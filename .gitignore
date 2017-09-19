@@ -1,0 +1,16 @@
+*.pyc
+*.pyo
+*.egg-info
+*.class
+*~
+*#
+/doc/generated/*
+/runpy
+/build
+.coverage
+dist
+.tox
+.cache
+.python-version
+build
+test/integration/integration_tests.conf
