@@ -1,1 +1,1 @@
-aws_encryption_sdk>=1.3.0
+aws-encryption-sdk>=1.3.2

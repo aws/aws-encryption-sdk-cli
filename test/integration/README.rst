@@ -2,7 +2,7 @@
 aws-encryption-sdk-cli Integration Tests
 ****************************************
 
-In order to run these integration tests successfully, there things which must be configured.
+In order to run these integration tests successfully, these things which must be configured.
 
 #. These tests assume that AWS credentials are available in one of the
    `automatically discoverable credential locations`_.

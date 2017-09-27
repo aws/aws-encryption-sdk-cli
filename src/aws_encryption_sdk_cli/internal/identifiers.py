@@ -15,7 +15,7 @@ import logging
 
 import aws_encryption_sdk
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 # Using string lookups here rather than direct references to remove special case logic
 #  and allow for future cases where known master key providers are provided by optional
