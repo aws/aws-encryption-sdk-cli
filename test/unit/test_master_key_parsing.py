@@ -211,7 +211,7 @@ def test_build_crypto_materials_manager_from_args_with_caching(
 
     patch_aws_encryption_sdk.LocalCryptoMaterialsCache.assert_called_once_with(capacity=5)
     patch_aws_encryption_sdk.CachingCryptoMaterialsManager.assert_called_once_with(
-        materials_manager=patch_aws_encryption_sdk.DefaultCryptoMaterialsManager.return_value,
+        backing_materials_manager=patch_aws_encryption_sdk.DefaultCryptoMaterialsManager.return_value,
         cache=patch_aws_encryption_sdk.LocalCryptoMaterialsCache.return_value,
         a='cache_config_a',
         b='cache_config_b'

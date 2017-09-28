@@ -112,7 +112,7 @@ def build_crypto_materials_manager_from_args(key_providers_config, caching_confi
 
     cache = aws_encryption_sdk.LocalCryptoMaterialsCache(capacity=caching_config.pop('capacity'))
     return aws_encryption_sdk.CachingCryptoMaterialsManager(
-        materials_manager=cmm,
+        backing_materials_manager=cmm,
         cache=cache,
         **caching_config
     )

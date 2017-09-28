@@ -26,6 +26,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 CONFIG_FILE_NAME = os.path.join(HERE, 'integration_tests.conf')
 ENCRYPT_ARGS_TEMPLATE = '-e -i {source} -o {target} --encryption-context a=b c=d @' + CONFIG_FILE_NAME
 DECRYPT_ARGS_TEMPLATE = '-d -i {source} -o {target} @' + CONFIG_FILE_NAME
+CACHING_CONFIG = ' --caching capacity=10 max_age=60.0'
 
 
 def _should_run_tests():
@@ -53,6 +54,30 @@ def test_file_to_file_cycle(tmpdir):
         source=str(plaintext),
         target=str(ciphertext)
     )
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(ciphertext),
+        target=str(decrypted)
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    assert filecmp.cmp(str(plaintext), str(decrypted))
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_to_file_cycle_with_caching(tmpdir):
+    base_dir = tmpdir.mkdir('test')
+    plaintext = base_dir.join('source_plaintext')
+    ciphertext = base_dir.join('ciphertext')
+    decrypted = base_dir.join('decrypted')
+    with open(str(plaintext), 'wb') as f:
+        f.write(os.urandom(1024))
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(ciphertext)
+    ) + CACHING_CONFIG
     decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
         source=str(ciphertext),
         target=str(decrypted)
