@@ -17,6 +17,7 @@ import logging
 
 import aws_encryption_sdk
 
+from aws_encryption_sdk_cli.internal.args_post_processing import nop_config
 from aws_encryption_sdk_cli.internal.identifiers import KNOWN_MASTER_KEY_PROVIDERS, LOGGER_NAME
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
@@ -59,8 +60,17 @@ def _build_master_key_provider(provider, key, **kwargs):
     :rtype: aws_encryption_sdk.key_providers.base.MasterKeyProvider
     """
     _LOGGER.debug('Loading provider: %s', provider)
-    provider_class_path = KNOWN_MASTER_KEY_PROVIDERS.get(provider, provider)
+    try:
+        provider_config = KNOWN_MASTER_KEY_PROVIDERS[provider]
+        provider_class_path = provider_config['callable']
+        provider_post_processing_path = provider_config['post-processing']
+        provider_post_processing = _callable_loader(provider_post_processing_path)
+    except KeyError:
+        provider_class_path = provider
+        provider_post_processing = nop_config
+
     provider_class = _callable_loader(provider_class_path)
+    kwargs = provider_post_processing(kwargs)
     key_provider = provider_class(**kwargs)
     for single_key in key:
         key_provider.add_master_key(single_key)

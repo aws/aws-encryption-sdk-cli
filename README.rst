@@ -154,11 +154,19 @@ If multiple master keys are defined in the primary master key provider, the firs
    --master-keys provider=aws-kms key=$ALIAS_NAME region_names=us-west-2
    --master-keys provider=aws-kms key=$ALIAS_NAME region_names=eu-central-1
 
-Advanced Configuration
-``````````````````````
+AWS KMS Configuration
+`````````````````````
 If you want to use the ``aws-kms`` master key provider, you can either specify that
 as the provider or simply not specify a provider and allow the default value to be used.
 
+There are some configuration options which are unique to the ``aws-kms`` master key provider:
+
+* **profile** : Providing this configuration value will use the specified `named profile`_ credentials.
+* **region** : This allows you to specify the target region. If you provide both ``region`` and ``region_names``
+   values, ``region_names`` values will be discarded and ``region`` values will be used instead.
+
+Advanced Configuration
+``````````````````````
 If you want to use some other master key provider, that provider must be available in
 your local ``$PYTHONPATH`` as a callable (class or function) which will return the
 desired master key provider when called with the defined parameters. The value that
@@ -370,3 +378,4 @@ Execution
 .. _KMSMasterKeyProvider: http://aws-encryption-sdk-python.readthedocs.io/en/latest/generated/aws_encryption_sdk.key_providers.kms.html#aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
 .. _Carbon: https://www.powershellgallery.com/packages/Carbon
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
+.. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

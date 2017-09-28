@@ -31,6 +31,13 @@ def patch_callable_loader(mocker):
 
 
 @pytest.yield_fixture
+def patch_nop_config(mocker):
+    mocker.patch.object(master_key_parsing, 'nop_config')
+    master_key_parsing.nop_config.side_effect = lambda x: x
+    yield master_key_parsing.nop_config
+
+
+@pytest.yield_fixture
 def patch_build_master_key_provider(mocker):
     mocker.patch.object(master_key_parsing, '_build_master_key_provider')
     master_key_parsing._build_master_key_provider.side_effect = (
@@ -97,25 +104,42 @@ def test_callable_loader_json_decoder_success():
 
 
 def test_build_master_key_provider_known_provider(mocker, patch_callable_loader):
+    mock_provider_callable = MagicMock()
+    mock_post_processing = MagicMock(return_value={'c': sentinel.c})
+    patch_callable_loader.side_effect = (mock_post_processing, mock_provider_callable)
     mocker.patch.object(master_key_parsing, 'KNOWN_MASTER_KEY_PROVIDERS')
-    master_key_parsing.KNOWN_MASTER_KEY_PROVIDERS = {sentinel.known_provider_id: sentinel.known_provider_classpath}
+    master_key_parsing.KNOWN_MASTER_KEY_PROVIDERS = {sentinel.known_provider_id: {
+        'callable': sentinel.known_provider_classpath,
+        'post-processing': sentinel.known_provider_post_processing
+    }}
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.known_provider_id,
-        key=[]
+        key=[],
+        a=sentinel.a,
+        b=sentinel.b
     )
-    patch_callable_loader.assert_called_once_with(sentinel.known_provider_classpath)
-    patch_callable_loader.return_value.assert_called_once_with()
-    assert not patch_callable_loader.return_value.return_value.add_master_key.called
-    assert test is patch_callable_loader.return_value.return_value
+    patch_callable_loader.assert_has_calls(
+        calls=(
+            call(sentinel.known_provider_post_processing),
+            call(sentinel.known_provider_classpath)
+        ),
+        any_order=False
+    )
+    mock_post_processing.assert_called_once_with({'a': sentinel.a, 'b': sentinel.b})
+    mock_provider_callable.assert_called_once_with(c=sentinel.c)
+    assert not mock_provider_callable.return_value.add_master_key.called
+    assert test is mock_provider_callable.return_value
 
 
-def test_build_master_key_provider_unknown_key_provider(patch_callable_loader):
+def test_build_master_key_provider_unknown_key_provider(patch_callable_loader, patch_nop_config):
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.unknown_provider_id,
-        key=[]
+        key=[],
+        a=sentinel.a
     )
+    patch_nop_config.assert_called_once_with({'a': sentinel.a})
     patch_callable_loader.assert_called_once_with(sentinel.unknown_provider_id)
-    patch_callable_loader.return_value.assert_called_once_with()
+    patch_callable_loader.return_value.assert_called_once_with(a=sentinel.a)
     assert test is patch_callable_loader.return_value.return_value
 
 

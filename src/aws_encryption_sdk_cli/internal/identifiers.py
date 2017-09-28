@@ -22,7 +22,10 @@ __version__ = '1.0.1'
 #  libraries.
 #: Known MasterKeyProviders which can be referenced by provider_id rather than namespace path.
 KNOWN_MASTER_KEY_PROVIDERS = {
-    'aws-kms': 'aws_encryption_sdk.KMSMasterKeyProvider'
+    'aws-kms': {
+        'callable': 'aws_encryption_sdk.KMSMasterKeyProvider',
+        'post-processing': 'aws_encryption_sdk_cli.internal.args_post_processing.kms_master_key_provider'
+    }
 }
 #: Suffix added to output files if specific output filename is not specified.
 OUTPUT_SUFFIX = {
