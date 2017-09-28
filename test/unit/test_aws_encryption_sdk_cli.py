@@ -402,13 +402,12 @@ def test_cli(patch_for_cli):
 
 
 @pytest.mark.parametrize('level, logging_args', (
-    (None, {}),
-    (-1, {}),
-    (0, {}),
-    (1, {'level': logging.WARN}),
-    (2, {'level': logging.INFO}),
-    (3, {'level': logging.DEBUG}),
-    (4, {'level': logging.DEBUG})
+    (None, {'level': logging.WARN}),
+    (-1, {'level': logging.WARN}),
+    (0, {'level': logging.WARN}),
+    (1, {'level': logging.INFO}),
+    (2, {'level': logging.DEBUG}),
+    (3, {'level': logging.DEBUG})
 ))
 def test_cli_logging_setup(patch_for_cli, level, logging_args):
     aws_encryption_sdk_cli.parse_args.return_value.verbosity = level

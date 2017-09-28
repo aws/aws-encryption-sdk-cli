@@ -36,8 +36,7 @@ OUTPUT_SUFFIX = {
 ALGORITHM_NAMES = set([alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith('_')])
 LOGGER_NAME = 'aws_encryption_sdk_cli'
 LOGGING_LEVELS = {
-    1: logging.WARN,
-    2: logging.INFO,
-    3: logging.DEBUG
+    1: logging.INFO,
+    2: logging.DEBUG
 }
-MAX_LOGGING_LEVEL = 3
+MAX_LOGGING_LEVEL = 2

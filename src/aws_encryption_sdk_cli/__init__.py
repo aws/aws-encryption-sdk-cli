@@ -29,6 +29,7 @@ from aws_encryption_sdk_cli.internal.io_handling import (
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
+__all__ = ('cli', 'process_cli_request', 'stream_kwargs_from_args')
 
 
 def _expand_sources(source):
@@ -143,6 +144,19 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
     return stream_args
 
 
+def _setup_logger(verbosity):
+    """Sets up the logger.
+
+    :param int verbosity: Desired verbosity level.
+    """
+    logging_args = {}
+    if verbosity is None or verbosity <= 0:
+        logging_args['level'] = logging.WARN
+    else:
+        logging_args['level'] = LOGGING_LEVELS[min(verbosity, MAX_LOGGING_LEVEL)]
+    logging.basicConfig(**logging_args)
+
+
 def cli(raw_args=None):
     """CLI entry point.  Processes arguments, sets up the key provider, and processes requested action.
 
@@ -150,10 +164,7 @@ def cli(raw_args=None):
     """
     args = parse_args(raw_args)
 
-    logging_args = {}
-    if args.verbosity is not None and args.verbosity > 0:
-        logging_args['level'] = LOGGING_LEVELS[min(args.verbosity, MAX_LOGGING_LEVEL)]
-    logging.basicConfig(**logging_args)
+    _setup_logger(args.verbosity)
 
     _LOGGER.debug('Encryption mode: %s', args.action)
     _LOGGER.debug('Encryption source: %s', args.input)
