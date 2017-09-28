@@ -198,3 +198,41 @@ def test_dir_to_dir_cycle(tmpdir):
                 str(decrypted_dir)
             ) + '.encrypted.decrypted'
             assert filecmp.cmp(plaintext_filename, decrypted_filename)
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_glob_to_dir_cycle(tmpdir):
+    base_dir = tmpdir.mkdir('test')
+    plaintext_dir = base_dir.mkdir('plaintext')
+    ciphertext_dir = base_dir.mkdir('ciphertext')
+    decrypted_dir = base_dir.mkdir('decrypted')
+    for source_file_path in ('a.1', 'b.2', 'b.1', 'c.1'):
+        with open(os.path.join(str(plaintext_dir), source_file_path), 'wb') as file:
+            file.write(os.urandom(1024))
+
+    suffix = '.1'
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=os.path.join(str(plaintext_dir), '*' + suffix),
+        target=str(ciphertext_dir)
+    ) + ' -r'
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(ciphertext_dir),
+        target=str(decrypted_dir)
+    ) + ' -r'
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    for base_dir, _dirs, filenames in os.walk(str(plaintext_dir)):
+        for file in filenames:
+            plaintext_filename = os.path.join(base_dir, file)
+            decrypted_filename = plaintext_filename.replace(
+                str(plaintext_dir),
+                str(decrypted_dir)
+            ) + '.encrypted.decrypted'
+
+            if plaintext_filename.endswith(suffix):
+                assert filecmp.cmp(plaintext_filename, decrypted_filename)
+            else:
+                assert not os.path.isfile(decrypted_filename)
