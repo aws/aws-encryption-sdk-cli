@@ -129,7 +129,6 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
         source=str(ciphertext_file),
         target='-'
     ) + ' -vvv'
-    print(decrypt_args)
 
     proc = Popen(shlex.split(encrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     _stdout, _stderr = proc.communicate(input=plaintext)
@@ -142,6 +141,27 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
 
     proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate()
+
+    assert decrypted_stdout == plaintext
+
+
+@pytest.mark.skipif(not _aws_crypto_is_findable(), reason='aws-crypto executable could not be found.')
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_stdin_stdout_stdin_stdout_cycle():
+    plaintext = os.urandom(1024)
+
+    encrypt_args = 'aws-crypto ' + ENCRYPT_ARGS_TEMPLATE.format(
+        source='-',
+        target='-'
+    )
+    decrypt_args = 'aws-crypto ' + DECRYPT_ARGS_TEMPLATE.format(
+        source='-',
+        target='-'
+    )
+    proc = Popen(shlex.split(encrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    ciphertext, _stderr = proc.communicate(input=plaintext)
+    proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
 
     assert decrypted_stdout == plaintext
 
