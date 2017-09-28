@@ -299,10 +299,14 @@ def _process_master_key_provider_configs(raw_keys, action):
     :raises ParameterParseError: if exactly one provider value is not provided
     :raises ParameterParseError: if no key values are provided
     """
-    if raw_keys is None and action == 'decrypt':
-        # We allow not defining any master key provider configuration if decrypting with aws-kms.
-        _LOGGER.debug('No master key provider config provided on decrypt request. Using aws-kms with no master keys.')
-        return [{'provider': 'aws-kms', 'key': []}]
+    if raw_keys is None:
+        if action == 'decrypt':
+            # We allow not defining any master key provider configuration if decrypting with aws-kms.
+            _LOGGER.debug(
+                'No master key provider config provided on decrypt request. Using aws-kms with no master keys.'
+            )
+            return [{'provider': 'aws-kms', 'key': []}]
+        raise ParameterParseError('No master key provider configuration found.')
 
     all_keys = copy.deepcopy(raw_keys)
     for pos, key_set in enumerate(all_keys):

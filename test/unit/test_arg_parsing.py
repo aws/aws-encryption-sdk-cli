@@ -332,6 +332,13 @@ def test_process_master_key_provider_configs(source, action, result):
     assert test == result
 
 
+def test_process_master_key_provider_configs_no_provider_on_encrypt():
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_master_key_provider_configs(None, 'encrypt')
+
+    excinfo.match(r'No master key provider configuration found.')
+
+
 def test_process_master_key_provider_configs_not_exactly_one_provider():
     with pytest.raises(ParameterParseError) as excinfo:
         arg_parsing._process_master_key_provider_configs(
