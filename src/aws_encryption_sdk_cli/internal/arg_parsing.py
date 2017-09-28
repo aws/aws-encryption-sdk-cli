@@ -136,12 +136,14 @@ def _build_parser():
     parser.add_argument(
         '-i',
         '--input',
+        required=True,
         action=UniqueStoreAction,
         help='Input file or directory for encrypt/decrypt operation, or "-" for stdin.'
     )
     parser.add_argument(
         '-o',
         '--output',
+        required=True,
         action=UniqueStoreAction,
         help='Output file or directory for encrypt/decrypt operation, or - for stdout.'
     )
@@ -334,9 +336,6 @@ def parse_args(raw_args=None):
     """
     parser = _build_parser()
     parsed_args = parser.parse_args(args=raw_args)
-
-    if parsed_args.input is None or parsed_args.output is None:
-        parser.error('the following arguments are required: -i/--input, -o/--output')
 
     try:
         parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
