@@ -210,7 +210,13 @@ def _build_parser():
         '-v',
         dest='verbosity',
         action='count',
-        help='Enables logging and sets detail level: -v == WARN, -vv == INFO, -vvv == DEBUG'
+        help='Enables logging and sets detail level. Multiple -v options increases verbosity (max: 4).'
+    )
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        action='store_true',
+        help='Suppresses most warning and diagnostic messages'
     )
     return parser
 

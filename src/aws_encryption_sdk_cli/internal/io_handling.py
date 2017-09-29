@@ -135,7 +135,7 @@ def _should_write_file(filepath, interactive, no_overwrite):
 
     if no_overwrite:
         # The file exists and the caller specifically asked us not to overwrite anything
-        _LOGGER.debug('Skipping existing target file because of "no overwrite" option: %s', filepath)
+        _LOGGER.warning('Skipping existing target file because of "no overwrite" option: %s', filepath)
         return False
 
     if interactive:
@@ -143,7 +143,7 @@ def _should_write_file(filepath, interactive, no_overwrite):
         decision = _input()('Overwrite existing target file "{}" with new contents? [y/N]:'.format(filepath))
         try:
             if decision.lower()[0] == 'y':
-                _LOGGER.debug('Overwriting existing target file based on interactive user decision: %s', filepath)
+                _LOGGER.warning('Overwriting existing target file based on interactive user decision: %s', filepath)
                 return True
             return False
         except IndexError:

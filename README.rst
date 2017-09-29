@@ -201,6 +201,18 @@ Allowed parameters:
 * **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can encrypt.
 
 
+Logging and Verbosity
+---------------------
+The ``-v`` argument allows you to tune the verbosity of the built-in logging to your desired level.
+In short, the more ``-v`` arguments you supply, the more verbose the output gets.
+
+* default : aws-encryption-sdk-cli logs all warnings, all dependencies only log critical messages
+* ``-v`` :  aws-encryption-sdk-cli performs moderate logging, all dependencies only log critical messages
+* ``-vv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies only log critical messages
+* ``-vvv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies perform moderate logging
+* ``-vvvv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies perform detailed logging
+
+
 Configuration Files
 -------------------
 As with any CLI where the configuration can get rather complex, you might want to use a configuration
@@ -296,8 +308,9 @@ Execution
 
 .. code-block:: sh
 
-   usage: aws-crypto [-h] (-e | -d) -m MASTER_KEYS [MASTER_KEYS ...] [-C CACHING [CACHING ...]]
-                     [-i INPUT] [-o OUTPUT]
+   usage: aws-crypto [-h] (--version | [-e | -d]
+                     [-m MASTER_KEYS [MASTER_KEYS ...]]
+                     [-C CACHING [CACHING ...]] -i INPUT -o OUTPUT
                      [-c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]]
                      [-a {
                         AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
@@ -363,8 +376,10 @@ Execution
                            overwriting existing files
      --no-overwrite        Never overwrite existing files
      -r, -R, --recursive   Allow operation on directories as input
-     -v                    Sets logging level: -v == WARN, -vv == INFO, -vvv ==
-                           DEBUG
+     -v                    Enables logging and sets detail level. Multiple -v
+                           options increases verbosity (max: 4).
+     -q, --quiet           Suppresses most warning and diagnostic messages
+
 
    For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
 

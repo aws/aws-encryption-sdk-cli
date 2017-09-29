@@ -14,6 +14,7 @@
 import copy
 import glob
 import logging
+import logging.config
 import os
 
 import aws_encryption_sdk
@@ -144,17 +145,44 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
     return stream_args
 
 
-def _setup_logger(verbosity):
+def _logging_levels(verbosity, quiet):
+    """Determines the proper logging levels given required verbosity level and quiet.
+
+    :param int verbosity: Requested level of verbosity
+    :param bool quiet: Suppresses all logging when true
+    :returns: local and root logging levels
+    :rtype: list of int
+    """
+    if quiet:
+        return logging.CRITICAL, logging.CRITICAL
+
+    if verbosity is None or verbosity <= 0:
+        return logging.WARNING, logging.CRITICAL
+
+    normalized_local = min(verbosity, MAX_LOGGING_LEVEL)
+    normalized_root = min(verbosity - normalized_local, MAX_LOGGING_LEVEL)
+    return LOGGING_LEVELS[normalized_local], LOGGING_LEVELS[normalized_root]
+
+
+def _setup_logger(verbosity, quiet):
     """Sets up the logger.
 
-    :param int verbosity: Desired verbosity level.
+    :param int verbosity: Requested level of verbosity
+    :param bool quiet: Suppresses all logging when true
     """
-    logging_args = {}
-    if verbosity is None or verbosity <= 0:
-        logging_args['level'] = logging.WARN
-    else:
-        logging_args['level'] = LOGGING_LEVELS[min(verbosity, MAX_LOGGING_LEVEL)]
-    logging.basicConfig(**logging_args)
+    local_logging_level, root_logging_level = _logging_levels(verbosity, quiet)
+
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(logging.BASIC_FORMAT)
+    handler.setFormatter(formatter)
+
+    local_logger = logging.getLogger(LOGGER_NAME)
+    local_logger.setLevel(local_logging_level)
+    local_logger.addHandler(handler)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(root_logging_level)
+    root_logger.addHandler(handler)
 
 
 def cli(raw_args=None):
@@ -164,7 +192,7 @@ def cli(raw_args=None):
     """
     args = parse_args(raw_args)
 
-    _setup_logger(args.verbosity)
+    _setup_logger(args.verbosity, args.quiet)
 
     _LOGGER.debug('Encryption mode: %s', args.action)
     _LOGGER.debug('Encryption source: %s', args.input)

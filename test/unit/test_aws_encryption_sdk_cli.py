@@ -14,7 +14,7 @@
 import logging
 
 import aws_encryption_sdk
-from mock import MagicMock, sentinel
+from mock import call, MagicMock, sentinel
 import pytest
 
 import aws_encryption_sdk_cli
@@ -38,6 +38,18 @@ def patch_for_process_cli_request(mocker):
     mocker.patch.object(aws_encryption_sdk_cli, 'process_single_operation')
     mocker.patch.object(aws_encryption_sdk_cli.glob, 'iglob')
     aws_encryption_sdk_cli.glob.iglob.side_effect = lambda x: [x]
+
+
+@pytest.yield_fixture
+def patch_logging_levels(mocker):
+    mocker.patch.object(aws_encryption_sdk_cli, '_logging_levels')
+    yield aws_encryption_sdk_cli._logging_levels
+
+
+@pytest.yield_fixture
+def patch_logging(mocker):
+    mocker.patch.object(aws_encryption_sdk_cli, 'logging')
+    yield aws_encryption_sdk_cli.logging
 
 
 def test_process_cli_request_source_is_destination(patch_for_process_cli_request):
@@ -361,7 +373,8 @@ def patch_for_cli(mocker):
     mocker.patch.object(aws_encryption_sdk_cli, 'parse_args')
     aws_encryption_sdk_cli.parse_args.return_value = MagicMock(
         version=False,
-        verbosity=None,
+        verbosity=sentinel.verbosity,
+        quiet=sentinel.quiet,
         master_keys=sentinel.master_keys,
         caching=sentinel.caching_config,
         input=sentinel.input,
@@ -370,7 +383,7 @@ def patch_for_cli(mocker):
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )
-    mocker.patch.object(aws_encryption_sdk_cli.logging, 'basicConfig')
+    mocker.patch.object(aws_encryption_sdk_cli, '_setup_logger')
     mocker.patch.object(aws_encryption_sdk_cli, 'build_crypto_materials_manager_from_args')
     aws_encryption_sdk_cli.build_crypto_materials_manager_from_args.return_value = sentinel.crypto_materials_manager
     mocker.patch.object(aws_encryption_sdk_cli, 'stream_kwargs_from_args')
@@ -382,6 +395,10 @@ def test_cli(patch_for_cli):
     test = aws_encryption_sdk_cli.cli(sentinel.raw_args)
 
     aws_encryption_sdk_cli.parse_args.assert_called_once_with(sentinel.raw_args)
+    aws_encryption_sdk_cli._setup_logger.assert_called_once_with(
+        sentinel.verbosity,
+        sentinel.quiet
+    )
     aws_encryption_sdk_cli.build_crypto_materials_manager_from_args.assert_called_once_with(
         key_providers_config=sentinel.master_keys,
         caching_config=sentinel.caching_config
@@ -401,18 +418,42 @@ def test_cli(patch_for_cli):
     assert test is aws_encryption_sdk_cli.process_cli_request.return_value
 
 
-@pytest.mark.parametrize('level, logging_args', (
-    (None, {'level': logging.WARN}),
-    (-1, {'level': logging.WARN}),
-    (0, {'level': logging.WARN}),
-    (1, {'level': logging.INFO}),
-    (2, {'level': logging.DEBUG}),
-    (3, {'level': logging.DEBUG})
+@pytest.mark.parametrize('verbosity, quiet, local_level, root_level', (
+    (None, False, logging.WARNING, logging.CRITICAL),
+    (-1, False, logging.WARNING, logging.CRITICAL),
+    (0, False, logging.WARNING, logging.CRITICAL),
+    (1, False, logging.INFO, logging.CRITICAL),
+    (2, False, logging.DEBUG, logging.CRITICAL),
+    (3, False, logging.DEBUG, logging.INFO),
+    (4, False, logging.DEBUG, logging.DEBUG),
+    (99, False, logging.DEBUG, logging.DEBUG),
+    (99, True, logging.CRITICAL, logging.CRITICAL)
 ))
-def test_cli_logging_setup(patch_for_cli, level, logging_args):
-    aws_encryption_sdk_cli.parse_args.return_value.verbosity = level
-    aws_encryption_sdk_cli.cli()
-    aws_encryption_sdk_cli.logging.basicConfig.assert_called_once_with(**logging_args)
+def test_cli_logging_levels(verbosity, quiet, local_level, root_level):
+    assert aws_encryption_sdk_cli._logging_levels(verbosity, quiet) == (local_level, root_level)
+
+
+def test_setup_logger(patch_logging_levels, patch_logging):
+    patch_logging_levels.return_value = sentinel.local_level, sentinel.root_level
+    mock_local_logger = MagicMock()
+    mock_root_logger = MagicMock()
+    patch_logging.getLogger.side_effect = (
+        mock_local_logger,
+        mock_root_logger
+    )
+    aws_encryption_sdk_cli._setup_logger(sentinel.verbosity, sentinel.quiet)
+
+    patch_logging_levels.assert_called_once_with(sentinel.verbosity, sentinel.quiet)
+    patch_logging.StreamHandler.assert_called_once_with()
+    patch_logging.Formatter.assert_called_once_with(patch_logging.BASIC_FORMAT)
+    patch_logging.getLogger.assert_has_calls(
+        calls=(call(aws_encryption_sdk_cli.LOGGER_NAME), call()),
+        any_order=False
+    )
+    mock_local_logger.setLevel.assert_called_once_with(sentinel.local_level)
+    mock_local_logger.addHandler.assert_called_once_with(patch_logging.StreamHandler.return_value)
+    mock_root_logger.setLevel.assert_called_once_with(sentinel.root_level)
+    mock_root_logger.addHandler.assert_called_once_with(patch_logging.StreamHandler.return_value)
 
 
 def test_cli_bad_user_input(patch_for_cli):
