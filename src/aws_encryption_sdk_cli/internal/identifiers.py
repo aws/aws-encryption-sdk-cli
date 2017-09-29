@@ -15,7 +15,7 @@ from typing import Dict, Set  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 
-__version__ = '1.0.1'  # type: str
+__version__ = '1.0.2'  # type: str
 
 # Using string lookups here rather than direct references to remove special case logic
 #  and allow for future cases where known master key providers are provided by optional
