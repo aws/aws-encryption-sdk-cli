@@ -128,16 +128,10 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
     decrypt_args = 'aws-crypto ' + DECRYPT_ARGS_TEMPLATE.format(
         source=str(ciphertext_file),
         target='-'
-    ) + ' -vvv'
+    )
 
     proc = Popen(shlex.split(encrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     _stdout, _stderr = proc.communicate(input=plaintext)
-    print('STDOUT:')
-    for line in _stdout.splitlines():
-        print(line)
-    print('STDERR:')
-    for line in _stderr.splitlines():
-        print(line)
 
     proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate()
@@ -197,6 +191,42 @@ def test_dir_to_dir_cycle(tmpdir):
                 str(plaintext_dir),
                 str(decrypted_dir)
             ) + '.encrypted.decrypted'
+            assert filecmp.cmp(plaintext_filename, decrypted_filename)
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_dir_to_dir_cycle_custom_suffix(tmpdir):
+    base_dir = tmpdir.mkdir('test')
+    plaintext_dir = base_dir.mkdir('plaintext')
+    ciphertext_dir = base_dir.mkdir('ciphertext')
+    decrypted_dir = base_dir.mkdir('decrypted')
+    plaintext_dir.mkdir('a').mkdir('b')
+    plaintext_dir.mkdir('c')
+    for source_file_path in (['1'], ['a', '2'], ['a', 'b', '3'], ['c', '4']):
+        with open(os.path.join(str(plaintext_dir), *source_file_path), 'wb') as file:
+            file.write(os.urandom(1024))
+
+    encrypt_suffix = 'THIS_IS_A_CUSTOM_SUFFIX'
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext_dir),
+        target=str(ciphertext_dir)
+    ) + ' -r' + ' --suffix ' + encrypt_suffix
+    decrypt_suffix = '.anotherSuffix'
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(ciphertext_dir),
+        target=str(decrypted_dir)
+    ) + ' -r' + ' --suffix ' + decrypt_suffix
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    for base_dir, _dirs, filenames in os.walk(str(plaintext_dir)):
+        for file in filenames:
+            plaintext_filename = os.path.join(base_dir, file)
+            decrypted_filename = plaintext_filename.replace(
+                str(plaintext_dir),
+                str(decrypted_dir)
+            ) + encrypt_suffix + decrypt_suffix
             assert filecmp.cmp(plaintext_filename, decrypted_filename)
 
 

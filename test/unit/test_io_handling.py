@@ -277,34 +277,52 @@ def test_process_single_file(patch_process_single_operation):
     )
 
 
-@pytest.mark.parametrize('source, destination, mode, output', (
+@pytest.mark.parametrize('source, destination, mode, suffix, output', (
     (
         os.path.join('source_dir', 'source_filename'),
         'destination_dir',
         'encrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.encrypted')
     ),
     (
         os.path.join('source_dir', 'source_filename.encrypted'),
         'destination_dir',
         'encrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.encrypted.encrypted')
     ),
     (
         os.path.join('source_dir', 'source_filename'),
         'destination_dir',
         'decrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.decrypted')
     ),
     (
         os.path.join('source_dir', 'source_filename.encrypted'),
         'destination_dir',
         'decrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.encrypted.decrypted')
+    ),
+    (
+        os.path.join('source_dir', 'source_filename'),
+        'destination_dir',
+        'encrypt',
+        'CUSTOM_SUFFIX',
+        os.path.join('destination_dir', 'source_filenameCUSTOM_SUFFIX')
+    ),
+    (
+        os.path.join('source_dir', 'source_filename'),
+        'destination_dir',
+        'decrypt',
+        'CUSTOM_SUFFIX',
+        os.path.join('destination_dir', 'source_filenameCUSTOM_SUFFIX')
     )
 ))
-def test_output_filename(source, destination, mode, output):
-    assert io_handling.output_filename(source, destination, mode) == output
+def test_output_filename(source, destination, mode, suffix, output):
+    assert io_handling.output_filename(source, destination, mode, suffix) == output
 
 
 @pytest.mark.parametrize('source_root, destination_root, source_dir, output', (
@@ -358,7 +376,8 @@ def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream):
         source=str(source),
         destination=str(target),
         interactive=False,
-        no_overwrite=False
+        no_overwrite=False,
+        suffix=None
     )
 
     for filename, suffix in (

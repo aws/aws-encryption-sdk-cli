@@ -18,7 +18,8 @@ import logging
 import aws_encryption_sdk
 
 from aws_encryption_sdk_cli.internal.args_post_processing import nop_config
-from aws_encryption_sdk_cli.internal.identifiers import KNOWN_MASTER_KEY_PROVIDERS, LOGGER_NAME
+from aws_encryption_sdk_cli.internal.identifiers import KNOWN_MASTER_KEY_PROVIDERS
+from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 

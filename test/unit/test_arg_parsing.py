@@ -165,6 +165,17 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     good_args.append((default_encrypt, 'max_length', None))
     good_args.append((default_encrypt + ' --max-length 99', 'max_length', 99))
 
+    # interactive
+    good_args.append((default_encrypt, 'interactive', False))
+    good_args.append((default_encrypt + ' --interactive', 'interactive', True))
+
+    # no-overwrite
+    good_args.append((default_encrypt, 'no_overwrite', False))
+    good_args.append((default_encrypt + ' --no-overwrite', 'no_overwrite', True))
+
+    # suffix
+    good_args.append((default_encrypt + ' --suffix .MY_SPECIAL_SUFFIX', 'suffix', '.MY_SPECIAL_SUFFIX'))
+
     # recursive
     good_args.append((default_encrypt, 'recursive', False))
     for recursive_flag in (' -r', ' -R', ' --recursive'):
@@ -172,7 +183,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
 
     # logging verbosity
     good_args.append((default_encrypt, 'verbosity', None))
-    for count in (1, 2, 3):
+    for count in (1, 2, 3, 4):
         good_args.append((default_encrypt + ' -' + 'v' * count, 'verbosity', count))
 
     return good_args
@@ -208,7 +219,8 @@ def build_bad_multiple_arguments():
         ' --encryption-context key=value',
         ' --algorithm ALGORITHM',
         ' --frame-length 256',
-        ' --max-length 1024'
+        ' --max-length 1024',
+        ' --suffix .MY_SPECIAL_SUFFIX'
     ]
     return [
         prefix + arg + arg

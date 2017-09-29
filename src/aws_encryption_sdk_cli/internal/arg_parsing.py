@@ -19,7 +19,8 @@ import logging
 import aws_encryption_sdk
 
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES, LOGGER_NAME
+from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES
+from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -182,6 +183,12 @@ def _build_parser():
             'Maximum frame length (for framed messages) or content length (for '
             'non-framed messages) (decryption only)'
         )
+    )
+
+    parser.add_argument(
+        '--suffix',
+        action=UniqueStoreAction,
+        help='Custom suffix to use when target filename is not specified'
     )
 
     parser.add_argument(

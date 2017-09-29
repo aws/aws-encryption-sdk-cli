@@ -18,7 +18,8 @@ import sys
 import aws_encryption_sdk
 import six
 
-from aws_encryption_sdk_cli.internal.identifiers import LOGGER_NAME, OUTPUT_SUFFIX
+from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
+from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -175,19 +176,24 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
         )
 
 
-def output_filename(source_filename, destination_dir, mode):
+def output_filename(source_filename, destination_dir, mode, suffix):
     """Duplicates the source filename in the destination directory, adding or stripping
     a suffix as needed.
 
     :param str source_filename: Full file path to source file
     :param str destination_dir: Full file path to destination directory
     :param str mode: Operating mode (encrypt/decrypt)
+    :param str suffix: Suffix to append to output filename
     :returns: Full file path of new destination file in destination directory
     :rtype: str
     """
+    if suffix is None:
+        suffix = OUTPUT_SUFFIX[mode]
+    else:
+        _LOGGER.debug('Using custom suffix "%s" to create target file', suffix)
     filename = source_filename.rsplit(os.sep, 1)[-1]
     _LOGGER.debug('Duplicating filename %s into %s', filename, destination_dir)
-    return os.path.join(destination_dir, filename) + OUTPUT_SUFFIX[mode]
+    return os.path.join(destination_dir, filename) + suffix
 
 
 def _output_dir(source_root, destination_root, source_dir):
@@ -201,7 +207,7 @@ def _output_dir(source_root, destination_root, source_dir):
     return os.path.join(destination_root, suffix)
 
 
-def process_dir(stream_args, source, destination, interactive, no_overwrite):
+def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix):
     """Processes encrypt/decrypt operations on all files in a directory tree.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -209,6 +215,7 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite):
     :param str destination: Full file path to destination directory root
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
+    :param str suffix: Suffix to append to output filename
     """
     _LOGGER.debug('%sing directory %s to %s', stream_args['mode'].capitalize(), source, destination)
     for base_dir, _dirs, files in os.walk(source):
@@ -222,7 +229,8 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite):
             destination_filename = output_filename(
                 source_filename=source_filename,
                 destination_dir=destination_dir,
-                mode=stream_args['mode']
+                mode=stream_args['mode'],
+                suffix=suffix
             )
             _LOGGER.info('%sing file %s to %s', stream_args['mode'].capitalize(), source_filename, destination_filename)
             process_single_file(
