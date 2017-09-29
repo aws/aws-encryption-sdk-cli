@@ -182,7 +182,7 @@ def test_process_cli_request_source_file_destination_dir(patch_for_process_cli_r
     aws_encryption_sdk_cli.output_filename.assert_called_once_with(
         source_filename=sentinel.source,
         destination_dir='a specific destination',
-        mode=sentinel.mode,
+        mode=str(sentinel.mode),
         suffix=sentinel.suffix
     )
     aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
@@ -407,7 +407,7 @@ def test_cli(patch_for_cli):
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix
     )
-    assert test is aws_encryption_sdk_cli.process_cli_request.return_value
+    assert test is None
 
 
 def test_cli_bad_user_input(patch_for_cli):

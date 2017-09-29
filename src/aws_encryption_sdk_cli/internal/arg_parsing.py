@@ -15,12 +15,17 @@ import argparse
 from collections import defaultdict, OrderedDict
 import copy
 import logging
+from typing import Any, Dict, List, Optional, Sequence, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
+    ARGPARSE_TEXT, CACHING_CONFIG, COLLAPSED_CONFIG,
+    MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
+)
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -29,36 +34,47 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
     """``ArgumentParser`` that ignores lines in ``fromfile_prefix_chars`` files which start with ``#``."""
 
     def convert_arg_line_to_args(self, arg_line):
+        # type: (ARGPARSE_TEXT) -> List[str]
         """Applies whitespace stripping to individual arguments in each line and
         drops both full-line and in-line comments.
         """
+        converted_line = []
         for arg in arg_line.split():
             arg = arg.strip()
             if arg.startswith('#'):
                 break
-            yield arg
+            converted_line.append(str(arg))
+        return converted_line
 
 
 class UniqueStoreAction(argparse.Action):  # pylint: disable=too-few-public-methods
     """argparse action that requires that arguments cannot be repeated."""
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+            self,
+            parser,  # type: argparse.ArgumentParser
+            namespace,  # type: argparse.Namespace
+            values,  # type: Union[ARGPARSE_TEXT, Sequence[Any], None]
+            option_string=None  # type: Optional[ARGPARSE_TEXT]
+    ):
+        # type: (...) -> None
         """Checks to make sure that the destination is empty before writing.
 
         :raises parser.error: if destination is already set
         """
-        if getattr(namespace, self.dest) is not None:
+        if getattr(namespace, self.dest) is not None:  # type: ignore # typeshed doesn't know about Action.dest yet?
             parser.error('{} argument may not be specified more than once'.format(option_string))
             return
-        setattr(namespace, self.dest, values)
+        setattr(namespace, self.dest, values)  # type: ignore # typeshed doesn't know about Action.dest yet?
 
 
 def _version_report():
+    # type: () -> str
     """Returns a formatted report of the versions of this CLI and relevant dependencies.
 
     :rtype: str
     """
-    versions = OrderedDict()
+    versions = OrderedDict()  # type: Dict[str, str]
     versions['aws-encryption-sdk-cli'] = __version__
     versions['aws-encryption-sdk'] = aws_encryption_sdk.__version__
     return ' '.join([
@@ -69,6 +85,7 @@ def _version_report():
 
 
 def _build_parser():
+    # type: () -> CommentIgnoringArgumentParser
     """Builds the argument parser.
 
     :returns: Constructed argument parser
@@ -227,6 +244,7 @@ def _build_parser():
 
 
 def _parse_kwargs(args):
+    # type: (RAW_CONFIG) -> PARSED_CONFIG
     """Parses a list of CLI arguments of "key=value" form into key/values pairs.
 
     :param iterable args: arguments to unpack
@@ -234,7 +252,7 @@ def _parse_kwargs(args):
     :rtype: dict
     :raises ParameterParseError: if a badly formed parameter if found
     """
-    kwargs = defaultdict(list)
+    kwargs = defaultdict(list)  # type: Dict[str, List[str]]
     for arg in args:
         _LOGGER.debug('Attempting to parse argument: %s', arg)
         try:
@@ -247,6 +265,7 @@ def _parse_kwargs(args):
 
 
 def _collapse_config(config):
+    # type: (PARSED_CONFIG) -> COLLAPSED_CONFIG
     """Collapses a dict returned by ``_parse_kwargs``, replacing each value list with its first entry.
 
     :param dict config: Configuration to collapse
@@ -254,12 +273,14 @@ def _collapse_config(config):
     :rtype: dict
     """
     config = copy.deepcopy(config)
+    collapsed_config = {}  # type: Dict[str, str]
     for key in config:
-        config[key] = config[key][0]
-    return config
+        collapsed_config[key] = config[key][0]
+    return collapsed_config
 
 
 def _parse_and_collapse_config(raw_config):
+    # type: (RAW_CONFIG) -> COLLAPSED_CONFIG
     """Copies, parses, and collapses a raw configuration of "key=value" pairs.
 
     :param list raw_config: Unprocessed encryption context
@@ -267,12 +288,13 @@ def _parse_and_collapse_config(raw_config):
     :rtype: dict
     """
     config = copy.deepcopy(raw_config)
-    config = _parse_kwargs(config)
-    config = _collapse_config(config)
-    return config
+    parsed_config = _parse_kwargs(config)
+    collapsed_config = _collapse_config(parsed_config)
+    return collapsed_config
 
 
 def _process_caching_config(raw_caching_config):
+    # type: (RAW_CONFIG) -> CACHING_CONFIG
     """Applies additional processing to prepare the caching configuration.
 
     :param list raw_caching_config: Unprocessed caching configuration
@@ -287,12 +309,13 @@ def _process_caching_config(raw_caching_config):
         'max_bytes_encrypted': int,
         'max_age': float
     }
-    caching_config = _parse_and_collapse_config(raw_caching_config)
+    parsed_config = _parse_and_collapse_config(raw_caching_config)
 
-    if 'capacity' not in caching_config or 'max_age' not in caching_config:
+    if 'capacity' not in parsed_config or 'max_age' not in parsed_config:
         raise ParameterParseError('If enabling caching, both "capacity" and "max_age" are required')
 
-    for key, value in caching_config.items():
+    caching_config = {}  # type: Dict[str, Union[str, int, float]]
+    for key, value in parsed_config.items():
         try:
             caching_config[key] = _cast_types[key](value)
         except KeyError:
@@ -301,6 +324,7 @@ def _process_caching_config(raw_caching_config):
 
 
 def _process_master_key_provider_configs(raw_keys, action):
+    # type: (List[RAW_CONFIG], str) -> List[MASTER_KEY_PROVIDER_CONFIG]
     """Applied additional processing to prepare the master key provider configuration.
 
     :param list raw_keys: List of master key provider configurations
@@ -319,9 +343,10 @@ def _process_master_key_provider_configs(raw_keys, action):
             return [{'provider': 'aws-kms', 'key': []}]
         raise ParameterParseError('No master key provider configuration found.')
 
-    all_keys = copy.deepcopy(raw_keys)
-    for pos, key_set in enumerate(all_keys):
-        parsed_args = _parse_kwargs(key_set)
+    processed_configs = []  # type: List[MASTER_KEY_PROVIDER_CONFIG]
+    for raw_config in raw_keys:
+        parsed_args = {}  # type: Dict[str, Union[str, List[str]]]
+        parsed_args.update(_parse_kwargs(raw_config))
 
         provider = parsed_args.get('provider', ['aws-kms'])  # If no provider is defined, use aws-kms
         if len(provider) != 1:
@@ -339,15 +364,17 @@ def _process_master_key_provider_configs(raw_keys, action):
                 raise ParameterParseError(
                     'At least one "key" must be provided for each master key provider configuration'
                 )
-        all_keys[pos] = parsed_args
-    return all_keys
+        processed_configs.append(parsed_args)
+    return processed_configs
 
 
 def parse_args(raw_args=None):
+    # type: (Optional[List[str]]) -> argparse.Namespace
     """Handles argparse to collect the needed input values.
 
     :param list raw_args: List of arguments
     :returns: parsed arguments
+    :rtype: argparse.Namespace
     """
     parser = _build_parser()
     parsed_args = parser.parse_args(args=raw_args)

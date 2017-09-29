@@ -12,14 +12,16 @@
 # language governing permissions and limitations under the License.
 """Logging utility tooling."""
 import logging
+from typing import Dict, Sequence, Text, Union  # noqa pylint: disable=unused-import
 
 LOGGING_LEVELS = {
     0: logging.CRITICAL,
     1: logging.INFO,
     2: logging.DEBUG
-}
-LOGGER_NAME = 'aws_encryption_sdk_cli'
-MAX_LOGGING_LEVEL = 2
+}  # type: Dict[int, int]
+LOGGER_NAME = 'aws_encryption_sdk_cli'  # type: str
+FORMAT_STRING = '%(levelname)s:%(name)s:%(message)s'  # type: str
+MAX_LOGGING_LEVEL = 2  # type: int
 
 
 class _BlacklistFilter(logging.Filter):  # pylint: disable=too-few-public-methods
@@ -29,11 +31,13 @@ class _BlacklistFilter(logging.Filter):  # pylint: disable=too-few-public-method
     """
 
     def __init__(self, *args):
+        # type: (Union[Text, str]) -> None
         """Creates internal blacklist."""
         super(_BlacklistFilter, self).__init__()
         self.__blacklist = args
 
     def filter(self, record):
+        # type: (logging.LogRecord) -> bool
         """Determines whether to filter record.
 
         :param record: Logging record to filter
@@ -47,6 +51,7 @@ class _BlacklistFilter(logging.Filter):  # pylint: disable=too-few-public-method
 
 
 def _logging_levels(verbosity, quiet):
+    # type: (int, bool) -> Sequence[int]
     """Determines the proper logging levels given required verbosity level and quiet.
 
     :param int verbosity: Requested level of verbosity
@@ -66,6 +71,7 @@ def _logging_levels(verbosity, quiet):
 
 
 def setup_logger(verbosity, quiet):
+    # type: (int, bool) -> None
     """Sets up the logger.
 
     :param int verbosity: Requested level of verbosity
@@ -73,7 +79,7 @@ def setup_logger(verbosity, quiet):
     """
     local_logging_level, root_logging_level = _logging_levels(verbosity, quiet)
 
-    formatter = logging.Formatter(logging.BASIC_FORMAT)
+    formatter = logging.Formatter(FORMAT_STRING)
 
     local_handler = logging.StreamHandler()
     local_handler.setFormatter(formatter)

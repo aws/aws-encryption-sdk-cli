@@ -50,8 +50,8 @@ def patch_for_process_single_operation(mocker):
 
 @pytest.yield_fixture
 def patch_input(mocker):
-    mocker.patch.object(io_handling, '_input')
-    yield io_handling._input
+    mocker.patch.object(io_handling.six.moves, 'input')
+    yield io_handling.six.moves.input
 
 
 @pytest.yield_fixture
@@ -79,13 +79,6 @@ def test_stdin():
         assert io_handling._stdin() is sys.stdin
     else:
         assert io_handling._stdin() is sys.stdin.buffer
-
-
-def test_input():
-    if six.PY3:
-        assert io_handling._input() is input
-    else:
-        assert io_handling._input() is raw_input  # noqa
 
 
 def test_file_exists_error():
@@ -244,7 +237,7 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
 def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, result):
     target_file = tmpdir.mkdir('test').join('target')
     target_file.write(b'')
-    patch_input.return_value.return_value = user_input
+    patch_input.return_value = user_input
 
     should_write = io_handling._should_write_file(
         filepath=str(target_file),

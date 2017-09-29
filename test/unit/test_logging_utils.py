@@ -69,7 +69,7 @@ def test_setup_logger(patch_logging_levels, patch_blacklist_filter, patch_loggin
     logging_utils.setup_logger(sentinel.verbosity, sentinel.quiet)
 
     patch_logging_levels.assert_called_once_with(sentinel.verbosity, sentinel.quiet)
-    patch_logging.Formatter.assert_called_once_with(patch_logging.BASIC_FORMAT)
+    patch_logging.Formatter.assert_called_once_with(logging_utils.FORMAT_STRING)
     patch_logging.StreamHandler.assert_has_calls(calls=(call(), call()), any_order=True)
     mock_local_handler.setFormatter.assert_called_once_with(patch_logging.Formatter.return_value)
     patch_logging.getLogger.assert_has_calls(

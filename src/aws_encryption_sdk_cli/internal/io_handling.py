@@ -14,17 +14,20 @@
 import logging
 import os
 import sys
+from typing import IO, Type  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 import six
 
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 def _stdout():
+    # type: () -> IO
     """Returns the appropriate stdout to use for incremental writes.
 
     :returns: stdout buffer
@@ -35,6 +38,7 @@ def _stdout():
 
 
 def _stdin():
+    # type: () -> IO
     """Returns the appropriate stdin to use for incremental writes.
 
     :returns: stdin buffer
@@ -44,14 +48,8 @@ def _stdin():
     return sys.stdin
 
 
-def _input():
-    """Returns the appropriate safe input function."""
-    if six.PY3:
-        return input
-    return raw_input
-
-
 def _file_exists_error():
+    # type: () -> Type[Exception]
     """Returns the appropriate error that ``os.makedirs`` returns if the target directory
     already exists.
     """
@@ -61,6 +59,7 @@ def _file_exists_error():
 
 
 def _ensure_dir_exists(filename):
+    # type: (str) -> None
     """Creates a directory tree if it does not already exist.
 
     :param str filename: Full path to file in destination directory
@@ -79,6 +78,7 @@ def _ensure_dir_exists(filename):
 
 
 def _single_io_write(stream_args, source, destination_writer):
+    # type: (STREAM_KWARGS, SOURCE, IO) -> None
     """Performs the actual write operations for a single operation.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -94,6 +94,7 @@ def _single_io_write(stream_args, source, destination_writer):
 
 
 def process_single_operation(stream_args, source, destination, interactive, no_overwrite):
+    # type: (STREAM_KWARGS, SOURCE, str, bool, bool) -> None
     """Processes a single encrypt/decrypt operation given a pre-loaded source.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -123,6 +124,7 @@ def process_single_operation(stream_args, source, destination, interactive, no_o
 
 
 def _should_write_file(filepath, interactive, no_overwrite):
+    # type: (str, bool, bool) -> bool
     """Determines whether a specific file should be written.
 
     :param str filepath: Full file path to file in question
@@ -141,7 +143,9 @@ def _should_write_file(filepath, interactive, no_overwrite):
 
     if interactive:
         # The file exists and the caller asked us to be consulted on action before overwriting
-        decision = _input()('Overwrite existing target file "{}" with new contents? [y/N]:'.format(filepath))
+        decision = six.moves.input(  # type: ignore # six.moves confuses mypy
+            'Overwrite existing target file "{}" with new contents? [y/N]:'.format(filepath)
+        )
         try:
             if decision.lower()[0] == 'y':
                 _LOGGER.warning('Overwriting existing target file based on interactive user decision: %s', filepath)
@@ -158,6 +162,7 @@ def _should_write_file(filepath, interactive, no_overwrite):
 
 
 def process_single_file(stream_args, source, destination, interactive, no_overwrite):
+    # type: (STREAM_KWARGS, str, str, bool, bool) -> None
     """Processes a single encrypt/decrypt operation on a source file.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -177,6 +182,7 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
 
 
 def output_filename(source_filename, destination_dir, mode, suffix):
+    # type: (str, str, str, str) -> str
     """Duplicates the source filename in the destination directory, adding or stripping
     a suffix as needed.
 
@@ -197,6 +203,7 @@ def output_filename(source_filename, destination_dir, mode, suffix):
 
 
 def _output_dir(source_root, destination_root, source_dir):
+    # type: (str, str, str) -> str
     """Duplicates the source child directory structure into the target directory root.
 
     :param str source_root: Root of source directory
@@ -208,6 +215,7 @@ def _output_dir(source_root, destination_root, source_dir):
 
 
 def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix):
+    # type: (STREAM_KWARGS, str, str, bool, bool, str) -> None
     """Processes encrypt/decrypt operations on all files in a directory tree.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -217,7 +225,7 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
     :param bool no_overwrite: Should never overwrite existing files
     :param str suffix: Suffix to append to output filename
     """
-    _LOGGER.debug('%sing directory %s to %s', stream_args['mode'].capitalize(), source, destination)
+    _LOGGER.debug('%sing directory %s to %s', stream_args['mode'], source, destination)
     for base_dir, _dirs, files in os.walk(source):
         for filename in files:
             source_filename = os.path.join(base_dir, filename)
@@ -229,10 +237,10 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
             destination_filename = output_filename(
                 source_filename=source_filename,
                 destination_dir=destination_dir,
-                mode=stream_args['mode'],
+                mode=str(stream_args['mode']),
                 suffix=suffix
             )
-            _LOGGER.info('%sing file %s to %s', stream_args['mode'].capitalize(), source_filename, destination_filename)
+            _LOGGER.info('%sing file %s to %s', stream_args['mode'], source_filename, destination_filename)
             process_single_file(
                 stream_args=stream_args,
                 source=source_filename,

@@ -14,17 +14,23 @@
 import copy
 import importlib
 import logging
+from typing import Callable, List, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
+from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.internal.args_post_processing import nop_config
 from aws_encryption_sdk_cli.internal.identifiers import KNOWN_MASTER_KEY_PROVIDERS
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
+    CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
+)
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 def _callable_loader(namespace_string):
+    # type: (str) -> Callable
     """Load a callable object from a namespace string.
 
     :param str namespace_string: Full namespace path of desired callable
@@ -52,6 +58,7 @@ def _callable_loader(namespace_string):
 
 
 def _build_master_key_provider(provider, key, **kwargs):
+    # type: (str, List[str], Union[str, List[str]]) -> MasterKeyProvider
     """Builds a master key provider using the supplied provider indicator and optional additional arguments.
 
     :param str provider: Provider indicator (may be known provider ID or classpath to class to use
@@ -79,6 +86,7 @@ def _build_master_key_provider(provider, key, **kwargs):
 
 
 def _assemble_master_key_providers(primary_provider, *providers):
+    # type: (MasterKeyProvider, MasterKeyProvider) -> MasterKeyProvider
     """Given one or more MasterKeyProvider instance, loads first MasterKeyProvider instance
     with all remaining MasterKeyProvider instances.
 
@@ -94,24 +102,33 @@ def _assemble_master_key_providers(primary_provider, *providers):
 
 
 def _parse_master_key_providers_from_args(*key_providers_info):
+    # type: (RAW_MASTER_KEY_PROVIDER_CONFIG) -> MasterKeyProvider
     """Parses the input key info from argparse and loads all key providers and key IDs.
 
     :param *key_providers_info: One or more dict containing key provider configuration (see _build_master_key_provider)
     :returns: MasterKeyProvider instance containing all referenced providers and keys
     :rtype: aws_encryption_sdk.key_providers.base.MasterKeyProvider
     """
-    key_providers = [
-        _build_master_key_provider(**provider_info)
-        for provider_info
-        in key_providers_info
-    ]
+    key_providers = []
+    for provider_info in key_providers_info:
+        info = copy.deepcopy(provider_info)
+        provider = str(info.pop('provider'))
+        key_ids = [str(key_id) for key_id in info.pop('key')]
+        key_providers.append(_build_master_key_provider(
+            provider=provider,
+            key=key_ids,
+            **info
+        ))
+
     return _assemble_master_key_providers(*key_providers)  # pylint: disable=no-value-for-parameter
 
 
 def build_crypto_materials_manager_from_args(key_providers_config, caching_config):
+    # type:(List[RAW_MASTER_KEY_PROVIDER_CONFIG], CACHING_CONFIG) -> aws_encryption_sdk.CachingCryptoMaterialsManager
     """Builds a cryptographic materials manager from the provided arguments.
 
     :param list key_providers_config: List of one or more dicts containing key provider configuration
+    :param dict caching_config: Parsed caching configuration
     :rtype: aws_encryption_sdk.materials_managers.base.CryptoMaterialsManager
     """
     caching_config = copy.deepcopy(caching_config)

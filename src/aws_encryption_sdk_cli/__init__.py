@@ -11,12 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """AWS Encryption SDK CLI."""
+from argparse import Namespace  # noqa pylint: disable=unused-import
 import copy
 import glob
 import logging
 import os
+from typing import Iterator, List, Optional, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
+from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
@@ -27,12 +30,14 @@ from aws_encryption_sdk_cli.internal.io_handling import (
 )
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
+from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 __all__ = ('cli', 'process_cli_request', 'stream_kwargs_from_args')
 
 
 def _expand_sources(source):
+    # type: (str) -> Iterator[str]
     """Expands source using pathname patterns.
     https://docs.python.org/3/library/glob.html
 
@@ -48,7 +53,16 @@ def _expand_sources(source):
     return all_sources
 
 
-def process_cli_request(stream_args, source, destination, recursive, interactive, no_overwrite, suffix=None):
+def process_cli_request(
+        stream_args,  # type: STREAM_KWARGS
+        source,  # type: str
+        destination,  # type: str
+        recursive,  # type: bool
+        interactive,  # type: bool
+        no_overwrite,  # type: bool
+        suffix=None  # type: Optional[str]
+):
+    # type: (...) -> None
     """Maps the operation request to the appropriate function based on the type of input and output provided.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -106,7 +120,7 @@ def process_cli_request(stream_args, source, destination, recursive, interactive
                 _destination = output_filename(
                     source_filename=_source,
                     destination_dir=_destination,
-                    mode=stream_args['mode'],
+                    mode=str(stream_args['mode']),
                     suffix=suffix
                 )
             # write to file
@@ -120,6 +134,7 @@ def process_cli_request(stream_args, source, destination, recursive, interactive
 
 
 def stream_kwargs_from_args(args, crypto_materials_manager):
+    # type: (Namespace, CryptoMaterialsManager) -> STREAM_KWARGS
     """Builds kwargs object for aws_encryption_sdk.stream based on argparse
     arguments and existing CryptoMaterialsManager.
 
@@ -148,6 +163,7 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
 
 
 def cli(raw_args=None):
+    # type: (List[str]) -> Union[str, None]
     """CLI entry point.  Processes arguments, sets up the key provider, and processes requested action.
 
     :returns: Execution return value intended for ``sys.exit()``
@@ -170,7 +186,7 @@ def cli(raw_args=None):
     stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
 
     try:
-        return process_cli_request(
+        process_cli_request(
             stream_args=stream_args,
             source=args.input,
             destination=args.output,
@@ -179,5 +195,6 @@ def cli(raw_args=None):
             no_overwrite=args.no_overwrite,
             suffix=args.suffix
         )
+        return None
     except BadUserArgumentError as error:
         return error.args[0]

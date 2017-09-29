@@ -12,6 +12,7 @@
 # language governing permissions and limitations under the License.
 """Arguments post-processors for known master key providers."""
 import copy
+from typing import Dict, List, Text, Union  # noqa pylint: disable=unused-import
 
 import botocore.session
 
@@ -19,6 +20,7 @@ from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 
 
 def nop_config(kwargs):
+    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
     """Stand-in NOP post-processor. Does not modify kwargs.
 
     :param dict kwargs: Named parameters collected from CLI arguments
@@ -29,6 +31,7 @@ def nop_config(kwargs):
 
 
 def kms_master_key_provider(kwargs):
+    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
     """Apply post-processing to transform KMSMasterKeyProvider-specific arguments from CLI arguments
     to class parameters.
 

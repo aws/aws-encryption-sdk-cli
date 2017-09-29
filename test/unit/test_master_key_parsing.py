@@ -191,13 +191,13 @@ def test_assemble_master_key_providers():
 
 def test_parse_master_key_providers_from_args(patch_build_master_key_provider, patch_assemble_master_key_providers):
     test = master_key_parsing._parse_master_key_providers_from_args(
-        {'a': sentinel.provider_info_1_a, 'b': sentinel.provider_info_1_b},
-        {'a': sentinel.provider_info_2_a, 'b': sentinel.provider_info_2_b}
+        {'provider': 'provider_1_a', 'key': ['provider_info_1_b']},
+        {'provider': 'provider_2_a', 'key': ['provider_info_2_b'], 'z': 'additional_z'}
     )
     patch_build_master_key_provider.assert_has_calls(
         calls=(
-            call(a=sentinel.provider_info_1_a, b=sentinel.provider_info_1_b),
-            call(a=sentinel.provider_info_2_a, b=sentinel.provider_info_2_b)
+            call(provider='provider_1_a', key=['provider_info_1_b']),
+            call(provider='provider_2_a', key=['provider_info_2_b'], z='additional_z')
         ),
         any_order=False
     )
