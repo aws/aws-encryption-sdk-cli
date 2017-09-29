@@ -155,8 +155,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     # algorithm
     algorithm_name = 'AES_128_GCM_IV12_TAG16'
     good_args.append((default_encrypt, 'algorithm', None))
-    for algorithm_flag in (' -a ', ' --algorithm '):
-        good_args.append((default_encrypt + algorithm_flag + algorithm_name, 'algorithm', algorithm_name))
+    good_args.append((default_encrypt + ' --algorithm ' + algorithm_name, 'algorithm', algorithm_name))
 
     # frame length
     good_args.append((default_encrypt, 'frame_length', None))

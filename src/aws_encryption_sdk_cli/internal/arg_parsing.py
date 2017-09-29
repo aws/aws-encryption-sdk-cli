@@ -120,7 +120,6 @@ def _build_parser():
     )
 
     parser.add_argument(
-        '-C',
         '--caching',
         nargs='+',
         required=False,
@@ -161,7 +160,6 @@ def _build_parser():
     )
 
     parser.add_argument(
-        '-a',
         '--algorithm',
         action=UniqueStoreAction,
         help='Algorithm name (encryption only)',
