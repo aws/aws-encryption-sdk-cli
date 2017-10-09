@@ -24,20 +24,20 @@ def nop_post_processing(kwargs):
     """Stand-in NOP post-processor. Does not modify kwargs.
 
     :param dict kwargs: Named parameters collected from CLI arguments
-    :returns: Unmodified kwargs
-    :rtype: dict of lists
+    :returns: Unmodified kwargs to pass directly to master key provider callable
+    :rtype: dict
     """
     return copy.deepcopy(kwargs)
 
 
 def kms_master_key_provider_post_processing(kwargs):
-    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
+    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, Union[List[Union[Text, str]], botocore.session.Session]]
     """Apply post-processing to transform KMSMasterKeyProvider-specific arguments from CLI arguments
     to class parameters.
 
     :param dict kwargs: Named parameters collected from CLI arguments
-    :returns: Updated kwargs
-    :rtype: dict of lists
+    :returns: Updated kwargs to pass directly to master key provider callable
+    :rtype: dict
     """
     kwargs = copy.deepcopy(kwargs)
     try:
