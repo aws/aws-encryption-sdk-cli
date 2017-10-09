@@ -18,7 +18,7 @@ from mock import MagicMock, sentinel
 import pytest
 
 import aws_encryption_sdk_cli
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 
 
 def patch_reactive_side_effect(kwargs):
@@ -411,8 +411,15 @@ def test_cli(patch_for_cli):
     assert test is None
 
 
-def test_cli_bad_user_input(patch_for_cli):
-    aws_encryption_sdk_cli.process_cli_request.side_effect = BadUserArgumentError(sentinel.error_message)
+def test_cli_local_error(patch_for_cli):
+    aws_encryption_sdk_cli.process_cli_request.side_effect = AWSEncryptionSDKCLIError(sentinel.error_message)
     test = aws_encryption_sdk_cli.cli()
 
     assert test is sentinel.error_message
+
+
+def test_cli_unknown_error(patch_for_cli):
+    aws_encryption_sdk_cli.process_cli_request.side_effect = Exception()
+    test = aws_encryption_sdk_cli.cli()
+
+    assert test == 'Encountered unexpected error'
