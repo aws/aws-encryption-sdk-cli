@@ -196,8 +196,8 @@ def test_parser_from_shell(argstring, attribute, value):
 
 
 @pytest.mark.parametrize('argstring, attribute, value', build_expected_good_args())
-def test_parser_fromfile(tmpdir_factory, argstring, attribute, value):
-    argfile = tmpdir_factory.mktemp('testing').join('argfile')
+def test_parser_fromfile(tmpdir, argstring, attribute, value):
+    argfile = tmpdir.join('argfile')
     argfile.write(argstring)
     parsed = arg_parsing.parse_args(['@{}'.format(argfile)])
     assert getattr(parsed, attribute) == value

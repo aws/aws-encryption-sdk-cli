@@ -43,10 +43,9 @@ def _aws_crypto_is_findable():
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_file_cycle(tmpdir):
-    base_dir = tmpdir.mkdir('test')
-    plaintext = base_dir.join('source_plaintext')
-    ciphertext = base_dir.join('ciphertext')
-    decrypted = base_dir.join('decrypted')
+    plaintext = tmpdir.join('source_plaintext')
+    ciphertext = tmpdir.join('ciphertext')
+    decrypted = tmpdir.join('decrypted')
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
@@ -67,10 +66,9 @@ def test_file_to_file_cycle(tmpdir):
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_file_cycle_with_caching(tmpdir):
-    base_dir = tmpdir.mkdir('test')
-    plaintext = base_dir.join('source_plaintext')
-    ciphertext = base_dir.join('ciphertext')
-    decrypted = base_dir.join('decrypted')
+    plaintext = tmpdir.join('source_plaintext')
+    ciphertext = tmpdir.join('ciphertext')
+    decrypted = tmpdir.join('decrypted')
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
@@ -91,11 +89,10 @@ def test_file_to_file_cycle_with_caching(tmpdir):
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_dir_cycle(tmpdir):
-    base_dir = tmpdir.mkdir('test')
-    inner_dir = base_dir.mkdir('inner')
-    plaintext = base_dir.join('source_plaintext')
+    inner_dir = tmpdir.mkdir('inner')
+    plaintext = tmpdir.join('source_plaintext')
     ciphertext = inner_dir.join('source_plaintext.encrypted')
-    decrypted = base_dir.join('decrypted')
+    decrypted = tmpdir.join('decrypted')
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
@@ -118,7 +115,7 @@ def test_file_to_dir_cycle(tmpdir):
 @pytest.mark.skipif(not _aws_crypto_is_findable(), reason='aws-crypto executable could not be found.')
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_stdin_to_file_to_stdout_cycle(tmpdir):
-    ciphertext_file = tmpdir.mkdir('test').join('ciphertext')
+    ciphertext_file = tmpdir.join('ciphertext')
     plaintext = os.urandom(1024)
 
     encrypt_args = 'aws-crypto ' + ENCRYPT_ARGS_TEMPLATE.format(
@@ -162,10 +159,9 @@ def test_stdin_stdout_stdin_stdout_cycle():
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_dir_to_dir_cycle(tmpdir):
-    base_dir = tmpdir.mkdir('test')
-    plaintext_dir = base_dir.mkdir('plaintext')
-    ciphertext_dir = base_dir.mkdir('ciphertext')
-    decrypted_dir = base_dir.mkdir('decrypted')
+    plaintext_dir = tmpdir.mkdir('plaintext')
+    ciphertext_dir = tmpdir.mkdir('ciphertext')
+    decrypted_dir = tmpdir.mkdir('decrypted')
     plaintext_dir.mkdir('a').mkdir('b')
     plaintext_dir.mkdir('c')
     for source_file_path in (['1'], ['a', '2'], ['a', 'b', '3'], ['c', '4']):
@@ -196,10 +192,9 @@ def test_dir_to_dir_cycle(tmpdir):
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_dir_to_dir_cycle_custom_suffix(tmpdir):
-    base_dir = tmpdir.mkdir('test')
-    plaintext_dir = base_dir.mkdir('plaintext')
-    ciphertext_dir = base_dir.mkdir('ciphertext')
-    decrypted_dir = base_dir.mkdir('decrypted')
+    plaintext_dir = tmpdir.mkdir('plaintext')
+    ciphertext_dir = tmpdir.mkdir('ciphertext')
+    decrypted_dir = tmpdir.mkdir('decrypted')
     plaintext_dir.mkdir('a').mkdir('b')
     plaintext_dir.mkdir('c')
     for source_file_path in (['1'], ['a', '2'], ['a', 'b', '3'], ['c', '4']):
@@ -232,10 +227,9 @@ def test_dir_to_dir_cycle_custom_suffix(tmpdir):
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_glob_to_dir_cycle(tmpdir):
-    base_dir = tmpdir.mkdir('test')
-    plaintext_dir = base_dir.mkdir('plaintext')
-    ciphertext_dir = base_dir.mkdir('ciphertext')
-    decrypted_dir = base_dir.mkdir('decrypted')
+    plaintext_dir = tmpdir.mkdir('plaintext')
+    ciphertext_dir = tmpdir.mkdir('ciphertext')
+    decrypted_dir = tmpdir.mkdir('decrypted')
     for source_file_path in ('a.1', 'b.2', 'b.1', 'c.1'):
         with open(os.path.join(str(plaintext_dir), source_file_path), 'wb') as file:
             file.write(os.urandom(1024))

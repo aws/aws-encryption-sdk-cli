@@ -118,7 +118,7 @@ def test_ensure_dir_exists_current_directory(patch_makedirs):
 
 def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
-    target_file = tmpdir.mkdir('test').join('target')
+    target_file = tmpdir.join('target')
     with open(str(target_file), 'wb') as destination_writer:
         io_handling._single_io_write(
             stream_args={
@@ -215,7 +215,7 @@ def test_process_single_operation_file_should_not_write(patch_for_process_single
     (True, True)
 ))
 def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
-    target = tmpdir.mkdir('test').join('target')
+    target = tmpdir.join('target')
     assert not os.path.exists(str(target))
     # Should always be true regardless of input if file does not exist
     assert io_handling._should_write_file(
@@ -235,7 +235,7 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     (False, False, None, True)  # interactive is not set, and no_overwrite is not set
 ))
 def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, result):
-    target_file = tmpdir.mkdir('test').join('target')
+    target_file = tmpdir.join('target')
     target_file.write(b'')
     patch_input.return_value = user_input
 
