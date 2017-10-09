@@ -44,9 +44,6 @@ class _BlacklistFilter(logging.Filter):  # pylint: disable=too-few-public-method
         :type record: logging.LogRecord
         :rtype: bool
         """
-        print(record.name)
-        print(self.__blacklist)
-        print(record.name in self.__blacklist)
         return record.name not in self.__blacklist
 
 
