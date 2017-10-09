@@ -19,7 +19,7 @@ from typing import Callable, List, Union  # noqa pylint: disable=unused-import
 import aws_encryption_sdk
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 
-from aws_encryption_sdk_cli.internal.args_post_processing import nop_config
+from aws_encryption_sdk_cli.internal.args_post_processing import nop_post_processing
 from aws_encryption_sdk_cli.internal.identifiers import KNOWN_MASTER_KEY_PROVIDERS
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
@@ -75,7 +75,7 @@ def _build_master_key_provider(provider, key, **kwargs):
         provider_post_processing = _callable_loader(provider_post_processing_path)
     except KeyError:
         provider_class_path = provider
-        provider_post_processing = nop_config
+        provider_post_processing = nop_post_processing
 
     provider_class = _callable_loader(provider_class_path)
     kwargs = provider_post_processing(kwargs)

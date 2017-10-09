@@ -19,7 +19,7 @@ import botocore.session
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 
 
-def nop_config(kwargs):
+def nop_post_processing(kwargs):
     # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
     """Stand-in NOP post-processor. Does not modify kwargs.
 
@@ -30,7 +30,7 @@ def nop_config(kwargs):
     return copy.deepcopy(kwargs)
 
 
-def kms_master_key_provider(kwargs):
+def kms_master_key_provider_post_processing(kwargs):
     # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
     """Apply post-processing to transform KMSMasterKeyProvider-specific arguments from CLI arguments
     to class parameters.

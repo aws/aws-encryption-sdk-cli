@@ -24,7 +24,8 @@ __version__ = '1.0.2'  # type: str
 KNOWN_MASTER_KEY_PROVIDERS = {
     'aws-kms': {
         'callable': 'aws_encryption_sdk.KMSMasterKeyProvider',
-        'post-processing': 'aws_encryption_sdk_cli.internal.args_post_processing.kms_master_key_provider'
+        'post-processing':
+            'aws_encryption_sdk_cli.internal.args_post_processing.kms_master_key_provider_post_processing'
     }
 }  # type: Dict[str, Dict[str, str]]
 #: Suffix added to output files if specific output filename is not specified.

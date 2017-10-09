@@ -32,8 +32,8 @@ def patch_botocore_session(mocker):
     yield args_post_processing.botocore.session.Session
 
 
-def test_nop_config(patch_deepcopy):
-    test = args_post_processing.nop_config(sentinel.kwargs)
+def test_nop_post_processing(patch_deepcopy):
+    test = args_post_processing.nop_post_processing(sentinel.kwargs)
 
     patch_deepcopy.assert_called_once_with(sentinel.kwargs)
     assert test == patch_deepcopy.return_value
@@ -62,12 +62,12 @@ def test_nop_config(patch_deepcopy):
         {'a': 'a thing', 'botocore_session': sentinel.botocore_session}
     )
 ))
-def test_kms_master_key_provider(patch_botocore_session, source, result):
-    assert args_post_processing.kms_master_key_provider(source) == result
+def test_kms_master_key_provider_post_processing(patch_botocore_session, source, result):
+    assert args_post_processing.kms_master_key_provider_post_processing(source) == result
 
 
-def test_kms_master_key_provider_botocore_session_call(patch_botocore_session):
-    args_post_processing.kms_master_key_provider(dict(
+def test_kms_master_key_provider_post_processing_botocore_session_call(patch_botocore_session):
+    args_post_processing.kms_master_key_provider_post_processing(dict(
         profile=['a profile name']
     ))
 
@@ -75,8 +75,8 @@ def test_kms_master_key_provider_botocore_session_call(patch_botocore_session):
 
 
 @pytest.mark.parametrize('profile_names', ([], [sentinel.a, sentinel.b]))
-def test_kms_master_key_provider_not_one_profile(patch_botocore_session, profile_names):
+def test_kms_master_key_provider_post_processing_not_one_profile(patch_botocore_session, profile_names):
     with pytest.raises(BadUserArgumentError) as excinfo:
-        args_post_processing.kms_master_key_provider(dict(profile=profile_names))
+        args_post_processing.kms_master_key_provider_post_processing(dict(profile=profile_names))
 
     excinfo.match(r'Only one profile may be specified per master key provider configuration. *')

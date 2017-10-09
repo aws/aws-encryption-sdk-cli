@@ -31,10 +31,10 @@ def patch_callable_loader(mocker):
 
 
 @pytest.yield_fixture
-def patch_nop_config(mocker):
-    mocker.patch.object(master_key_parsing, 'nop_config')
-    master_key_parsing.nop_config.side_effect = lambda x: x
-    yield master_key_parsing.nop_config
+def patch_nop_post_processing(mocker):
+    mocker.patch.object(master_key_parsing, 'nop_post_processing')
+    master_key_parsing.nop_post_processing.side_effect = lambda x: x
+    yield master_key_parsing.nop_post_processing
 
 
 @pytest.yield_fixture
@@ -131,13 +131,13 @@ def test_build_master_key_provider_known_provider(mocker, patch_callable_loader)
     assert test is mock_provider_callable.return_value
 
 
-def test_build_master_key_provider_unknown_key_provider(patch_callable_loader, patch_nop_config):
+def test_build_master_key_provider_unknown_key_provider(patch_callable_loader, patch_nop_post_processing):
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.unknown_provider_id,
         key=[],
         a=sentinel.a
     )
-    patch_nop_config.assert_called_once_with({'a': sentinel.a})
+    patch_nop_post_processing.assert_called_once_with({'a': sentinel.a})
     patch_callable_loader.assert_called_once_with(sentinel.unknown_provider_id)
     patch_callable_loader.return_value.assert_called_once_with(a=sentinel.a)
     assert test is patch_callable_loader.return_value.return_value
