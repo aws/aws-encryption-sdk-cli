@@ -153,11 +153,11 @@ def _should_write_file(filepath, interactive, no_overwrite):
             return False
         except IndexError:
             # No input is interpreted as 'do not overwrite'
-            _LOGGER.debug('Skipping existing target file based on interactive user decision: %s', filepath)
+            _LOGGER.warning('Skipping existing target file based on interactive user decision: %s', filepath)
             return False
 
     # If we get to this point, the file exists and we should overwrite it
-    _LOGGER.debug('Overwriting existing target file because no action was specified otherwise: %s', filepath)
+    _LOGGER.warning('Overwriting existing target file because no action was specified otherwise: %s', filepath)
     return True
 
 
