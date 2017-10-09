@@ -74,7 +74,7 @@ def process_cli_request(
     :param str suffix: Suffix to append to output filename (optional)
     :raises BadUserArgumentError: if called with source directory and not specified as recursive
     :raises BadUserArgumentError: if called with a source directory and a destination that is anything
-    other than a directory
+        other than a directory
     :raises BadUserArgumentError: if called with an unknown type of source
     """
     acting_as_pipe = destination == '-' and source == '-'

@@ -25,7 +25,7 @@ def nop_post_processing(kwargs):
 
     :param dict kwargs: Named parameters collected from CLI arguments
     :returns: Unmodified kwargs
-    :rtype: dict
+    :rtype: dict of lists
     """
     return copy.deepcopy(kwargs)
 
@@ -37,7 +37,7 @@ def kms_master_key_provider_post_processing(kwargs):
 
     :param dict kwargs: Named parameters collected from CLI arguments
     :returns: Updated kwargs
-    :rtype: dict
+    :rtype: dict of lists
     """
     kwargs = copy.deepcopy(kwargs)
     try:
