@@ -80,3 +80,11 @@ def test_kms_master_key_provider_post_processing_not_one_profile(patch_botocore_
         args_post_processing.kms_master_key_provider_post_processing(dict(profile=profile_names))
 
     excinfo.match(r'Only one profile may be specified per master key provider configuration. *')
+
+
+@pytest.mark.parametrize('regions', ([], [sentinel.a, sentinel.b]))
+def test_kms_master_key_provider_post_processing_not_one_region(patch_botocore_session, regions):
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        args_post_processing.kms_master_key_provider_post_processing(dict(region=regions))
+
+    excinfo.match(r'Only one region may be specified per master key provider configuration. *')

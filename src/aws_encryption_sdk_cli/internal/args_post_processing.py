@@ -53,6 +53,12 @@ def kms_master_key_provider_post_processing(kwargs):
         pass
     try:
         region_name = kwargs.pop('region')
+        if len(region_name) != 1:
+            raise BadUserArgumentError(
+                'Only one region may be specified per master key provider configuration. {} provided.'.format(
+                    len(region_name)
+                )
+            )
         kwargs['region_names'] = region_name
     except KeyError:
         pass
