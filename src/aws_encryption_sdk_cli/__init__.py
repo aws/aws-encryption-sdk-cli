@@ -53,6 +53,50 @@ def _expand_sources(source):
     return all_sources
 
 
+def _catch_bad_stdin_stdout_requests(source, destination, dest_is_dir):
+    # type: (str, str, bool) -> None
+    """Catches bad requests based on characteristics of source and destination when
+    source might be stdin or stdout.
+
+    :param str source: Identifier for the source (filesystem path or ``-`` for stdin)
+    :param str destination: Identifier for the destination (filesystem path or ``-`` for stdout)
+    :param bool dest_is_dir: Is destination an existing directory
+    :raises BadUserArgument: if source and destination are the same
+    :raises BadUserArgument: if source is stdin and destination is a directory
+    """
+    acting_as_pipe = destination == '-' and source == '-'
+    if destination == source and not acting_as_pipe:
+        raise BadUserArgumentError('Destination and source cannot be the same')
+
+    if source == '-' and dest_is_dir:
+        raise BadUserArgumentError('Destination may not be a directory when source is stdin')
+
+
+def _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir, recursive):
+    # type: (List[str], bool, bool) -> None
+    """Catches bad requests based on characteristics of source and destination when
+    source contains files or directories.
+
+    :param list expanded_sources: List of source paths
+    :param bool dest_is_dir: Is destination an existing directory
+    :param bool recursive: Should recurse over directories
+    :raises BadUserArgumentError: if source contains multiple files and destination is not an existing directory
+    :raises BadUserArgumentError: if source contains a directory and recursive is not True
+    :raises BadUserArgumentError: if source contains a directory and destination is not an existing directory
+    """
+    if len(expanded_sources) > 1 and not dest_is_dir:
+        raise BadUserArgumentError('If operating on multiple sources, destination must be an existing directory')
+
+    for _source in expanded_sources:
+        if os.path.isdir(_source):
+            if not recursive:
+                raise BadUserArgumentError('Must specify -r/-R/--recursive when operating on a source directory')
+            if not dest_is_dir:
+                raise BadUserArgumentError(
+                    'If operating on a source directory, destination must be an existing directory'
+                )
+
+
 def process_cli_request(
         stream_args,  # type: STREAM_KWARGS
         source,  # type: str
@@ -72,19 +116,11 @@ def process_cli_request(
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
     :param str suffix: Suffix to append to output filename (optional)
-    :raises BadUserArgumentError: if called with source directory and not specified as recursive
-    :raises BadUserArgumentError: if called with a source directory and a destination that is anything
-        other than a directory
-    :raises BadUserArgumentError: if called with an unknown type of source
     """
-    acting_as_pipe = destination == '-' and source == '-'
-    if destination == source and not acting_as_pipe:
-        raise BadUserArgumentError('Destination and source cannot be the same')
     dest_is_dir = os.path.isdir(destination)
+    _catch_bad_stdin_stdout_requests(source, destination, dest_is_dir)
 
     if source == '-':
-        if dest_is_dir:
-            raise BadUserArgumentError('Destination may not be a directory when source is stdin')
         # read from stdin
         process_single_operation(
             stream_args=stream_args,
@@ -95,16 +131,13 @@ def process_cli_request(
         )
         return
 
-    for _source in _expand_sources(source):
+    expanded_sources = _expand_sources(source)
+    _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir, recursive)
+
+    for _source in expanded_sources:
         _destination = copy.copy(destination)
 
         if os.path.isdir(_source):
-            if not recursive:
-                raise BadUserArgumentError('Must specify -r/-R/--recursive when operating on a source directory')
-            if not dest_is_dir:
-                raise BadUserArgumentError(
-                    'If operating on a source directory, destination must be an existing directory'
-                )
             process_dir(
                 stream_args=stream_args,
                 source=_source,
