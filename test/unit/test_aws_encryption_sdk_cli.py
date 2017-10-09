@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli``."""
+import os
+
 import aws_encryption_sdk
 from mock import MagicMock, sentinel
 import pytest
@@ -34,8 +36,8 @@ def patch_for_process_cli_request(mocker):
     aws_encryption_sdk_cli.output_filename.return_value = sentinel.destination_filename
     mocker.patch.object(aws_encryption_sdk_cli, 'process_single_file')
     mocker.patch.object(aws_encryption_sdk_cli, 'process_single_operation')
-    mocker.patch.object(aws_encryption_sdk_cli.glob, 'iglob')
-    aws_encryption_sdk_cli.glob.iglob.side_effect = lambda x: [x]
+    mocker.patch.object(aws_encryption_sdk_cli.glob, 'glob')
+    aws_encryption_sdk_cli.glob.glob.side_effect = lambda x: [x]
 
 
 def test_process_cli_request_source_is_destination(patch_for_process_cli_request):
@@ -223,17 +225,16 @@ def test_process_cli_request_source_file_destination_file(patch_for_process_cli_
     )
 
 
-def test_process_cli_request_invalid_source(patch_for_process_cli_request):
-    # using lambda side effect rather than return value to override patch_for_process_cli_request
-    aws_encryption_sdk_cli.glob.iglob.side_effect = lambda x: []
+def test_process_cli_request_invalid_source(tmpdir):
+    target = os.path.join(str(tmpdir), 'test_targets.*')
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
-            stream_args=sentinel.stream_args,
-            source=sentinel.source,
+            stream_args={},
+            source=target,
             destination='a specific destination',
             recursive=False,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            interactive=False,
+            no_overwrite=False
         )
     excinfo.match(r'Invalid source.  Must be a valid pathname pattern or stdin \(-\)')
 

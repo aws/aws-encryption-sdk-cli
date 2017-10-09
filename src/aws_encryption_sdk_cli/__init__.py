@@ -16,7 +16,7 @@ import copy
 import glob
 import logging
 import os
-from typing import Iterator, List, Optional, Union  # noqa pylint: disable=unused-import
+from typing import List, Optional, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
@@ -37,7 +37,7 @@ __all__ = ('cli', 'process_cli_request', 'stream_kwargs_from_args')
 
 
 def _expand_sources(source):
-    # type: (str) -> Iterator[str]
+    # type: (str) -> List[str]
     """Expands source using pathname patterns.
     https://docs.python.org/3/library/glob.html
 
@@ -45,7 +45,7 @@ def _expand_sources(source):
     :returns: List of source paths
     :rtype: list
     """
-    all_sources = glob.iglob(source)
+    all_sources = glob.glob(source)
     if not all_sources:
         raise BadUserArgumentError('Invalid source.  Must be a valid pathname pattern or stdin (-)')
     _LOGGER.debug('Requested source: %s', source)
