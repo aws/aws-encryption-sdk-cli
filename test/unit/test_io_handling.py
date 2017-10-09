@@ -225,7 +225,7 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     )
 
 
-@pytest.mark.parametrize('interactive, no_overwrite, user_input, result', (
+@pytest.mark.parametrize('interactive, no_overwrite, user_input, expected', (
     (False, True, None, False),  # no_overwrite is set
     (True, True, None, False),  # both interactive and no_overwrite are set
     (True, False, 'y', True),  # interactive is set, and approval input is provided
@@ -234,7 +234,7 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     (True, False, '', False),  # interactive is set, and no input is provided,
     (False, False, None, True)  # interactive is not set, and no_overwrite is not set
 ))
-def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, result):
+def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, expected):
     target_file = tmpdir.join('target')
     target_file.write(b'')
     patch_input.return_value = user_input
@@ -245,7 +245,7 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         no_overwrite=no_overwrite
     )
 
-    if result:
+    if expected:
         assert should_write
     else:
         assert not should_write

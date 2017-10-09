@@ -234,7 +234,7 @@ def test_parse_args_fail(args):
         arg_parsing.parse_args(shlex.split(args))
 
 
-@pytest.mark.parametrize('source, result', (
+@pytest.mark.parametrize('source, expected', (
     (
         ['a=b', 'c=d', 'e=f'],
         {'a': ['b'], 'c': ['d'], 'e': ['f']}
@@ -244,10 +244,10 @@ def test_parse_args_fail(args):
         {'a': ['b'], 'b': ['c', 'd']}
     )
 ))
-def test_parse_kwargs_good(source, result):
+def test_parse_kwargs_good(source, expected):
     test = arg_parsing._parse_kwargs(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_parse_kwargs_fail():
@@ -259,29 +259,29 @@ def test_parse_kwargs_fail():
 
 def test_collapse_config():
     source = {'a': ['b'], 'c': ['d'], 'e': ['f']}
-    result = {'a': 'b', 'c': 'd', 'e': 'f'}
+    expected = {'a': 'b', 'c': 'd', 'e': 'f'}
 
     test = arg_parsing._collapse_config(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_parse_and_collapse_config():
     source = ['key1=value1', 'key2=value2', 'key3=value3']
-    result = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
+    expected = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
 
     test = arg_parsing._parse_and_collapse_config(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_process_caching_config():
     source = ['capacity=3', 'max_messages_encrypted=55', 'max_bytes_encrypted=8', 'max_age=32']
-    result = {'capacity': 3, 'max_messages_encrypted': 55, 'max_bytes_encrypted': 8, 'max_age': 32.0}
+    expected = {'capacity': 3, 'max_messages_encrypted': 55, 'max_bytes_encrypted': 8, 'max_age': 32.0}
 
     test = arg_parsing._process_caching_config(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_process_caching_config_bad_key():
@@ -336,11 +336,11 @@ KEY_PROVIDER_CONFIGS.append(([['provider=aws-kms']], 'decrypt', [{'provider': 'a
 KEY_PROVIDER_CONFIGS.append(([['key=ex_key_1']], 'encrypt', [{'provider': 'aws-kms', 'key': ['ex_key_1']}]))
 
 
-@pytest.mark.parametrize('source, action, result', KEY_PROVIDER_CONFIGS)
-def test_process_master_key_provider_configs(source, action, result):
+@pytest.mark.parametrize('source, action, expected', KEY_PROVIDER_CONFIGS)
+def test_process_master_key_provider_configs(source, action, expected):
     test = arg_parsing._process_master_key_provider_configs(source, action)
 
-    assert test == result
+    assert test == expected
 
 
 def test_process_master_key_provider_configs_no_provider_on_encrypt():

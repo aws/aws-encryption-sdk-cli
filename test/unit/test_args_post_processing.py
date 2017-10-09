@@ -39,7 +39,7 @@ def test_nop_post_processing(patch_deepcopy):
     assert test == patch_deepcopy.return_value
 
 
-@pytest.mark.parametrize('source, result', (
+@pytest.mark.parametrize('source, expected', (
     ({}, {}),  # empty baseline
     (  # arbitrary non-empty baseline
         {'a': 'a thing', 'b': 'another thing'},
@@ -62,8 +62,8 @@ def test_nop_post_processing(patch_deepcopy):
         {'a': 'a thing', 'botocore_session': sentinel.botocore_session}
     )
 ))
-def test_kms_master_key_provider_post_processing(patch_botocore_session, source, result):
-    assert args_post_processing.kms_master_key_provider_post_processing(source) == result
+def test_kms_master_key_provider_post_processing(patch_botocore_session, source, expected):
+    assert args_post_processing.kms_master_key_provider_post_processing(source) == expected
 
 
 def test_kms_master_key_provider_post_processing_botocore_session_call(patch_botocore_session):
