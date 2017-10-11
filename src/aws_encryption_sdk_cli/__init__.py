@@ -198,7 +198,7 @@ def cli(raw_args=None):
         return None
     except AWSEncryptionSDKCLIError as error:
         return error.args[0]
-    except Exception:  # pylint: disable=broad-except
-        message = 'Encountered unexpected error'
+    except Exception as error:  # pylint: disable=broad-except
+        message = 'Encountered unexpected {}: increase verbosity to see details'.format(error.__class__.__name__)
         _LOGGER.exception(message)
         return message

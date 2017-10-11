@@ -422,4 +422,4 @@ def test_cli_unknown_error(patch_for_cli):
     aws_encryption_sdk_cli.process_cli_request.side_effect = Exception()
     test = aws_encryption_sdk_cli.cli()
 
-    assert test == 'Encountered unexpected error'
+    assert test.startswith('Encountered unexpected ')
