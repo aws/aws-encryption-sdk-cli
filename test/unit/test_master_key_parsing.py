@@ -31,6 +31,13 @@ def patch_callable_loader(mocker):
 
 
 @pytest.yield_fixture
+def patch_nop_post_processing(mocker):
+    mocker.patch.object(master_key_parsing, 'nop_post_processing')
+    master_key_parsing.nop_post_processing.side_effect = lambda x: x
+    yield master_key_parsing.nop_post_processing
+
+
+@pytest.yield_fixture
 def patch_build_master_key_provider(mocker):
     mocker.patch.object(master_key_parsing, '_build_master_key_provider')
     master_key_parsing._build_master_key_provider.side_effect = (
@@ -97,25 +104,42 @@ def test_callable_loader_json_decoder_success():
 
 
 def test_build_master_key_provider_known_provider(mocker, patch_callable_loader):
+    mock_provider_callable = MagicMock()
+    mock_post_processing = MagicMock(return_value={'c': sentinel.c})
+    patch_callable_loader.side_effect = (mock_post_processing, mock_provider_callable)
     mocker.patch.object(master_key_parsing, 'KNOWN_MASTER_KEY_PROVIDERS')
-    master_key_parsing.KNOWN_MASTER_KEY_PROVIDERS = {sentinel.known_provider_id: sentinel.known_provider_classpath}
+    master_key_parsing.KNOWN_MASTER_KEY_PROVIDERS = {sentinel.known_provider_id: {
+        'callable': sentinel.known_provider_classpath,
+        'post-processing': sentinel.known_provider_post_processing
+    }}
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.known_provider_id,
-        key=[]
+        key=[],
+        a=sentinel.a,
+        b=sentinel.b
     )
-    patch_callable_loader.assert_called_once_with(sentinel.known_provider_classpath)
-    patch_callable_loader.return_value.assert_called_once_with()
-    assert not patch_callable_loader.return_value.return_value.add_master_key.called
-    assert test is patch_callable_loader.return_value.return_value
+    patch_callable_loader.assert_has_calls(
+        calls=(
+            call(sentinel.known_provider_post_processing),
+            call(sentinel.known_provider_classpath)
+        ),
+        any_order=False
+    )
+    mock_post_processing.assert_called_once_with({'a': sentinel.a, 'b': sentinel.b})
+    mock_provider_callable.assert_called_once_with(c=sentinel.c)
+    assert not mock_provider_callable.return_value.add_master_key.called
+    assert test is mock_provider_callable.return_value
 
 
-def test_build_master_key_provider_unknown_key_provider(patch_callable_loader):
+def test_build_master_key_provider_unknown_key_provider(patch_callable_loader, patch_nop_post_processing):
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.unknown_provider_id,
-        key=[]
+        key=[],
+        a=sentinel.a
     )
+    patch_nop_post_processing.assert_called_once_with({'a': sentinel.a})
     patch_callable_loader.assert_called_once_with(sentinel.unknown_provider_id)
-    patch_callable_loader.return_value.assert_called_once_with()
+    patch_callable_loader.return_value.assert_called_once_with(a=sentinel.a)
     assert test is patch_callable_loader.return_value.return_value
 
 
@@ -167,13 +191,13 @@ def test_assemble_master_key_providers():
 
 def test_parse_master_key_providers_from_args(patch_build_master_key_provider, patch_assemble_master_key_providers):
     test = master_key_parsing._parse_master_key_providers_from_args(
-        {'a': sentinel.provider_info_1_a, 'b': sentinel.provider_info_1_b},
-        {'a': sentinel.provider_info_2_a, 'b': sentinel.provider_info_2_b}
+        {'provider': 'provider_1_a', 'key': ['provider_info_1_b']},
+        {'provider': 'provider_2_a', 'key': ['provider_info_2_b'], 'z': 'additional_z'}
     )
     patch_build_master_key_provider.assert_has_calls(
         calls=(
-            call(a=sentinel.provider_info_1_a, b=sentinel.provider_info_1_b),
-            call(a=sentinel.provider_info_2_a, b=sentinel.provider_info_2_b)
+            call(provider='provider_1_a', key=['provider_info_1_b']),
+            call(provider='provider_2_a', key=['provider_info_2_b'], z='additional_z')
         ),
         any_order=False
     )
@@ -211,7 +235,7 @@ def test_build_crypto_materials_manager_from_args_with_caching(
 
     patch_aws_encryption_sdk.LocalCryptoMaterialsCache.assert_called_once_with(capacity=5)
     patch_aws_encryption_sdk.CachingCryptoMaterialsManager.assert_called_once_with(
-        materials_manager=patch_aws_encryption_sdk.DefaultCryptoMaterialsManager.return_value,
+        backing_materials_manager=patch_aws_encryption_sdk.DefaultCryptoMaterialsManager.return_value,
         cache=patch_aws_encryption_sdk.LocalCryptoMaterialsCache.return_value,
         a='cache_config_a',
         b='cache_config_b'

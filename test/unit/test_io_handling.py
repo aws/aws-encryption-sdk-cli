@@ -50,8 +50,8 @@ def patch_for_process_single_operation(mocker):
 
 @pytest.yield_fixture
 def patch_input(mocker):
-    mocker.patch.object(io_handling, '_input')
-    yield io_handling._input
+    mocker.patch.object(io_handling.six.moves, 'input')
+    yield io_handling.six.moves.input
 
 
 @pytest.yield_fixture
@@ -79,13 +79,6 @@ def test_stdin():
         assert io_handling._stdin() is sys.stdin
     else:
         assert io_handling._stdin() is sys.stdin.buffer
-
-
-def test_input():
-    if six.PY3:
-        assert io_handling._input() is input
-    else:
-        assert io_handling._input() is raw_input  # noqa
 
 
 def test_file_exists_error():
@@ -125,7 +118,7 @@ def test_ensure_dir_exists_current_directory(patch_makedirs):
 
 def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
-    target_file = tmpdir.mkdir('test').join('target')
+    target_file = tmpdir.join('target')
     with open(str(target_file), 'wb') as destination_writer:
         io_handling._single_io_write(
             stream_args={
@@ -222,7 +215,7 @@ def test_process_single_operation_file_should_not_write(patch_for_process_single
     (True, True)
 ))
 def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
-    target = tmpdir.mkdir('test').join('target')
+    target = tmpdir.join('target')
     assert not os.path.exists(str(target))
     # Should always be true regardless of input if file does not exist
     assert io_handling._should_write_file(
@@ -232,7 +225,7 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     )
 
 
-@pytest.mark.parametrize('interactive, no_overwrite, user_input, result', (
+@pytest.mark.parametrize('interactive, no_overwrite, user_input, expected', (
     (False, True, None, False),  # no_overwrite is set
     (True, True, None, False),  # both interactive and no_overwrite are set
     (True, False, 'y', True),  # interactive is set, and approval input is provided
@@ -241,10 +234,10 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     (True, False, '', False),  # interactive is set, and no input is provided,
     (False, False, None, True)  # interactive is not set, and no_overwrite is not set
 ))
-def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, result):
-    target_file = tmpdir.mkdir('test').join('target')
+def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, expected):
+    target_file = tmpdir.join('target')
     target_file.write(b'')
-    patch_input.return_value.return_value = user_input
+    patch_input.return_value = user_input
 
     should_write = io_handling._should_write_file(
         filepath=str(target_file),
@@ -252,7 +245,7 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         no_overwrite=no_overwrite
     )
 
-    if result:
+    if expected:
         assert should_write
     else:
         assert not should_write
@@ -277,34 +270,52 @@ def test_process_single_file(patch_process_single_operation):
     )
 
 
-@pytest.mark.parametrize('source, destination, mode, output', (
+@pytest.mark.parametrize('source, destination, mode, suffix, output', (
     (
         os.path.join('source_dir', 'source_filename'),
         'destination_dir',
         'encrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.encrypted')
     ),
     (
         os.path.join('source_dir', 'source_filename.encrypted'),
         'destination_dir',
         'encrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.encrypted.encrypted')
     ),
     (
         os.path.join('source_dir', 'source_filename'),
         'destination_dir',
         'decrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.decrypted')
     ),
     (
         os.path.join('source_dir', 'source_filename.encrypted'),
         'destination_dir',
         'decrypt',
+        None,
         os.path.join('destination_dir', 'source_filename.encrypted.decrypted')
+    ),
+    (
+        os.path.join('source_dir', 'source_filename'),
+        'destination_dir',
+        'encrypt',
+        'CUSTOM_SUFFIX',
+        os.path.join('destination_dir', 'source_filenameCUSTOM_SUFFIX')
+    ),
+    (
+        os.path.join('source_dir', 'source_filename'),
+        'destination_dir',
+        'decrypt',
+        'CUSTOM_SUFFIX',
+        os.path.join('destination_dir', 'source_filenameCUSTOM_SUFFIX')
     )
 ))
-def test_output_filename(source, destination, mode, output):
-    assert io_handling.output_filename(source, destination, mode) == output
+def test_output_filename(source, destination, mode, suffix, output):
+    assert io_handling.output_filename(source, destination, mode, suffix) == output
 
 
 @pytest.mark.parametrize('source_root, destination_root, source_dir, output', (
@@ -358,7 +369,8 @@ def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream):
         source=str(source),
         destination=str(target),
         interactive=False,
-        no_overwrite=False
+        no_overwrite=False,
+        suffix=None
     )
 
     for filename, suffix in (

@@ -154,11 +154,19 @@ If multiple master keys are defined in the primary master key provider, the firs
    --master-keys provider=aws-kms key=$ALIAS_NAME region_names=us-west-2
    --master-keys provider=aws-kms key=$ALIAS_NAME region_names=eu-central-1
 
-Advanced Configuration
-``````````````````````
+AWS KMS Configuration
+`````````````````````
 If you want to use the ``aws-kms`` master key provider, you can either specify that
 as the provider or simply not specify a provider and allow the default value to be used.
 
+There are some configuration options which are unique to the ``aws-kms`` master key provider:
+
+* **profile** : Providing this configuration value will use the specified `named profile`_ credentials.
+* **region** : This allows you to specify the target region. If you provide both ``region`` and ``region_names``
+   values, ``region_names`` values will be discarded and ``region`` values will be used instead.
+
+Advanced Configuration
+``````````````````````
 If you want to use some other master key provider, that provider must be available in
 your local ``$PYTHONPATH`` as a callable (class or function) which will return the
 desired master key provider when called with the defined parameters. The value that
@@ -191,6 +199,18 @@ Allowed parameters:
 * **max_age** *(required)* :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_messages_encrypted** :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can encrypt.
+
+
+Logging and Verbosity
+---------------------
+The ``-v`` argument allows you to tune the verbosity of the built-in logging to your desired level.
+In short, the more ``-v`` arguments you supply, the more verbose the output gets.
+
+* default : aws-encryption-sdk-cli logs all warnings, all dependencies only log critical messages
+* ``-v`` :  aws-encryption-sdk-cli performs moderate logging, all dependencies only log critical messages
+* ``-vv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies only log critical messages
+* ``-vvv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies perform moderate logging
+* ``-vvvv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies perform detailed logging
 
 
 Configuration Files
@@ -288,8 +308,9 @@ Execution
 
 .. code-block:: sh
 
-   usage: aws-crypto [-h] (-e | -d) -m MASTER_KEYS [MASTER_KEYS ...] [-C CACHING [CACHING ...]]
-                     [-i INPUT] [-o OUTPUT]
+   usage: aws-crypto [-h] (--version | [-e | -d]
+                     [-m MASTER_KEYS [MASTER_KEYS ...]]
+                     [-C CACHING [CACHING ...]] -i INPUT -o OUTPUT
                      [-c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]]
                      [-a {
                         AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
@@ -355,8 +376,10 @@ Execution
                            overwriting existing files
      --no-overwrite        Never overwrite existing files
      -r, -R, --recursive   Allow operation on directories as input
-     -v                    Sets logging level: -v == WARN, -vv == INFO, -vvv ==
-                           DEBUG
+     -v                    Enables logging and sets detail level. Multiple -v
+                           options increases verbosity (max: 4).
+     -q, --quiet           Suppresses most warning and diagnostic messages
+
 
    For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
 
@@ -370,3 +393,4 @@ Execution
 .. _KMSMasterKeyProvider: http://aws-encryption-sdk-python.readthedocs.io/en/latest/generated/aws_encryption_sdk.key_providers.kms.html#aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
 .. _Carbon: https://www.powershellgallery.com/packages/Carbon
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
+.. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html

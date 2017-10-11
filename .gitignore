@@ -12,5 +12,6 @@ dist
 .tox
 .cache
 .python-version
+.mypy_cache
 build
 test/integration/integration_tests.conf

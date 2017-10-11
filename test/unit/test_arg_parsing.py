@@ -155,8 +155,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     # algorithm
     algorithm_name = 'AES_128_GCM_IV12_TAG16'
     good_args.append((default_encrypt, 'algorithm', None))
-    for algorithm_flag in (' -a ', ' --algorithm '):
-        good_args.append((default_encrypt + algorithm_flag + algorithm_name, 'algorithm', algorithm_name))
+    good_args.append((default_encrypt + ' --algorithm ' + algorithm_name, 'algorithm', algorithm_name))
 
     # frame length
     good_args.append((default_encrypt, 'frame_length', None))
@@ -166,6 +165,17 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     good_args.append((default_encrypt, 'max_length', None))
     good_args.append((default_encrypt + ' --max-length 99', 'max_length', 99))
 
+    # interactive
+    good_args.append((default_encrypt, 'interactive', False))
+    good_args.append((default_encrypt + ' --interactive', 'interactive', True))
+
+    # no-overwrite
+    good_args.append((default_encrypt, 'no_overwrite', False))
+    good_args.append((default_encrypt + ' --no-overwrite', 'no_overwrite', True))
+
+    # suffix
+    good_args.append((default_encrypt + ' --suffix .MY_SPECIAL_SUFFIX', 'suffix', '.MY_SPECIAL_SUFFIX'))
+
     # recursive
     good_args.append((default_encrypt, 'recursive', False))
     for recursive_flag in (' -r', ' -R', ' --recursive'):
@@ -173,7 +183,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
 
     # logging verbosity
     good_args.append((default_encrypt, 'verbosity', None))
-    for count in (1, 2, 3):
+    for count in (1, 2, 3, 4):
         good_args.append((default_encrypt + ' -' + 'v' * count, 'verbosity', count))
 
     return good_args
@@ -186,8 +196,8 @@ def test_parser_from_shell(argstring, attribute, value):
 
 
 @pytest.mark.parametrize('argstring, attribute, value', build_expected_good_args())
-def test_parser_fromfile(tmpdir_factory, argstring, attribute, value):
-    argfile = tmpdir_factory.mktemp('testing').join('argfile')
+def test_parser_fromfile(tmpdir, argstring, attribute, value):
+    argfile = tmpdir.join('argfile')
     argfile.write(argstring)
     parsed = arg_parsing.parse_args(['@{}'.format(argfile)])
     assert getattr(parsed, attribute) == value
@@ -209,7 +219,8 @@ def build_bad_multiple_arguments():
         ' --encryption-context key=value',
         ' --algorithm ALGORITHM',
         ' --frame-length 256',
-        ' --max-length 1024'
+        ' --max-length 1024',
+        ' --suffix .MY_SPECIAL_SUFFIX'
     ]
     return [
         prefix + arg + arg
@@ -223,7 +234,7 @@ def test_parse_args_fail(args):
         arg_parsing.parse_args(shlex.split(args))
 
 
-@pytest.mark.parametrize('source, result', (
+@pytest.mark.parametrize('source, expected', (
     (
         ['a=b', 'c=d', 'e=f'],
         {'a': ['b'], 'c': ['d'], 'e': ['f']}
@@ -233,10 +244,10 @@ def test_parse_args_fail(args):
         {'a': ['b'], 'b': ['c', 'd']}
     )
 ))
-def test_parse_kwargs_good(source, result):
+def test_parse_kwargs_good(source, expected):
     test = arg_parsing._parse_kwargs(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_parse_kwargs_fail():
@@ -248,29 +259,29 @@ def test_parse_kwargs_fail():
 
 def test_collapse_config():
     source = {'a': ['b'], 'c': ['d'], 'e': ['f']}
-    result = {'a': 'b', 'c': 'd', 'e': 'f'}
+    expected = {'a': 'b', 'c': 'd', 'e': 'f'}
 
     test = arg_parsing._collapse_config(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_parse_and_collapse_config():
     source = ['key1=value1', 'key2=value2', 'key3=value3']
-    result = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
+    expected = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
 
     test = arg_parsing._parse_and_collapse_config(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_process_caching_config():
     source = ['capacity=3', 'max_messages_encrypted=55', 'max_bytes_encrypted=8', 'max_age=32']
-    result = {'capacity': 3, 'max_messages_encrypted': 55, 'max_bytes_encrypted': 8, 'max_age': 32.0}
+    expected = {'capacity': 3, 'max_messages_encrypted': 55, 'max_bytes_encrypted': 8, 'max_age': 32.0}
 
     test = arg_parsing._process_caching_config(source)
 
-    assert test == result
+    assert test == expected
 
 
 def test_process_caching_config_bad_key():
@@ -325,11 +336,18 @@ KEY_PROVIDER_CONFIGS.append(([['provider=aws-kms']], 'decrypt', [{'provider': 'a
 KEY_PROVIDER_CONFIGS.append(([['key=ex_key_1']], 'encrypt', [{'provider': 'aws-kms', 'key': ['ex_key_1']}]))
 
 
-@pytest.mark.parametrize('source, action, result', KEY_PROVIDER_CONFIGS)
-def test_process_master_key_provider_configs(source, action, result):
+@pytest.mark.parametrize('source, action, expected', KEY_PROVIDER_CONFIGS)
+def test_process_master_key_provider_configs(source, action, expected):
     test = arg_parsing._process_master_key_provider_configs(source, action)
 
-    assert test == result
+    assert test == expected
+
+
+def test_process_master_key_provider_configs_no_provider_on_encrypt():
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_master_key_provider_configs(None, 'encrypt')
+
+    excinfo.match(r'No master key provider configuration found.')
 
 
 def test_process_master_key_provider_configs_not_exactly_one_provider():

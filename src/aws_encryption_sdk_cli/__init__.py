@@ -11,25 +11,58 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """AWS Encryption SDK CLI."""
+from argparse import Namespace  # noqa pylint: disable=unused-import
+import copy
+import glob
 import logging
 import os
+from typing import List, Optional, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
+from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
 # convenience import separated from other imports from this module to avoid over-application of linting override
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
-from aws_encryption_sdk_cli.internal.identifiers import LOGGER_NAME, LOGGING_LEVELS, MAX_LOGGING_LEVEL
 from aws_encryption_sdk_cli.internal.io_handling import (
     output_filename, process_dir, process_single_file, process_single_operation
 )
+from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
+from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
+__all__ = ('cli', 'process_cli_request', 'stream_kwargs_from_args')
 
 
-def process_cli_request(stream_args, source, destination, recursive, interactive, no_overwrite):
+def _expand_sources(source):
+    # type: (str) -> List[str]
+    """Expands source using pathname patterns.
+    https://docs.python.org/3/library/glob.html
+
+    :param str source: Source pattern
+    :returns: List of source paths
+    :rtype: list
+    """
+    all_sources = glob.glob(source)
+    if not all_sources:
+        raise BadUserArgumentError('Invalid source.  Must be a valid pathname pattern or stdin (-)')
+    _LOGGER.debug('Requested source: %s', source)
+    _LOGGER.debug('Expanded source: %s', all_sources)
+    return all_sources
+
+
+def process_cli_request(
+        stream_args,  # type: STREAM_KWARGS
+        source,  # type: str
+        destination,  # type: str
+        recursive,  # type: bool
+        interactive,  # type: bool
+        no_overwrite,  # type: bool
+        suffix=None  # type: Optional[str]
+):
+    # type: (...) -> None
     """Maps the operation request to the appropriate function based on the type of input and output provided.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -38,31 +71,16 @@ def process_cli_request(stream_args, source, destination, recursive, interactive
     :param bool recursive: Should recurse over directories
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
+    :param str suffix: Suffix to append to output filename (optional)
     :raises BadUserArgumentError: if called with source directory and not specified as recursive
     :raises BadUserArgumentError: if called with a source directory and a destination that is anything
-    other than a directory
+        other than a directory
     :raises BadUserArgumentError: if called with an unknown type of source
     """
     acting_as_pipe = destination == '-' and source == '-'
     if destination == source and not acting_as_pipe:
         raise BadUserArgumentError('Destination and source cannot be the same')
-
-    source_is_dir = os.path.isdir(source)
     dest_is_dir = os.path.isdir(destination)
-
-    if source_is_dir:
-        if not recursive:
-            raise BadUserArgumentError('Must specify -r/-R/--recursive when operating on a source directory')
-        if not dest_is_dir:
-            raise BadUserArgumentError('If operating on a source directory, destination must be an existing directory')
-        process_dir(
-            stream_args=stream_args,
-            source=source,
-            destination=destination,
-            interactive=interactive,
-            no_overwrite=no_overwrite
-        )
-        return
 
     if source == '-':
         if dest_is_dir:
@@ -77,27 +95,46 @@ def process_cli_request(stream_args, source, destination, recursive, interactive
         )
         return
 
-    if os.path.isfile(source):
-        if dest_is_dir:
-            # create new filename
-            destination = output_filename(
-                source_filename=source,
-                destination_dir=destination,
-                mode=stream_args['mode']
+    for _source in _expand_sources(source):
+        _destination = copy.copy(destination)
+
+        if os.path.isdir(_source):
+            if not recursive:
+                raise BadUserArgumentError('Must specify -r/-R/--recursive when operating on a source directory')
+            if not dest_is_dir:
+                raise BadUserArgumentError(
+                    'If operating on a source directory, destination must be an existing directory'
+                )
+            process_dir(
+                stream_args=stream_args,
+                source=_source,
+                destination=_destination,
+                interactive=interactive,
+                no_overwrite=no_overwrite,
+                suffix=suffix
             )
-        # write to file
-        process_single_file(
-            stream_args=stream_args,
-            source=source,
-            destination=destination,
-            interactive=interactive,
-            no_overwrite=no_overwrite
-        )
-        return
-    raise BadUserArgumentError('Invalid source.  Must be a filename, directory, or stdin (-)')
+
+        elif os.path.isfile(_source):
+            if dest_is_dir:
+                # create new filename
+                _destination = output_filename(
+                    source_filename=_source,
+                    destination_dir=_destination,
+                    mode=str(stream_args['mode']),
+                    suffix=suffix
+                )
+            # write to file
+            process_single_file(
+                stream_args=stream_args,
+                source=_source,
+                destination=_destination,
+                interactive=interactive,
+                no_overwrite=no_overwrite
+            )
 
 
 def stream_kwargs_from_args(args, crypto_materials_manager):
+    # type: (Namespace, CryptoMaterialsManager) -> STREAM_KWARGS
     """Builds kwargs object for aws_encryption_sdk.stream based on argparse
     arguments and existing CryptoMaterialsManager.
 
@@ -126,21 +163,20 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
 
 
 def cli(raw_args=None):
+    # type: (List[str]) -> Union[str, None]
     """CLI entry point.  Processes arguments, sets up the key provider, and processes requested action.
 
     :returns: Execution return value intended for ``sys.exit()``
     """
     args = parse_args(raw_args)
 
-    logging_args = {}
-    if args.verbosity is not None and args.verbosity > 0:
-        logging_args['level'] = LOGGING_LEVELS[min(args.verbosity, MAX_LOGGING_LEVEL)]
-    logging.basicConfig(**logging_args)
+    setup_logger(args.verbosity, args.quiet)
 
     _LOGGER.debug('Encryption mode: %s', args.action)
     _LOGGER.debug('Encryption source: %s', args.input)
     _LOGGER.debug('Encryption destination: %s', args.output)
     _LOGGER.debug('Master key provider configuration: %s', args.master_keys)
+    _LOGGER.debug('Suffix requested: %s', args.suffix)
 
     crypto_materials_manager = build_crypto_materials_manager_from_args(
         key_providers_config=args.master_keys,
@@ -150,13 +186,15 @@ def cli(raw_args=None):
     stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
 
     try:
-        return process_cli_request(
+        process_cli_request(
             stream_args=stream_args,
             source=args.input,
             destination=args.output,
             recursive=args.recursive,
             interactive=args.interactive,
-            no_overwrite=args.no_overwrite
+            no_overwrite=args.no_overwrite,
+            suffix=args.suffix
         )
+        return None
     except BadUserArgumentError as error:
         return error.args[0]
