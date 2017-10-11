@@ -23,7 +23,8 @@ def nop_post_processing(kwargs):
     # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
     """Stand-in NOP post-processor. Does not modify kwargs.
 
-    :param dict kwargs: Named parameters collected from CLI arguments
+    :param dict kwargs: Named parameters collected from CLI arguments as prepared
+        in aws_encryption_sdk_cli.internal.master_key_parsing._parse_master_key_providers_from_args
     :returns: Unmodified kwargs
     :rtype: dict of lists
     """
@@ -35,7 +36,8 @@ def kms_master_key_provider_post_processing(kwargs):
     """Apply post-processing to transform KMSMasterKeyProvider-specific arguments from CLI arguments
     to class parameters.
 
-    :param dict kwargs: Named parameters collected from CLI arguments
+    :param dict kwargs: Named parameters collected from CLI arguments as prepared
+        in aws_encryption_sdk_cli.internal.master_key_parsing._parse_master_key_providers_from_args
     :returns: Updated kwargs
     :rtype: dict of lists
     """
