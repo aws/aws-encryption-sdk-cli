@@ -32,7 +32,7 @@ def nop_post_processing(kwargs):
 
 
 def kms_master_key_provider_post_processing(kwargs):
-    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
+    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, Union[List[Union[Text, str]], botocore.session.Session]]
     """Apply post-processing to transform KMSMasterKeyProvider-specific arguments from CLI arguments
     to class parameters.
 
