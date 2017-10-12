@@ -14,7 +14,7 @@
 import os
 
 import aws_encryption_sdk
-from mock import MagicMock, sentinel
+from mock import ANY, call, MagicMock, sentinel
 import pytest
 
 import aws_encryption_sdk_cli
@@ -27,14 +27,24 @@ def patch_reactive_side_effect(kwargs):
     return _check
 
 
+@pytest.yield_fixture
+def patch_process_dir(mocker):
+    mocker.patch.object(aws_encryption_sdk_cli, 'process_dir')
+    yield aws_encryption_sdk_cli.process_dir
+
+
+@pytest.yield_fixture
+def patch_process_single_file(mocker):
+    mocker.patch.object(aws_encryption_sdk_cli, 'process_single_file')
+    yield aws_encryption_sdk_cli.process_single_file
+
+
 @pytest.fixture
-def patch_for_process_cli_request(mocker):
+def patch_for_process_cli_request(mocker, patch_process_dir, patch_process_single_file):
     mocker.patch.object(aws_encryption_sdk_cli.os.path, 'isdir')
     mocker.patch.object(aws_encryption_sdk_cli.os.path, 'isfile')
-    mocker.patch.object(aws_encryption_sdk_cli, 'process_dir')
     mocker.patch.object(aws_encryption_sdk_cli, 'output_filename')
     aws_encryption_sdk_cli.output_filename.return_value = sentinel.destination_filename
-    mocker.patch.object(aws_encryption_sdk_cli, 'process_single_file')
     mocker.patch.object(aws_encryption_sdk_cli, 'process_single_operation')
     mocker.patch.object(aws_encryption_sdk_cli.glob, 'glob')
     aws_encryption_sdk_cli.glob.glob.side_effect = lambda x: [x]
@@ -58,16 +68,18 @@ def test_process_cli_request_source_dir_nonrecursive(patch_for_process_cli_reque
         sentinel.source: True,
         sentinel.destination: True
     })
-    with pytest.raises(BadUserArgumentError) as excinfo:
-        aws_encryption_sdk_cli.process_cli_request(
-            stream_args=sentinel.stream_args,
-            source=sentinel.source,
-            destination=sentinel.destination,
-            recursive=False,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
-        )
-    excinfo.match(r'Must specify -r/-R/--recursive when operating on a source directory')
+    aws_encryption_sdk_cli.process_cli_request(
+        stream_args=sentinel.stream_args,
+        source=sentinel.source,
+        destination=sentinel.destination,
+        recursive=False,
+        interactive=sentinel.interactive,
+        no_overwrite=sentinel.no_overwrite
+    )
+
+    assert not aws_encryption_sdk_cli.process_single_operation.called
+    assert not aws_encryption_sdk_cli.process_dir.called
+    assert not aws_encryption_sdk_cli.process_single_file.called
 
 
 def test_process_cli_request_source_dir_destination_nondir(patch_for_process_cli_request):
@@ -237,6 +249,70 @@ def test_process_cli_request_invalid_source(tmpdir):
             no_overwrite=False
         )
     excinfo.match(r'Invalid source.  Must be a valid pathname pattern or stdin \(-\)')
+
+
+def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_process_dir, patch_process_single_file):
+    plaintext_dir = tmpdir.mkdir('plaintext')
+    test_file = plaintext_dir.join('testing.aa')
+    test_file.write(b'some data here!')
+    test_file = plaintext_dir.join('testing.bb')
+    test_file.write(b'some data here!')
+    ciphertext_dir = tmpdir.mkdir('ciphertext')
+    target_file = ciphertext_dir.join('target_file')
+    source = os.path.join(str(plaintext_dir), 'testing.*')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli.process_cli_request(
+            stream_args={'mode': 'encrypt'},
+            source=source,
+            destination=str(target_file),
+            recursive=False,
+            interactive=False,
+            no_overwrite=False
+        )
+
+    excinfo.match('If operating on multiple sources, destination must be an existing directory')
+    assert not patch_process_dir.called
+    assert not patch_process_single_file.called
+
+
+def test_process_cli_request_source_contains_directory_nonrecursive(
+        tmpdir,
+        patch_process_dir,
+        patch_process_single_file
+):
+    plaintext_dir = tmpdir.mkdir('plaintext')
+    test_file_a = plaintext_dir.join('testing.aa')
+    test_file_a.write(b'some data here!')
+    test_file_c = plaintext_dir.join('testing.cc')
+    test_file_c.write(b'some data here!')
+    plaintext_dir.mkdir('testing.bb')
+    ciphertext_dir = tmpdir.mkdir('ciphertext')
+    source = os.path.join(str(plaintext_dir), 'testing.*')
+
+    aws_encryption_sdk_cli.process_cli_request(
+        stream_args={'mode': 'encrypt'},
+        source=source,
+        destination=str(ciphertext_dir),
+        recursive=False,
+        interactive=False,
+        no_overwrite=False
+    )
+
+    assert not patch_process_dir.called
+    patch_process_single_file.assert_has_calls(
+        calls=[
+            call(
+                stream_args={'mode': 'encrypt'},
+                source=str(source_file),
+                destination=ANY,
+                interactive=False,
+                no_overwrite=False
+            )
+            for source_file in (test_file_a, test_file_c)
+        ],
+        any_order=True
+    )
 
 
 @pytest.mark.parametrize('args, stream_args', (
