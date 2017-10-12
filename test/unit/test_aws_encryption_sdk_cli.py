@@ -14,7 +14,7 @@
 import os
 
 import aws_encryption_sdk
-from mock import MagicMock, sentinel
+from mock import ANY, call, MagicMock, sentinel
 import pytest
 
 import aws_encryption_sdk_cli
@@ -68,16 +68,18 @@ def test_process_cli_request_source_dir_nonrecursive(patch_for_process_cli_reque
         sentinel.source: True,
         sentinel.destination: True
     })
-    with pytest.raises(BadUserArgumentError) as excinfo:
-        aws_encryption_sdk_cli.process_cli_request(
-            stream_args=sentinel.stream_args,
-            source=sentinel.source,
-            destination=sentinel.destination,
-            recursive=False,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
-        )
-    excinfo.match(r'Must specify -r/-R/--recursive when operating on a source directory')
+    aws_encryption_sdk_cli.process_cli_request(
+        stream_args=sentinel.stream_args,
+        source=sentinel.source,
+        destination=sentinel.destination,
+        recursive=False,
+        interactive=sentinel.interactive,
+        no_overwrite=sentinel.no_overwrite
+    )
+
+    assert not aws_encryption_sdk_cli.process_single_operation.called
+    assert not aws_encryption_sdk_cli.process_dir.called
+    assert not aws_encryption_sdk_cli.process_single_file.called
 
 
 def test_process_cli_request_source_dir_destination_nondir(patch_for_process_cli_request):
@@ -280,25 +282,37 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
         patch_process_single_file
 ):
     plaintext_dir = tmpdir.mkdir('plaintext')
-    test_file = plaintext_dir.join('testing.aa')
-    test_file.write(b'some data here!')
+    test_file_a = plaintext_dir.join('testing.aa')
+    test_file_a.write(b'some data here!')
+    test_file_c = plaintext_dir.join('testing.cc')
+    test_file_c.write(b'some data here!')
     plaintext_dir.mkdir('testing.bb')
     ciphertext_dir = tmpdir.mkdir('ciphertext')
     source = os.path.join(str(plaintext_dir), 'testing.*')
 
-    with pytest.raises(BadUserArgumentError) as excinfo:
-        aws_encryption_sdk_cli.process_cli_request(
-            stream_args={'mode': 'encrypt'},
-            source=source,
-            destination=str(ciphertext_dir),
-            recursive=False,
-            interactive=False,
-            no_overwrite=False
-        )
+    aws_encryption_sdk_cli.process_cli_request(
+        stream_args={'mode': 'encrypt'},
+        source=source,
+        destination=str(ciphertext_dir),
+        recursive=False,
+        interactive=False,
+        no_overwrite=False
+    )
 
-    excinfo.match('Must specify -r/-R/--recursive when operating on a source directory')
     assert not patch_process_dir.called
-    assert not patch_process_single_file.called
+    patch_process_single_file.assert_has_calls(
+        calls=[
+            call(
+                stream_args={'mode': 'encrypt'},
+                source=str(source_file),
+                destination=ANY,
+                interactive=False,
+                no_overwrite=False
+            )
+            for source_file in (test_file_a, test_file_c)
+        ],
+        any_order=True
+    )
 
 
 @pytest.mark.parametrize('args, stream_args', (

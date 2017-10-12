@@ -72,16 +72,14 @@ def _catch_bad_stdin_stdout_requests(source, destination, dest_is_dir):
         raise BadUserArgumentError('Destination may not be a directory when source is stdin')
 
 
-def _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir, recursive):
-    # type: (List[str], bool, bool) -> None
+def _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir):
+    # type: (List[str], bool) -> None
     """Catches bad requests based on characteristics of source and destination when
     source contains files or directories.
 
     :param list expanded_sources: List of source paths
     :param bool dest_is_dir: Is destination an existing directory
-    :param bool recursive: Should recurse over directories
     :raises BadUserArgumentError: if source contains multiple files and destination is not an existing directory
-    :raises BadUserArgumentError: if source contains a directory and recursive is not True
     :raises BadUserArgumentError: if source contains a directory and destination is not an existing directory
     """
     if len(expanded_sources) > 1 and not dest_is_dir:
@@ -89,8 +87,6 @@ def _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir, recurs
 
     for _source in expanded_sources:
         if os.path.isdir(_source):
-            if not recursive:
-                raise BadUserArgumentError('Must specify -r/-R/--recursive when operating on a source directory')
             if not dest_is_dir:
                 raise BadUserArgumentError(
                     'If operating on a source directory, destination must be an existing directory'
@@ -132,12 +128,15 @@ def process_cli_request(
         return
 
     expanded_sources = _expand_sources(source)
-    _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir, recursive)
+    _catch_bad_file_and_directory_requests(expanded_sources, dest_is_dir)
 
     for _source in expanded_sources:
         _destination = copy.copy(destination)
 
         if os.path.isdir(_source):
+            if not recursive:
+                _LOGGER.warning('Skipping %s because it is a directory and -r/-R/--recursive is not set', _source)
+                continue
             process_dir(
                 stream_args=stream_args,
                 source=_source,
