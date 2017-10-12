@@ -278,6 +278,13 @@ references to other configuration files.
 
    aws-crypto @my-encrypt -i $INPUT -o $OUTPUT
 
+Errors
+------
+If an unexpected exception is raised during processing, "Encountered unexpected error" will be output on exit.
+
+If you see this message and want to see the exception that was raised, increase the verbosity to at least 1 (ie: `-v`)
+and the exception and stacktrace will be shown.
+
 Encoding Output
 ---------------
 If you want to output to ``stdout``, chances are good that you might want to encode that output.

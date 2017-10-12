@@ -21,7 +21,7 @@ from typing import List, Optional, Union  # noqa pylint: disable=unused-import
 import aws_encryption_sdk
 from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
 # convenience import separated from other imports from this module to avoid over-application of linting override
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
@@ -196,5 +196,9 @@ def cli(raw_args=None):
             suffix=args.suffix
         )
         return None
-    except BadUserArgumentError as error:
+    except AWSEncryptionSDKCLIError as error:
         return error.args[0]
+    except Exception as error:  # pylint: disable=broad-except
+        message = 'Encountered unexpected {}: increase verbosity to see details'.format(error.__class__.__name__)
+        _LOGGER.exception(message)
+        return message
