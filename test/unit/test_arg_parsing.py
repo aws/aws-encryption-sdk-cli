@@ -175,6 +175,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
 
     # suffix
     good_args.append((default_encrypt + ' --suffix .MY_SPECIAL_SUFFIX', 'suffix', '.MY_SPECIAL_SUFFIX'))
+    good_args.append((default_encrypt + ' --suffix', 'suffix', ''))
 
     # recursive
     good_args.append((default_encrypt, 'recursive', False))
