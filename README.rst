@@ -275,6 +275,8 @@ Configuration files are supported using Python's native `argparse file support`_
 you to write configuration files exactly as you would enter arguments in the shell. Configuration
 file references passed to ``aws-crypto`` are identified by the ``@`` prefix and the contents are
 expanded as if you had included them in line. Configuration files can have any name you desire.
+NOTE: in PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
+rather than interpretted by PowerShell.
 
 For example, if I wanted to use a common master key configuration for all of my calls, I could
 create a file ``master-key.conf`` with contents detailing my master key configuration.
