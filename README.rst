@@ -423,6 +423,5 @@ Execution
 .. _data key caching documentation: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/data-key-caching.html
 .. _encryption context: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/concepts.html#encryption-context
 .. _KMSMasterKeyProvider: http://aws-encryption-sdk-python.readthedocs.io/en/latest/generated/aws_encryption_sdk.key_providers.kms.html#aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
-.. _Carbon: https://www.powershellgallery.com/packages/Carbon
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
