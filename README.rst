@@ -16,7 +16,7 @@ Required Prerequisites
 ======================
 
 * Python 2.7+ or 3.4+
-* aws-encryption-sdk >= 1.3.2
+* aws-encryption-sdk >= 1.3.0
 
 Installation
 ============
@@ -40,10 +40,9 @@ Input and Output
 For the most part, the behavior of ``aws-crypto`` in handling files is based on that of
 GNU CLIs such as ``cp``.  A qualifier to this is that when encrypting a file, if a
 directory is provided as the destination, rather than creating the source filename
-in the destination directory, the string ``.encrypted`` is appended to the destination
-filename.  This suffix is also added to all discovered files if recursively encrypting
-a directory.  To complement this behavior, in these situations on decrypt, a decryption
-suffix of ``.decrypted`` is added to the destination filename.
+in the destination directory, a suffix is appended to the destination filename. By
+default the suffix is ``.encrypted`` when encrypting and ``.decrypted`` when decrypting,
+but a custom suffix can be provided by the caller if desired.
 
 If a destination file already exists, the contents will be overwritten.
 
@@ -63,21 +62,24 @@ If a destination file already exists, the contents will be overwritten.
     |           |   **directory**  |            |          | Y             |
     +-----------+------------------+------------+----------+---------------+
 
+If the source includes a directory and the ``--recursive`` flag is set, the entire
+tree of the source directory is replicated in the target directory.
 
-If operating from a directory to a directory, the entire tree of the source directory
-is replicated in the target directory.
+.. _parameter-values:
 
-Providing Parameter Values
---------------------------
+Parameter Values
+----------------
 Some arguments accept additional parameter values.  These values must be provided in the
 form of ``parameter=value`` as demonstrated below.
 
 .. code-block:: sh
 
-   --encryption-context key1=value1 key2=value2 key3=value3
+   --encryption-context key1=value1 key2=value2 "key 3=value with spaces"
    --master-keys provider=aws-kms key=$KEY_ID_1 key=$KEY_ID_2
    --caching capacity=3 max_age=80.0
 
+
+.. _encryption-context:
 
 Encryption Context
 ------------------
@@ -86,47 +88,53 @@ arbitrary nonsecret data. The encryption context can contain any data you choose
 typically consists of data that is useful in logging and tracking, such as data about the file
 type, purpose, or ownership.
 
-Parameters may be provided using the "parameter=value" format defined elsewhere.
+Parameters may be provided using :ref:`parameter-values`.
 
 .. code-block:: sh
 
-   --encryption-context key1=value1 key2=value2 key3=value3
+   --encryption-context key1=value1 key2=value2 "key 3=value with spaces"
 
 
-Master Key Provider Configuration
----------------------------------
+.. _master-key-provider:
+
+Master Key Provider
+-------------------
 Information for configuring a master key provider must be provided.
 
-Parameters may be provided using the "parameter=value" format defined elsewhere.
+Parameters may be provided using :ref:`parameter-values`.
 
 Required parameters:
 
 * **provider** *(default: aws-kms)* : Indicator of the master key provider to use.
 
-    * See **Advanced Configuration** for more information on using other master key providers.
+    * See :ref:`advanced-configuration` for more information on using other master key providers.
 
 * **key** *(one required, many allowed)* : Identifier for a master key to be used. Must be an
   identifier understood by the specified master key provider.
 
-    * If using ``aws-kms`` to decrypt, it is not required to supply any key identifier.
+    * If using ``aws-kms`` to decrypt, it is not necessary to supply any key identifier.
 
 Any additional parameters supplied are collected into lists by parameter name and
-passed to the master key provider class when it is instantiated.
+passed to the master key provider class when it is instantiated. Custom master key providers
+may provide an arguments post-processing function to modify these values before passing
+them to the master key provider. See :ref:`advanced-configuration` for more information.
 
-Multiple master key providers can be defined by using multiple instances of the ``key``
-argument.
+Multiple master keys can be defined using multiple instances of the ``key`` argument.
+
+Multiple master key providers can be defined using multiple ``--master-keys`` groups.
 
 If multiple master key providers are defined, the first one is treated as the primary.
 
-If multiple master keys are defined in the primary master key provider, the first one is treated as the primary.
+If multiple master keys are defined in the primary master key provider, the first one is treated
+as the primary. This master key is used to generate the data key.
 
 .. code-block:: python
 
    # With parameters:
-   --master-keys provider=aws-kms key=$KEY_ARN_1 key=$KEY_ARN_2 region_names=us-west-2 region_names=eu-central-1
+   --master-keys provider=aws-kms key=$KEY_ARN_1 key=$KEY_ARN_2
 
    # KMSMasterKeyProvider is called as:
-   key_provider = KMSMasterKeyProvider(region_names=['us-west-2', 'eu-central-1'])
+   key_provider = KMSMasterKeyProvider()
    key_provider.add_master_key($KEY_ARN_1)
    key_provider.add_master_key($KEY_ARN_2)
 
@@ -153,19 +161,37 @@ If multiple master keys are defined in the primary master key provider, the firs
    --master-keys provider=aws-kms key=$ALIAS_NAME
 
    # KMS Alias by name in two specific regions
-   --master-keys provider=aws-kms key=$ALIAS_NAME region_names=us-west-2
-   --master-keys provider=aws-kms key=$ALIAS_NAME region_names=eu-central-1
+   --master-keys provider=aws-kms key=$ALIAS_NAME region=us-west-2
+   --master-keys provider=aws-kms key=$ALIAS_NAME region=eu-central-1
 
-AWS KMS Configuration
-`````````````````````
+.. _aws-kms:
+
+AWS KMS
+```````
 If you want to use the ``aws-kms`` master key provider, you can either specify that
 as the provider or simply not specify a provider and allow the default value to be used.
 
 There are some configuration options which are unique to the ``aws-kms`` master key provider:
 
-* **profile** : Providing this configuration value will use the specified `named profile`_ credentials.
-* **region** : This allows you to specify the target region. If you provide both ``region`` and ``region_names``
-   values, ``region_names`` values will be discarded and ``region`` values will be used instead.
+* **profile** : Providing this configuration value will use the specified `named profile`_
+   credentials.
+* **region** : This allows you to specify the target region.
+
+The logic for determining which region to use is shown in the pseudocode below:
+
+.. code-block:: python
+
+   if key ID is an ARN:
+      use region identified in ARN
+   else:
+      if region is specified:
+         use region
+      else if profile is specified and profile has a defined region:
+         use profile's region
+      else:
+         use system default region
+
+.. _advanced-configuration:
 
 Advanced Configuration
 ``````````````````````
@@ -187,13 +213,15 @@ and called while building the master key provider.
    --master-keys provider=aws_encryption_sdk.KMSMasterKeyProvider key=$KEY_ARN_1
 
 
-Caching Configuration
----------------------
+.. _data-key-caching:
+
+Data Key Caching
+----------------
 Data key caching is optional, but if used then the parameters noted as required must
 be provided.  For detailed information about using data key caching with the AWS
 Encryption SDK, see the `data key caching documentation`_.
 
-Parameters may be provided using the "parameter=value" format defined elsewhere.
+Parameters may be provided using :ref:`parameter-values`.
 
 Allowed parameters:
 
@@ -203,17 +231,40 @@ Allowed parameters:
 * **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can encrypt.
 
 
+.. _verbosity:
+
 Logging and Verbosity
 ---------------------
 The ``-v`` argument allows you to tune the verbosity of the built-in logging to your desired level.
 In short, the more ``-v`` arguments you supply, the more verbose the output gets.
 
-* default : aws-encryption-sdk-cli logs all warnings, all dependencies only log critical messages
-* ``-v`` :  aws-encryption-sdk-cli performs moderate logging, all dependencies only log critical messages
-* ``-vv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies only log critical messages
-* ``-vvv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies perform moderate logging
-* ``-vvvv`` :  aws-encryption-sdk-cli performs detailed logging, all dependencies perform detailed logging
+* unset : ``aws-crypto`` logs all warnings, all dependencies only log critical messages
+* ``-v`` :  ``aws-crypto`` performs moderate logging, all dependencies only log critical messages
+* ``-vv`` :  ``aws-crypto`` performs detailed logging, all dependencies only log critical messages
+* ``-vvv`` :  ``aws-crypto`` performs detailed logging, all dependencies perform moderate logging
+* ``-vvvv`` :  ``aws-crypto`` performs detailed logging, all dependencies perform detailed logging
 
+.. table::
+
+   +---------------------------------------+
+   |       python logging levels           |
+   +===========+============+==============+
+   | verbosity | aws-crypto | dependencies |
+   | flag      |            |              |
+   +-----------+------------+--------------+
+   | unset     | WARNING    | CRITICAL     |
+   +-----------+------------+--------------+
+   | -v        | INFO       | CRITICAL     |
+   +-----------+------------+--------------+
+   | -vv       | DEBUG      | CRITICAL     |
+   +-----------+------------+--------------+
+   | -vvv      | DEBUG      | INFO         |
+   +-----------+------------+--------------+
+   | -vvvv     | DEBUG      | DEBUG        |
+   +-----------+------------+--------------+
+
+
+.. _config-files:
 
 Configuration Files
 -------------------
@@ -223,7 +274,7 @@ file to define some or all of your desired behavior.
 Configuration files are supported using Python's native `argparse file support`_, which allows
 you to write configuration files exactly as you would enter arguments in the shell. Configuration
 file references passed to ``aws-crypto`` are identified by the ``@`` prefix and the contents are
-expanded as if you had included them in line.
+expanded as if you had included them in line. Configuration files can have any name you desire.
 
 For example, if I wanted to use a common master key configuration for all of my calls, I could
 create a file ``master-key.conf`` with contents detailing my master key configuration.
@@ -243,7 +294,7 @@ configuration file, and ``aws-crypto`` will use the composite configuration.
 
 
 To extend the example, if I wanted a common caching configuration for all of my calls, I could
-similarly place my caching configuration in a configuration file (``caching.conf`` in this example
+similarly place my caching configuration in a configuration file ``caching.conf`` in this example
 and include both files in my call.
 
 **caching.conf**
@@ -280,37 +331,6 @@ references to other configuration files.
 
    aws-crypto @my-encrypt -i $INPUT -o $OUTPUT
 
-Errors
-------
-If an unexpected exception is raised during processing, "Encountered unexpected error" will be output on exit.
-
-If you see this message and want to see the exception that was raised, increase the verbosity to at least 1 (ie: `-v`)
-and the exception and stacktrace will be shown.
-
-Encoding Output
----------------
-If you want to output to ``stdout``, chances are good that you might want to encode that output.
-Rather than complicating this tool's interface with encoding, we recommend leveraging native
-encoding on your platform by piping the output into an encoder.
-
-Linux/OSX
-`````````
-For OSX and most Linux distributions, the ``base64`` utility is natively available.
-
-.. code-block:: sh
-
-   aws-crypto -e -o - -i $INPUT_FILE .... | base64
-
-
-Windows (Powershell)
-````````````````````
-While there is no native base64 encoder utility in Windows, one is easily obtainable
-for the Powershell command line environment through the `Carbon`_ tool suite.
-
-.. code-block:: sh
-
-   aws-crypto -e -o - -i $INPUT_FILE .... | ConvertTo-Base64
-
 
 Execution
 =========
@@ -319,9 +339,9 @@ Execution
 
    usage: aws-crypto [-h] (--version | [-e | -d]
                      [-m MASTER_KEYS [MASTER_KEYS ...]]
-                     [-C CACHING [CACHING ...]] -i INPUT -o OUTPUT
+                     [--caching CACHING [CACHING ...]] -i INPUT -o OUTPUT
                      [-c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]]
-                     [-a {
+                     [--algorithm {
                         AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
                         AES_192_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
                         AES_128_GCM_IV12_TAG16_HKDF_SHA256_ECDSA_P256,
@@ -333,7 +353,8 @@ Execution
                         AES_128_GCM_IV12_TAG16
                      }]
                      [--frame-length FRAME_LENGTH] [--max-length MAX_LENGTH]
-                     [--interactive] [--no-overwrite] [-r] [-v] [--version]
+                     [--suffix SUFFIX] [--interactive] [--no-overwrite] [-r] [-v]
+                     [-q]
 
    Encrypt or decrypt data using the AWS Encryption SDK
 
@@ -348,23 +369,23 @@ Execution
                            provider identifier and identifiers for one or more
                            master key supplied by that provider. ex: --master-
                            keys provider=aws-kms key=$AWS_KMS_KEY_ARN
-     -C CACHING [CACHING ...], --caching CACHING [CACHING ...]
+     --caching CACHING [CACHING ...]
                            Configuration options for a caching cryptographic
                            materials manager and local cryptographic materials
                            cache. Must consist of "key=value" pairs. If caching,
                            at least "capacity" and "max_age" must be defined. ex:
                            --caching capacity=10 max_age=100.0
      -i INPUT, --input INPUT
-                           Input file or directory for encrypt/decrypt operation
-                           (default: -)
+                           Input file or directory for encrypt/decrypt operation,
+                           or "-" for stdin.
      -o OUTPUT, --output OUTPUT
-                           Output file or directory for encrypt/decrypt operation
-                           (default: -)
+                           Output file or directory for encrypt/decrypt
+                           operation, or - for stdout.
      -c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...], --encryption-context ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]
                            key-value pair encryption context values (encryption
                            only). Must a set of "key=value" pairs. ex: -c
                            key1=value1 key2=value2
-     -a {
+     --algorithm {
             AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
             AES_192_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
             AES_128_GCM_IV12_TAG16_HKDF_SHA256_ECDSA_P256,
@@ -381,6 +402,8 @@ Execution
      --max-length MAX_LENGTH
                            Maximum frame length (for framed messages) or content
                            length (for non-framed messages) (decryption only)
+     --suffix SUFFIX       Custom suffix to use when target filename is not
+                           specified
      --interactive         Force aws-crypto to prompt you for verification before
                            overwriting existing files
      --no-overwrite        Never overwrite existing files
@@ -389,8 +412,8 @@ Execution
                            options increases verbosity (max: 4).
      -q, --quiet           Suppresses most warning and diagnostic messages
 
-
    For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
+
 
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
 .. _Read the Docs: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
