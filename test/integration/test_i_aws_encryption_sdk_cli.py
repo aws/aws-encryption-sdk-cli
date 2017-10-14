@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Integration testing suite for AWS Encryption SDK CLI."""
+import base64
 from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import filecmp
 import os
@@ -87,6 +88,72 @@ def test_file_to_file_cycle_target_through_symlink(tmpdir):
     aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_to_file_base64_encode_only(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    b64_ciphertext = tmpdir.join('b64-ciphertext')
+    ciphertext = tmpdir.join('ciphertext')
+    decrypted = tmpdir.join('decrypted')
+    plaintext_source = os.urandom(10240)  # make sure we have more than one chunk
+    with open(str(plaintext), 'wb') as f:
+        f.write(plaintext_source)
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(b64_ciphertext)
+    ) + ' --encode'
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(ciphertext),
+        target=str(decrypted)
+    ) + ' -vv'
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    with open(str(b64_ciphertext), 'rb') as b64_ct, open(str(ciphertext), 'wb') as ct:
+        raw_ct = base64.b64decode(b64_ct.read())
+        print('raw_ct bytes:', len(raw_ct))
+        ct.write(raw_ct)
+
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    with open(str(decrypted), 'rb') as f:
+        decrypted_plaintext = f.read()
+
+    assert decrypted_plaintext == plaintext_source
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_to_file_base64_decode_only(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    b64_ciphertext = tmpdir.join('b64-ciphertext')
+    ciphertext = tmpdir.join('ciphertext')
+    decrypted = tmpdir.join('decrypted')
+    plaintext_source = os.urandom(10240)  # make sure we have more than one chunk
+    with open(str(plaintext), 'wb') as f:
+        f.write(plaintext_source)
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(ciphertext)
+    )
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(b64_ciphertext),
+        target=str(decrypted)
+    ) + ' --decode'
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    with open(str(ciphertext), 'rb') as ct, open(str(b64_ciphertext), 'wb') as b64_ct:
+        b64_ct.write(base64.b64encode(ct.read()))
+
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    with open(str(decrypted), 'rb') as f:
+        decrypted_plaintext = f.read()
+
+    assert decrypted_plaintext == plaintext_source
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
