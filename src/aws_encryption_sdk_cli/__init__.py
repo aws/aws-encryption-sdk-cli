@@ -111,7 +111,9 @@ def process_cli_request(
         recursive,  # type: bool
         interactive,  # type: bool
         no_overwrite,  # type: bool
-        suffix=None  # type: Optional[str]
+        suffix=None,  # type: Optional[str]
+        decode_input=False,  # type: Optional[bool]
+        encode_output=False  # type: Optional[bool]
 ):
     # type: (...) -> None
     """Maps the operation request to the appropriate function based on the type of input and output provided.
@@ -123,6 +125,8 @@ def process_cli_request(
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
     :param str suffix: Suffix to append to output filename (optional)
+    :param bool decode_input: Should input be base64 decoded before operation (optional)
+    :param bool encode_output: Should output be base64 encoded after operation (optional)
     """
     _catch_bad_destination_requests(destination)
     _catch_bad_stdin_stdout_requests(source, destination)
@@ -134,7 +138,9 @@ def process_cli_request(
             source=source,
             destination=destination,
             interactive=interactive,
-            no_overwrite=no_overwrite
+            no_overwrite=no_overwrite,
+            decode_input=decode_input,
+            encode_output=encode_output
         )
         return
 
@@ -154,7 +160,9 @@ def process_cli_request(
                 destination=_destination,
                 interactive=interactive,
                 no_overwrite=no_overwrite,
-                suffix=suffix
+                suffix=suffix,
+                decode_input=decode_input,
+                encode_output=encode_output
             )
 
         elif os.path.isfile(_source):
@@ -172,7 +180,9 @@ def process_cli_request(
                 source=_source,
                 destination=_destination,
                 interactive=interactive,
-                no_overwrite=no_overwrite
+                no_overwrite=no_overwrite,
+                decode_input=decode_input,
+                encode_output=encode_output
             )
 
 
@@ -236,7 +246,9 @@ def cli(raw_args=None):
             recursive=args.recursive,
             interactive=args.interactive,
             no_overwrite=args.no_overwrite,
-            suffix=args.suffix
+            suffix=args.suffix,
+            decode_input=args.decode,
+            encode_output=args.encode
         )
         return None
     except AWSEncryptionSDKCLIError as error:
