@@ -38,6 +38,7 @@ class Base64IO(ObjectProxy):
     __finalize = False
     __in_context_manager = False
     closed = False
+    seekable = False
 
     def __init__(self, wrapped):
         # type: (IO) -> None
@@ -60,6 +61,11 @@ class Base64IO(ObjectProxy):
         """Properly close self on exit."""
         self.close()
         self.__in_context_manager = False
+
+    def seek(self, offset, whence=0):  # pylint: disable=unused-argument,no-self-use
+        # type: (int, int) -> None
+        """Seek is not allowed on Base64IO objects."""
+        raise IOError('Seek not allowed on Base64IO objects')
 
     def close(self):
         # type: () -> None

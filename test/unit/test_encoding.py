@@ -54,6 +54,21 @@ def test_base64io_read_after_closed():
     excinfo.match(r'I/O operation on closed file.')
 
 
+def test_base64io_seekable():
+    test = Base64IO(io.BytesIO())
+
+    assert not test.seekable
+
+
+def test_base64io_seek():
+    test = Base64IO(io.BytesIO())
+
+    with pytest.raises(IOError) as excinfo:
+        test.seek(4)
+
+    excinfo.match(r'Seek not allowed on Base64IO objects')
+
+
 TEST_CASES = (
     (1024, 1024),
     (222, 222),
