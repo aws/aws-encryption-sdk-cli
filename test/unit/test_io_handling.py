@@ -300,12 +300,23 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
 
 
 def test_process_single_file(tmpdir, patch_process_single_operation):
-    source = tmpdir.join('source')
+    source = tmpdir.join('source_file')
     source.write('some data')
     destination = tmpdir.join('destination')
+    initial_kwargs = dict(
+        mode='encrypt',
+        a=sentinel.a,
+        b=sentinel.b
+    )
+    updated_kwargs = dict(
+        mode='encrypt',
+        a=sentinel.a,
+        b=sentinel.b,
+        source_length=os.path.getsize(str(source))
+    )
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
         io_handling.process_single_file(
-            stream_args={'mode': 'encrypt'},
+            stream_args=initial_kwargs,
             source=str(source),
             destination=str(destination),
             interactive=sentinel.interactive,
@@ -315,7 +326,7 @@ def test_process_single_file(tmpdir, patch_process_single_operation):
         )
     mock_open.assert_called_once_with(str(source), 'rb')
     patch_process_single_operation.assert_called_once_with(
-        stream_args={'mode': 'encrypt'},
+        stream_args=updated_kwargs,
         source=mock_open.return_value.__enter__.return_value,
         destination=str(destination),
         interactive=sentinel.interactive,
@@ -335,7 +346,9 @@ def test_process_single_file_source_is_destination(tmpdir, patch_process_single_
             source=str(source),
             destination=str(source),
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=sentinel.decode_input,
+            encode_output=sentinel.encode_output
         )
 
     assert not mock_open.called
@@ -354,7 +367,9 @@ def test_process_single_file_destination_is_symlink_to_source(tmpdir, patch_proc
             source=str(source),
             destination=destination,
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=sentinel.decode_input,
+            encode_output=sentinel.encode_output
         )
 
     assert not mock_open.called
