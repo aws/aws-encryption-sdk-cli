@@ -1,2 +1,3 @@
 aws-encryption-sdk>=1.3.2
 typing>=3.6.2
+setuptools
