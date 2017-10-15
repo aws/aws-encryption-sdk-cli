@@ -217,12 +217,12 @@ def _build_parser():
     parser.add_argument(
         '--encode',
         action='store_true',
-        help='Base64-encode output after encrypting'
+        help='Base64-encode output after processing'
     )
     parser.add_argument(
         '--decode',
         action='store_true',
-        help='Base64-decode input before decrypting'
+        help='Base64-decode input before processing'
     )
 
     parser.add_argument(
