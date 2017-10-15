@@ -185,23 +185,31 @@ The logic for determining which region to use is shown in the pseudocode below:
 
 Advanced Configuration
 ``````````````````````
-If you want to use some other master key provider, that provider must be available in
-your local ``$PYTHONPATH`` as a callable (class or function) which will return the
-desired master key provider when called with the defined parameters. The value that
-must be passed to ``aws-crypto`` as the provider parameter is the full Python namespace
-path leading to that callable.
+If you want to use a different master key provider, that provider must register at least one
+`setuptools entry point`_. You can find examples of registering these entry points in the
+``setup.py`` for this package.
 
-For example, if specifying the ``aws-kms`` master key provider using this option,
-you would define ``provider=aws_encryption_sdk.KMSMasterKeyProvider``.
+When a provider name is specifed in a call to ``aws-crypto``, the appropriate entry points
+for that name are used.
 
-If this option is used, the appropriate module will be imported and the callable loaded
-and called while building the master key provider.
+Two types of entry points are recognized:
 
-.. code-block:: sh
+Master Key Providers
+~~~~~~~~~~~~~~~~~~~~
+These entry points return an instance of a master key provider.
 
-   # Single KMS CMK, specifying the KMSMasterKeyProvider class directly
-   --master-keys provider=aws_encryption_sdk.KMSMasterKeyProvider key=$KEY_ARN_1
+These entry points must be registered in the  ``aws_encryption_sdk.master_key_providers`` group.
 
+Argument Processors
+~~~~~~~~~~~~~~~~~~~
+These entry points apply some post-processing to the collected master key provider construction
+arguments. They are useful if you want to apply some additional transformation to the arguments
+collected by the CLI prior to your master key provider being called.
+
+You are not required to register an argument processor entry point for your master key provider.
+
+These entry points must be registered in the ``aws_encryption_sdk_cli.master_key_provider_argument_processors``
+group.
 
 Data Key Caching
 ----------------
@@ -411,3 +419,4 @@ Execution
 .. _KMSMasterKeyProvider: http://aws-encryption-sdk-python.readthedocs.io/en/latest/generated/aws_encryption_sdk.key_providers.kms.html#aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
+.. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
