@@ -11,30 +11,33 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.master_key_parsing``."""
+from aws_encryption_sdk.key_providers.kms import KMSMasterKeyProvider
 from mock import call, MagicMock, sentinel
 import pytest
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import master_key_parsing
+from aws_encryption_sdk_cli.internal.args_post_processing import (
+    kms_master_key_provider_post_processing,
+    nop_post_processing
+)
+from aws_encryption_sdk_cli.internal.identifiers import (
+    MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT,
+    MASTER_KEY_PROVIDERS_ENTRY_POINT
+)
 
 
 @pytest.yield_fixture
-def patch_importlib(mocker):
-    mocker.patch.object(master_key_parsing.importlib, 'import_module')
-    yield master_key_parsing.importlib.import_module
+def patch_load_master_key_provider(mocker):
+    mocker.patch.object(master_key_parsing, '_load_master_key_provider')
+    yield master_key_parsing._load_master_key_provider
 
 
 @pytest.yield_fixture
-def patch_callable_loader(mocker):
-    mocker.patch.object(master_key_parsing, '_callable_loader')
-    yield master_key_parsing._callable_loader
-
-
-@pytest.yield_fixture
-def patch_nop_post_processing(mocker):
-    mocker.patch.object(master_key_parsing, 'nop_post_processing')
-    master_key_parsing.nop_post_processing.side_effect = lambda x: x
-    yield master_key_parsing.nop_post_processing
+def patch_load_arguments_post_processor(mocker):
+    mocker.patch.object(master_key_parsing, '_load_arguments_post_processor')
+    yield master_key_parsing._load_arguments_post_processor
 
 
 @pytest.yield_fixture
@@ -66,86 +69,58 @@ def patch_aws_encryption_sdk(mocker):
     yield master_key_parsing.aws_encryption_sdk
 
 
-def test_callable_loader_fail_no_module(patch_importlib):
-    patch_importlib.side_effect = TypeError
-
-    with pytest.raises(ImportError) as excinfo:
-        master_key_parsing._callable_loader('module.namespace.classname')
-
-    excinfo.match(r"No module named 'module.namespace'")
+def test_entry_points():
+    assert master_key_parsing._ENTRY_POINTS == master_key_parsing._load_entry_points()
 
 
-def test_callable_loader_fail_callable_not_found(patch_importlib):
-    patch_importlib.return_value = AttributeError
-
-    with pytest.raises(ImportError) as excinfo:
-        master_key_parsing._callable_loader('module.namespace.classname')
-
-    excinfo.match(r"Callable 'classname' not found in module 'module.namespace'")
+def test_entry_points_aws_kms():
+    assert master_key_parsing._ENTRY_POINTS[MASTER_KEY_PROVIDERS_ENTRY_POINT]['aws-kms'] == KMSMasterKeyProvider
+    assert master_key_parsing._ENTRY_POINTS[
+        MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT
+    ]['aws-kms'] == kms_master_key_provider_post_processing
 
 
-def test_callable_loader_fail_callable_not_callable(patch_importlib):
-    patch_importlib.return_value = MagicMock(classname=None)
-
-    with pytest.raises(ImportError) as excinfo:
-        master_key_parsing._callable_loader('module.namespace.classname')
-
-    excinfo.match(r"Target callable 'module.namespace.classname' is not callable")
+def test_load_master_key_provider_known():
+    assert master_key_parsing._load_master_key_provider('aws-kms') == KMSMasterKeyProvider
 
 
-def test_callable_loader_return(patch_importlib):
-    test = master_key_parsing._callable_loader('module.namespace.classname')
-    patch_importlib.assert_called_once_with('module.namespace')
-    assert test is patch_importlib.return_value.classname
+def test_load_master_key_provider_unknown():
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        master_key_parsing._load_master_key_provider(sentinel.unknown_name)
+
+    excinfo.match(r'Unknown master key provider: *')
 
 
-def test_callable_loader_json_decoder_success():
-    master_key_parsing._callable_loader('json.JSONDecoder')
+def test_load_arguments_post_processor_known():
+    assert master_key_parsing._load_arguments_post_processor('aws-kms') == kms_master_key_provider_post_processing
 
 
-def test_build_master_key_provider_known_provider(mocker, patch_callable_loader):
+def test_load_arguments_post_processor_unknown():
+    assert master_key_parsing._load_arguments_post_processor(sentinel.unknown_name) == nop_post_processing
+
+
+def test_build_master_key_provider_known_provider(patch_load_master_key_provider, patch_load_arguments_post_processor):
     mock_provider_callable = MagicMock()
     mock_post_processing = MagicMock(return_value={'c': sentinel.c})
-    patch_callable_loader.side_effect = (mock_post_processing, mock_provider_callable)
-    mocker.patch.object(master_key_parsing, 'KNOWN_MASTER_KEY_PROVIDERS')
-    master_key_parsing.KNOWN_MASTER_KEY_PROVIDERS = {sentinel.known_provider_id: {
-        'callable': sentinel.known_provider_classpath,
-        'post-processing': sentinel.known_provider_post_processing
-    }}
+    patch_load_master_key_provider.return_value = mock_provider_callable
+    patch_load_arguments_post_processor.return_value = mock_post_processing
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.known_provider_id,
         key=[],
         a=sentinel.a,
         b=sentinel.b
     )
-    patch_callable_loader.assert_has_calls(
-        calls=(
-            call(sentinel.known_provider_post_processing),
-            call(sentinel.known_provider_classpath)
-        ),
-        any_order=False
-    )
+    patch_load_master_key_provider.assert_called_once_with(sentinel.known_provider_id)
+    patch_load_arguments_post_processor.assert_called_once_with(sentinel.known_provider_id)
     mock_post_processing.assert_called_once_with({'a': sentinel.a, 'b': sentinel.b})
     mock_provider_callable.assert_called_once_with(c=sentinel.c)
     assert not mock_provider_callable.return_value.add_master_key.called
     assert test is mock_provider_callable.return_value
 
 
-def test_build_master_key_provider_unknown_key_provider(patch_callable_loader, patch_nop_post_processing):
-    test = master_key_parsing._build_master_key_provider(
-        provider=sentinel.unknown_provider_id,
-        key=[],
-        a=sentinel.a
-    )
-    patch_nop_post_processing.assert_called_once_with({'a': sentinel.a})
-    patch_callable_loader.assert_called_once_with(sentinel.unknown_provider_id)
-    patch_callable_loader.return_value.assert_called_once_with(a=sentinel.a)
-    assert test is patch_callable_loader.return_value.return_value
-
-
-def test_build_master_key_provider_add_keys(patch_callable_loader):
+def test_build_master_key_provider_add_keys(patch_load_master_key_provider, patch_load_arguments_post_processor):
     mock_provider = MagicMock()
-    patch_callable_loader.return_value.return_value = mock_provider
+    patch_load_master_key_provider.return_value.return_value = mock_provider
     master_key_parsing._build_master_key_provider(
         provider=sentinel.unknown_provider_id,
         key=[
@@ -162,14 +137,20 @@ def test_build_master_key_provider_add_keys(patch_callable_loader):
     )
 
 
-def test_build_master_key_provider_additional_kwargs(patch_callable_loader):
+def test_build_master_key_provider_additional_kwargs(
+        patch_load_master_key_provider,
+        patch_load_arguments_post_processor
+):
     kwargs = {'a': 1, 'b': 'asdf'}
+    kwargs2 = {'c': 5, 'd': None}
+    patch_load_arguments_post_processor.return_value.return_value = kwargs2
     master_key_parsing._build_master_key_provider(
         provider=sentinel.unknown_provider_id,
         key=[],
         **kwargs
     )
-    patch_callable_loader.return_value.assert_called_once_with(**kwargs)
+    patch_load_arguments_post_processor.return_value.assert_called_once_with(kwargs)
+    patch_load_master_key_provider.return_value.assert_called_once_with(**kwargs2)
 
 
 def test_assemble_master_key_providers():
