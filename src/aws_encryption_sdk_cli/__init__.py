@@ -53,6 +53,18 @@ def _expand_sources(source):
     return all_sources
 
 
+def _catch_bad_destination_requests(destination):
+    # type: (str) -> None
+    """Catches bad requests based on characteristics of destination.
+
+    :param str destination: Identifier for the destination (filesystem path or ``-`` for stdout)
+    :raises BadUserArgument: if destination is a file in a directory that does not already exist
+    """
+    if destination != '-' and not os.path.isdir(destination):
+        if not os.path.isdir(os.path.abspath(os.path.dirname(destination))):
+            raise BadUserArgumentError('If destination is a file, the immediate parent directory must already exist.')
+
+
 def _catch_bad_stdin_stdout_requests(source, destination):
     # type: (str, str) -> None
     """Catches bad requests based on characteristics of source and destination when
@@ -112,6 +124,7 @@ def process_cli_request(
     :param bool no_overwrite: Should never overwrite existing files
     :param str suffix: Suffix to append to output filename (optional)
     """
+    _catch_bad_destination_requests(destination)
     _catch_bad_stdin_stdout_requests(source, destination)
 
     if source == '-':

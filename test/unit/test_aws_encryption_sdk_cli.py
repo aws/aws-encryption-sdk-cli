@@ -63,6 +63,61 @@ def test_process_cli_request_source_is_destination_dir_to_dir(tmpdir):
     excinfo.match(r'Destination and source cannot be the same')
 
 
+def test_catch_bad_destination_requests_stdout():
+    aws_encryption_sdk_cli._catch_bad_destination_requests('-')
+
+
+def test_catch_bad_destination_requests_dir(tmpdir):
+    aws_encryption_sdk_cli._catch_bad_destination_requests(str(tmpdir))
+
+
+def test_catch_bad_destination_requests_file(tmpdir):
+    destination = tmpdir.join('dir1', 'dir2', 'file')
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_destination_requests(str(destination))
+
+    assert excinfo.match(r'If destination is a file, the immediate parent directory must already exist.')
+
+
+def test_catch_bad_stdin_stdout_requests_same_pipe():
+    aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests('-', '-')
+
+
+def test_catch_bad_stdin_stdout_requests_same_dir(tmpdir):
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(str(tmpdir), str(tmpdir))
+
+    excinfo.match(r'Destination and source cannot be the same')
+
+
+def test_catch_bad_stdin_stdout_requests_stdin_dir(tmpdir):
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests('-', str(tmpdir))
+
+    excinfo.match(r'Destination may not be a directory when source is stdin')
+
+
+def test_catch_bad_file_and_directory_requests_multiple_source_nondir_destination(tmpdir):
+    a = tmpdir.join('a')
+    a.write('asdf')
+    b = tmpdir.join('b')
+    b.write('asdf')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_file_and_directory_requests((str(a), str(b)), str(tmpdir.join('c')))
+
+    excinfo.match(r'If operating on multiple sources, destination must be an existing directory')
+
+
+def test_catch_bad_file_and_directory_requests_contains_dir(tmpdir):
+    b = tmpdir.mkdir('b')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_file_and_directory_requests((str(b),), str(tmpdir.join('c')))
+
+    excinfo.match(r'If operating on a source directory, destination must be an existing directory')
+
+
 def test_process_cli_request_source_is_destination_file_to_file(tmpdir):
     single_file = tmpdir.join('a_file')
     single_file.write('some data')
@@ -121,6 +176,7 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix
     )
+
     aws_encryption_sdk_cli.process_dir.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=str(source),
