@@ -20,7 +20,7 @@ LOGGING_LEVELS = {
     2: logging.DEBUG
 }  # type: Dict[int, int]
 LOGGER_NAME = 'aws_encryption_sdk_cli'  # type: str
-FORMAT_STRING = '%(levelname)s:%(name)s:%(message)s'  # type: str
+FORMAT_STRING = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'  # type: str
 MAX_LOGGING_LEVEL = 2  # type: int
 
 
