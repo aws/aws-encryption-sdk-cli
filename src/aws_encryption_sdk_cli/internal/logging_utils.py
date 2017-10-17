@@ -11,8 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Logging utility tooling."""
+import codecs
+import copy
+import json
 import logging
-from typing import Dict, Sequence, Text, Union  # noqa pylint: disable=unused-import
+from typing import cast, Dict, Sequence, Text, Union  # noqa pylint: disable=unused-import
 
 LOGGING_LEVELS = {
     0: logging.CRITICAL,
@@ -22,6 +25,111 @@ LOGGING_LEVELS = {
 LOGGER_NAME = 'aws_encryption_sdk_cli'  # type: str
 FORMAT_STRING = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'  # type: str
 MAX_LOGGING_LEVEL = 2  # type: int
+_REDACTED = '<**-redacted-**>'
+
+
+class _KMSKeyRedactingFormatter(logging.Formatter):
+    """Log formatter that redacts ``Plaintext`` values from KMS request and response bodies."""
+
+    def __to_str(self, value):  # pylint: disable=no-self-use
+        # type: (Union[Text, str, bytes]) -> Text
+        """Converts bytes or str to str.
+
+        :param value: Value to convert
+        :type value: bytes or str
+        :rtype: str
+        """
+        if isinstance(value, bytes):
+            return codecs.decode(value, 'utf-8')
+        return value
+
+    def __is_kms_encrypt_request(self, record):  # pylint: disable=no-self-use
+        # type: (logging.LogRecord) -> bool
+        """Determmine if a record contains a kms:Encrypt request.
+
+        :param record: Logging record to filter
+        :type record: logging.LogRecord
+        :rtype: bool
+        """
+        try:
+            return all((
+                record.name == 'botocore.endpoint',
+                record.msg.startswith('Making request'),
+                cast(tuple, record.args)[-1]['headers']['X-Amz-Target'] == 'TrentService.Encrypt'
+            ))
+        except Exception:  # pylint: disable=broad-except
+            return False
+
+    def __redact_encrypt_request(self, record):
+        # type: (logging.LogRecord) -> None
+        """Redact the ``Plaintext`` value from a kms:Encrypt request.
+
+        :param record: Logging record to filter
+        :type record: logging.LogRecord
+        """
+        try:
+            parsed_body = json.loads(self.__to_str(cast(tuple, record.args)[-1]['body']))
+            parsed_body['Plaintext'] = _REDACTED
+            cast(tuple, record.args)[-1]['body'] = json.dumps(parsed_body, sort_keys=True)
+        except Exception:  # pylint: disable=broad-except
+            return
+
+    def __is_kms_response_with_plaintext(self, record):  # pylint: disable=no-self-use
+        # type: (logging.LogRecord) -> bool
+        """Determine if a record contains a KMS response with plaintext.
+
+        :param record: Logging record to filter
+        :type record: logging.LogRecord
+        :rtype: bool
+        """
+        try:
+            return all((
+                record.name == 'botocore.parsers',
+                record.msg.startswith('Response body:'),
+                b'KeyId' in cast(tuple, record.args)[0],
+                b'Plaintext' in cast(tuple, record.args)[0]
+            ))
+        except Exception:  # pylint: disable=broad-except
+            return False
+
+    def __redact_key_from_response(self, record):
+        # type: (logging.LogRecord) -> None
+        """Redact the ``Plaintext`` value from a KMS response body.
+
+        :param record: Logging record to filter
+        :type record: logging.LogRecord
+        """
+        try:
+            parsed_body = json.loads(self.__to_str(cast(tuple, record.args)[0]))
+            parsed_body['Plaintext'] = _REDACTED
+            new_args = (json.dumps(parsed_body, sort_keys=True),) + cast(tuple, record.args)[1:]
+            record.args = new_args
+        except Exception:  # pylint: disable=broad-except
+            return
+
+    def __redact_record(self, record):
+        # type: (logging.LogRecord) -> logging.LogRecord
+        """Redact any values from a record, as necessary.
+
+        :param record: Logging record to filter
+        :type record: logging.LogRecord
+        """
+        _record = copy.deepcopy(record)
+        if self.__is_kms_encrypt_request(_record):
+            self.__redact_encrypt_request(_record)
+        elif self.__is_kms_response_with_plaintext(_record):
+            self.__redact_key_from_response(_record)
+        return _record
+
+    def format(self, record):
+        # type: (logging.LogRecord) -> str
+        """Format the specified record as text, redacting plaintext KMS data keys if found.
+
+        :param record: Logging record to filter
+        :type record: logging.LogRecord
+        """
+        _record = self.__redact_record(record)
+        return super(_KMSKeyRedactingFormatter, self).format(_record)
 
 
 class _BlacklistFilter(logging.Filter):  # pylint: disable=too-few-public-methods
@@ -76,7 +184,7 @@ def setup_logger(verbosity, quiet):
     """
     local_logging_level, root_logging_level = _logging_levels(verbosity, quiet)
 
-    formatter = logging.Formatter(FORMAT_STRING)
+    formatter = _KMSKeyRedactingFormatter(FORMAT_STRING)
 
     local_handler = logging.StreamHandler()
     local_handler.setFormatter(formatter)
