@@ -69,7 +69,10 @@ def _ensure_dir_exists(filename):
         # File is in current directory
         _LOGGER.debug('Target dir is current dir')
         return
-    _LOGGER.info('Creating dir if it does not exist %s', dest_final_dir)
+    _LOGGER.info(
+        'Replicating source child directory structure into destination if it does not already exist: %s',
+        dest_final_dir
+    )
     try:
         os.makedirs(dest_final_dir)
     except _file_exists_error():
