@@ -50,15 +50,48 @@ def patch_for_process_cli_request(mocker, patch_process_dir, patch_process_singl
     aws_encryption_sdk_cli.glob.glob.side_effect = lambda x: [x]
 
 
-def test_process_cli_request_source_is_destination(patch_for_process_cli_request):
+def test_process_cli_request_source_is_destination_dir_to_dir(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
-            stream_args=sentinel.stream_args,
-            source=sentinel.source,
-            destination=sentinel.source,
+            stream_args={'mode': 'encrypt'},
+            source=str(tmpdir),
+            destination=str(tmpdir),
             recursive=True,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            interactive=False,
+            no_overwrite=False
+        )
+    excinfo.match(r'Destination and source cannot be the same')
+
+
+def test_process_cli_request_source_is_destination_file_to_file(tmpdir):
+    single_file = tmpdir.join('a_file')
+    single_file.write('some data')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli.process_cli_request(
+            stream_args={'mode': 'encrypt'},
+            source=str(single_file),
+            destination=str(single_file),
+            recursive=True,
+            interactive=False,
+            no_overwrite=False
+        )
+    excinfo.match(r'Destination and source cannot be the same')
+
+
+def test_process_cli_request_source_is_destination_file_to_dir(tmpdir):
+    single_file = tmpdir.join('a_file')
+    single_file.write('some data')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli.process_cli_request(
+            stream_args={'mode': 'encrypt'},
+            source=str(single_file),
+            destination=str(tmpdir),
+            recursive=True,
+            interactive=False,
+            no_overwrite=False,
+            suffix=''
         )
     excinfo.match(r'Destination and source cannot be the same')
 
@@ -82,19 +115,19 @@ def test_process_cli_request_source_dir_nonrecursive(patch_for_process_cli_reque
     assert not aws_encryption_sdk_cli.process_single_file.called
 
 
-def test_process_cli_request_source_dir_destination_nondir(patch_for_process_cli_request):
+def test_process_cli_request_source_dir_destination_nondir(tmpdir):
     aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
         sentinel.source: True,
         sentinel.destination: False
     })
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
-            stream_args=sentinel.stream_args,
-            source=sentinel.source,
-            destination=sentinel.destination,
+            stream_args={'mode': 'encrypt'},
+            source=str(tmpdir),
+            destination=str(tmpdir.join('destination')),
             recursive=True,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            interactive=False,
+            no_overwrite=False
         )
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
@@ -130,19 +163,15 @@ def test_process_cli_request_source_dir_destination_dir(patch_for_process_cli_re
     assert not aws_encryption_sdk_cli.process_single_operation.called
 
 
-def test_process_cli_request_source_stdin_destination_dir(patch_for_process_cli_request):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        '-': False,
-        sentinel.destination: True
-    })
+def test_process_cli_request_source_stdin_destination_dir(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
-            stream_args=sentinel.stream_args,
+            stream_args={'mode': 'encrypt'},
             source='-',
-            destination=sentinel.destination,
+            destination=str(tmpdir),
             recursive=False,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            interactive=False,
+            no_overwrite=False
         )
     excinfo.match(r'Destination may not be a directory when source is stdin')
 
