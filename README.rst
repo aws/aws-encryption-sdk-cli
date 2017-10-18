@@ -65,8 +65,6 @@ If a destination file already exists, the contents will be overwritten.
 If the source includes a directory and the ``--recursive`` flag is set, the entire
 tree of the source directory is replicated in the target directory.
 
-.. _parameter-values:
-
 Parameter Values
 ----------------
 Some arguments accept additional parameter values.  These values must be provided in the
@@ -79,8 +77,6 @@ form of ``parameter=value`` as demonstrated below.
    --caching capacity=3 max_age=80.0
 
 
-.. _encryption-context:
-
 Encryption Context
 ------------------
 The `encryption context`_ is an optional, but recommended, set of key-value pairs that contain
@@ -88,26 +84,24 @@ arbitrary nonsecret data. The encryption context can contain any data you choose
 typically consists of data that is useful in logging and tracking, such as data about the file
 type, purpose, or ownership.
 
-Parameters may be provided using :ref:`parameter-values`.
+Parameters may be provided using `Parameter Values`_.
 
 .. code-block:: sh
 
    --encryption-context key1=value1 key2=value2 "key 3=value with spaces"
 
 
-.. _master-key-provider:
-
 Master Key Provider
 -------------------
 Information for configuring a master key provider must be provided.
 
-Parameters may be provided using :ref:`parameter-values`.
+Parameters may be provided using `Parameter Values`_.
 
 Required parameters:
 
 * **provider** *(default: aws-kms)* : Indicator of the master key provider to use.
 
-    * See :ref:`advanced-configuration` for more information on using other master key providers.
+    * See `Advanced Configuration`_ for more information on using other master key providers.
 
 * **key** *(one required, many allowed)* : Identifier for a master key to be used. Must be an
   identifier understood by the specified master key provider.
@@ -117,7 +111,7 @@ Required parameters:
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
 may provide an arguments post-processing function to modify these values before passing
-them to the master key provider. See :ref:`advanced-configuration` for more information.
+them to the master key provider. See `Advanced Configuration`_ for more information.
 
 Multiple master keys can be defined using multiple instances of the ``key`` argument.
 
@@ -164,8 +158,6 @@ as the primary. This master key is used to generate the data key.
    --master-keys provider=aws-kms key=$ALIAS_NAME region=us-west-2
    --master-keys provider=aws-kms key=$ALIAS_NAME region=eu-central-1
 
-.. _aws-kms:
-
 AWS KMS
 ```````
 If you want to use the ``aws-kms`` master key provider, you can either specify that
@@ -191,8 +183,6 @@ The logic for determining which region to use is shown in the pseudocode below:
       else:
          use system default region
 
-.. _advanced-configuration:
-
 Advanced Configuration
 ``````````````````````
 If you want to use some other master key provider, that provider must be available in
@@ -213,15 +203,13 @@ and called while building the master key provider.
    --master-keys provider=aws_encryption_sdk.KMSMasterKeyProvider key=$KEY_ARN_1
 
 
-.. _data-key-caching:
-
 Data Key Caching
 ----------------
 Data key caching is optional, but if used then the parameters noted as required must
 be provided.  For detailed information about using data key caching with the AWS
 Encryption SDK, see the `data key caching documentation`_.
 
-Parameters may be provided using :ref:`parameter-values`.
+Parameters may be provided using `Parameter Values`_.
 
 Allowed parameters:
 
@@ -230,8 +218,6 @@ Allowed parameters:
 * **max_messages_encrypted** :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can encrypt.
 
-
-.. _verbosity:
 
 Logging and Verbosity
 ---------------------
@@ -263,8 +249,6 @@ In short, the more ``-v`` arguments you supply, the more verbose the output gets
    | -vvvv     | DEBUG      | DEBUG        |
    +-----------+------------+--------------+
 
-
-.. _config-files:
 
 Configuration Files
 -------------------
