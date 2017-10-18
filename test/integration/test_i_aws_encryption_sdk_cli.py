@@ -88,6 +88,66 @@ def test_file_to_file_cycle_with_caching(tmpdir):
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_overwrite_source_file_to_file_custom_empty_prefix(tmpdir):
+    plaintext_source = os.urandom(2014)
+    plaintext = tmpdir.join('source_plaintext')
+    with open(str(plaintext), 'wb') as f:
+        f.write(plaintext_source)
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(plaintext)
+    ) + ' --suffix'
+
+    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    assert test_result == 'Destination and source cannot be the same'
+
+    with open(str(plaintext), 'rb') as f:
+        assert f.read() == plaintext_source
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_overwrite_source_dir_to_dir_custom_empty_prefix(tmpdir):
+    plaintext_source = os.urandom(2014)
+    plaintext = tmpdir.join('source_plaintext')
+    with open(str(plaintext), 'wb') as f:
+        f.write(plaintext_source)
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(tmpdir),
+        target=str(tmpdir)
+    ) + ' --suffix'
+
+    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    assert test_result == 'Destination and source cannot be the same'
+
+    with open(str(plaintext), 'rb') as f:
+        assert f.read() == plaintext_source
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
+    plaintext_source = os.urandom(2014)
+    plaintext = tmpdir.join('source_plaintext')
+    with open(str(plaintext), 'wb') as f:
+        f.write(plaintext_source)
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(tmpdir)
+    ) + ' --suffix'
+
+    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    assert test_result == 'Destination and source cannot be the same'
+
+    with open(str(plaintext), 'rb') as f:
+        assert f.read() == plaintext_source
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_dir_cycle(tmpdir):
     inner_dir = tmpdir.mkdir('inner')
     plaintext = tmpdir.join('source_plaintext')
