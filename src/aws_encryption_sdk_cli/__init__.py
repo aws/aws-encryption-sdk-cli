@@ -153,6 +153,9 @@ def process_cli_request(
                     mode=str(stream_args['mode']),
                     suffix=suffix
                 )
+            if _source == _destination:
+                # File source, directory destination, empty suffix:
+                raise BadUserArgumentError('Destination and source cannot be the same')
             # write to file
             process_single_file(
                 stream_args=stream_args,
