@@ -76,7 +76,7 @@ def _catch_bad_stdin_stdout_requests(source, destination):
     :raises BadUserArgument: if source is stdin and destination is a directory
     """
     acting_as_pipe = destination == '-' and source == '-'
-    if destination == source and not acting_as_pipe:
+    if not acting_as_pipe and os.path.realpath(source) == os.path.realpath(destination):
         raise BadUserArgumentError('Destination and source cannot be the same')
 
     if source == '-' and os.path.isdir(destination):
