@@ -133,14 +133,12 @@ class Base64IO(ObjectProxy):
             _bytes_to_read = int((b - len(self.__read_buffer)) * 4 / 3)
             _bytes_to_read += (4 - _bytes_to_read % 4)
 
-        _LOGGER.debug('%s bytes requested: adjusted to %s bytes', b, _bytes_to_read)
+        _LOGGER.debug('%s bytes requested: reading %s bytes from underlying stream', b, _bytes_to_read)
 
         # Read encoded bytes from wrapped stream.
         data = self.__wrapped__.read(_bytes_to_read)
-        _LOGGER.debug('read %d bytes from source', len(data))
 
         results = io.BytesIO()
-        _LOGGER.debug('loading %d stashed bytes', len(self.__read_buffer))
         # First, load any stashed bytes
         results.write(self.__read_buffer)
         # Decode encoded bytes.
@@ -148,10 +146,8 @@ class Base64IO(ObjectProxy):
 
         results.seek(0)
         output_data = results.read(b)
-        _LOGGER.debug('returning %d bytes', len(output_data))
         # Stash any extra bytes for the next run.
         self.__read_buffer = results.read()
-        _LOGGER.debug('stashing %d bytes', len(self.__read_buffer))
 
         if not output_data:
             self.__wrapped__.close()
