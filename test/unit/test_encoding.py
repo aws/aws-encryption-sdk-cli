@@ -104,6 +104,20 @@ def test_base64io_encode(source_bytes):
     assert plaintext_stream.getvalue() == plaintext_b64
 
 
+def test_base64io_decode_read_only_from_buffer():
+    plaintext_source = b'12345'
+    plaintext_b64 = io.BytesIO(base64.b64encode(plaintext_source))
+    plaintext_wrapped = Base64IO(plaintext_b64)
+
+    test_1 = plaintext_wrapped.read(1)
+    test_2 = plaintext_wrapped.read(1)
+    test_3 = plaintext_wrapped.read()
+
+    assert test_1 == b'1'
+    assert test_2 == b'2'
+    assert test_3 == b'345'
+
+
 def test_base64io_decode_context_manager():
     source_plaintext = os.urandom(102400)
     source_stream = io.BytesIO(base64.b64encode(source_plaintext))
