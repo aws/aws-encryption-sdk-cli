@@ -153,7 +153,7 @@ def process_cli_request(
                     mode=str(stream_args['mode']),
                     suffix=suffix
                 )
-            if _source == _destination:
+            if os.path.realpath(_source) == os.path.realpath(_destination):
                 # File source, directory destination, empty suffix:
                 raise BadUserArgumentError('Destination and source cannot be the same')
             # write to file
