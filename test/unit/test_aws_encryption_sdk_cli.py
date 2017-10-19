@@ -90,6 +90,18 @@ def test_catch_bad_stdin_stdout_requests_same_dir(tmpdir):
     excinfo.match(r'Destination and source cannot be the same')
 
 
+def test_catch_bad_stdin_stdout_requests_dest_links_source(tmpdir):
+    source = tmpdir.join('source')
+    source.write('some data')
+    linked_source = str(tmpdir.join('link_to_source'))
+    os.symlink(str(source), linked_source)
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(str(source), linked_source)
+
+    excinfo.match(r'Destination and source cannot be the same')
+
+
 def test_catch_bad_stdin_stdout_requests_stdin_dir(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests('-', str(tmpdir))
@@ -152,10 +164,11 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_for_process_c
 
 
 def test_process_cli_request_source_dir_destination_nondir(tmpdir):
+    source = tmpdir.mkdir('source')
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source=str(tmpdir),
+            source=str(source),
             destination=str(tmpdir.join('destination')),
             recursive=True,
             interactive=False,
@@ -164,9 +177,9 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
 
-def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_process_cli_request, patch_output_filename):
-    source = tmpdir.mkdir('source')
-    destination = tmpdir.mkdir('destination')
+def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_process_cli_request):
+    source = tmpdir.mkdir('source_dir')
+    destination = tmpdir.mkdir('destination_dir')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
         source=str(source),
@@ -185,7 +198,6 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix
     )
-    assert not aws_encryption_sdk_cli.output_filename.called
     assert not aws_encryption_sdk_cli.process_single_file.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
 
@@ -203,7 +215,7 @@ def test_process_cli_request_source_stdin_destination_dir(tmpdir):
     excinfo.match(r'Destination may not be a directory when source is stdin')
 
 
-def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request, patch_output_filename):
+def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request):
     destination = tmpdir.join('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
@@ -214,7 +226,6 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request,
         no_overwrite=sentinel.no_overwrite
     )
     assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.output_filename.called
     assert not aws_encryption_sdk_cli.process_single_file.called
     aws_encryption_sdk_cli.process_single_operation.assert_called_once_with(
         stream_args=sentinel.stream_args,
@@ -249,10 +260,11 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
     )
 
 
-def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_process_cli_request, patch_output_filename):
+def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_process_cli_request):
     source = tmpdir.join('source')
     source.write('some data')
     destination = tmpdir.join('destination')
+
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': sentinel.mode},
         source=str(source),
@@ -263,7 +275,6 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
-    assert not aws_encryption_sdk_cli.output_filename.called
     aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
         stream_args={'mode': sentinel.mode},
         source=str(source),
