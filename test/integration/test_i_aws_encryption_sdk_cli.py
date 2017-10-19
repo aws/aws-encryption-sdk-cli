@@ -113,7 +113,6 @@ def test_file_to_file_base64_encode_only(tmpdir):
 
     with open(str(b64_ciphertext), 'rb') as b64_ct, open(str(ciphertext), 'wb') as ct:
         raw_ct = base64.b64decode(b64_ct.read())
-        print('raw_ct bytes:', len(raw_ct))
         ct.write(raw_ct)
 
     aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
