@@ -39,15 +39,15 @@ def patch_process_single_file(mocker):
     yield aws_encryption_sdk_cli.process_single_file
 
 
-@pytest.fixture
-def patch_for_process_cli_request(mocker, patch_process_dir, patch_process_single_file):
-    mocker.patch.object(aws_encryption_sdk_cli.os.path, 'isdir')
-    mocker.patch.object(aws_encryption_sdk_cli.os.path, 'isfile')
+@pytest.yield_fixture
+def patch_output_filename(mocker):
     mocker.patch.object(aws_encryption_sdk_cli, 'output_filename')
     aws_encryption_sdk_cli.output_filename.return_value = sentinel.destination_filename
+
+
+@pytest.fixture
+def patch_for_process_cli_request(mocker, patch_process_dir, patch_process_single_file):
     mocker.patch.object(aws_encryption_sdk_cli, 'process_single_operation')
-    mocker.patch.object(aws_encryption_sdk_cli.glob, 'glob')
-    aws_encryption_sdk_cli.glob.glob.side_effect = lambda x: [x]
 
 
 def test_process_cli_request_source_is_destination_dir_to_dir(tmpdir):
@@ -79,32 +79,13 @@ def test_process_cli_request_source_is_destination_file_to_file(tmpdir):
     excinfo.match(r'Destination and source cannot be the same')
 
 
-def test_process_cli_request_source_is_destination_file_to_dir(tmpdir):
-    single_file = tmpdir.join('a_file')
-    single_file.write('some data')
-
-    with pytest.raises(BadUserArgumentError) as excinfo:
-        aws_encryption_sdk_cli.process_cli_request(
-            stream_args={'mode': 'encrypt'},
-            source=str(single_file),
-            destination=str(tmpdir),
-            recursive=True,
-            interactive=False,
-            no_overwrite=False,
-            suffix=''
-        )
-    excinfo.match(r'Destination and source cannot be the same')
-
-
-def test_process_cli_request_source_dir_nonrecursive(patch_for_process_cli_request):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        sentinel.source: True,
-        sentinel.destination: True
-    })
+def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_for_process_cli_request):
+    source = tmpdir.mkdir('source')
+    destination = tmpdir.mkdir('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
-        source=sentinel.source,
-        destination=sentinel.destination,
+        source=str(source),
+        destination=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
@@ -116,10 +97,6 @@ def test_process_cli_request_source_dir_nonrecursive(patch_for_process_cli_reque
 
 
 def test_process_cli_request_source_dir_destination_nondir(tmpdir):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        sentinel.source: True,
-        sentinel.destination: False
-    })
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
@@ -132,18 +109,13 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
 
-def test_process_cli_request_source_dir_destination_dir(patch_for_process_cli_request):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        sentinel.source: True,
-        'a specific destination': True
-    })
-    aws_encryption_sdk_cli.os.path.isfile.side_effect = patch_reactive_side_effect({
-        sentinel.source: False
-    })
+def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_process_cli_request, patch_output_filename):
+    source = tmpdir.mkdir('source')
+    destination = tmpdir.mkdir('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
-        source=sentinel.source,
-        destination='a specific destination',
+        source=str(source),
+        destination=str(destination),
         recursive=True,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
@@ -151,13 +123,12 @@ def test_process_cli_request_source_dir_destination_dir(patch_for_process_cli_re
     )
     aws_encryption_sdk_cli.process_dir.assert_called_once_with(
         stream_args=sentinel.stream_args,
-        source=sentinel.source,
-        destination='a specific destination',
+        source=str(source),
+        destination=str(destination),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix
     )
-    assert not aws_encryption_sdk_cli.os.path.isfile.called
     assert not aws_encryption_sdk_cli.output_filename.called
     assert not aws_encryption_sdk_cli.process_single_file.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -176,91 +147,71 @@ def test_process_cli_request_source_stdin_destination_dir(tmpdir):
     excinfo.match(r'Destination may not be a directory when source is stdin')
 
 
-def test_process_cli_request_source_stdin(patch_for_process_cli_request):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        '-': False,
-        sentinel.destination: False
-    })
+def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request, patch_output_filename):
+    destination = tmpdir.join('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
         source='-',
-        destination=sentinel.destination,
+        destination=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )
     assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.os.path.isfile.called
     assert not aws_encryption_sdk_cli.output_filename.called
     assert not aws_encryption_sdk_cli.process_single_file.called
     aws_encryption_sdk_cli.process_single_operation.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source='-',
-        destination=sentinel.destination,
+        destination=str(destination),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )
 
 
-def test_process_cli_request_source_file_destination_dir(patch_for_process_cli_request):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        sentinel.source: False,
-        'a specific destination': True
-    })
-    aws_encryption_sdk_cli.os.path.isfile.side_effect = patch_reactive_side_effect({
-        sentinel.source: True
-    })
+def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_process_cli_request):
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = tmpdir.mkdir('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': sentinel.mode},
-        source=sentinel.source,
-        destination='a specific destination',
+        source=str(source),
+        destination=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix
+        suffix='CUSTOM_SUFFIX'
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
-    aws_encryption_sdk_cli.os.path.isfile.assert_called_once_with(sentinel.source)
-    aws_encryption_sdk_cli.output_filename.assert_called_once_with(
-        source_filename=sentinel.source,
-        destination_dir='a specific destination',
-        mode=str(sentinel.mode),
-        suffix=sentinel.suffix
-    )
     aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
         stream_args={'mode': sentinel.mode},
-        source=sentinel.source,
-        destination=sentinel.destination_filename,
+        source=str(source),
+        destination=str(destination.join('sourceCUSTOM_SUFFIX')),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )
 
 
-def test_process_cli_request_source_file_destination_file(patch_for_process_cli_request):
-    aws_encryption_sdk_cli.os.path.isdir.side_effect = patch_reactive_side_effect({
-        sentinel.source: False,
-        'a specific destination': False
-    })
-    aws_encryption_sdk_cli.os.path.isfile.side_effect = patch_reactive_side_effect({
-        sentinel.source: True
-    })
+def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_process_cli_request, patch_output_filename):
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = tmpdir.join('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': sentinel.mode},
-        source=sentinel.source,
-        destination='a specific destination',
+        source=str(source),
+        destination=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
-    aws_encryption_sdk_cli.os.path.isfile.assert_called_once_with(sentinel.source)
     assert not aws_encryption_sdk_cli.output_filename.called
     aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
         stream_args={'mode': sentinel.mode},
-        source=sentinel.source,
-        destination='a specific destination',
+        source=str(source),
+        destination=str(destination),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )

@@ -141,7 +141,7 @@ def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
 
     test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
 
-    assert test_result == 'Destination and source cannot be the same'
+    assert test_result is None
 
     with open(str(plaintext), 'rb') as f:
         assert f.read() == plaintext_source

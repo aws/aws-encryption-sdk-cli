@@ -251,23 +251,62 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         assert not should_write
 
 
-def test_process_single_file(patch_process_single_operation):
+def test_process_single_file(tmpdir, patch_process_single_operation):
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = tmpdir.join('destination')
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
         io_handling.process_single_file(
             stream_args=sentinel.stream_args,
-            source=sentinel.source,
-            destination=sentinel.destination,
+            source=str(source),
+            destination=str(destination),
             interactive=sentinel.interactive,
             no_overwrite=sentinel.no_overwrite
         )
-    mock_open.assert_called_once_with(sentinel.source, 'rb')
+    mock_open.assert_called_once_with(str(source), 'rb')
     patch_process_single_operation.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=mock_open.return_value.__enter__.return_value,
-        destination=sentinel.destination,
+        destination=str(destination),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite
     )
+
+
+def test_process_single_file_source_is_destination(tmpdir, patch_process_single_operation):
+    source = tmpdir.join('source')
+    source.write('some data')
+
+    with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
+        io_handling.process_single_file(
+            stream_args=sentinel.stream_args,
+            source=str(source),
+            destination=str(source),
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite
+        )
+
+    assert not mock_open.called
+    assert not patch_process_single_operation.called
+
+
+def test_process_single_file_destination_is_symlink_to_source(tmpdir, patch_process_single_operation):
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = str(tmpdir.join('destination'))
+    os.symlink(str(source), destination)
+
+    with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
+        io_handling.process_single_file(
+            stream_args=sentinel.stream_args,
+            source=str(source),
+            destination=destination,
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite
+        )
+
+    assert not mock_open.called
+    assert not patch_process_single_operation.called
 
 
 @pytest.mark.parametrize('source, destination, mode, suffix, output', (
