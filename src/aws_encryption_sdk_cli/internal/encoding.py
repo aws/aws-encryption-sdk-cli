@@ -103,17 +103,17 @@ class Base64IO(ObjectProxy):
             raise ValueError('I/O operation on closed file.')
 
         # Load any stashed bytes and clear the buffer
-        _b = self.__write_buffer + b
+        _bytes_to_write = self.__write_buffer + b
         self.__write_buffer = b''
 
         # If an even base64 chunk or finalizing the stream, write through.
-        if len(_b) % 3 == 0 or self.__finalize:
-            return self.__wrapped__.write(base64.b64encode(_b))
+        if len(_bytes_to_write) % 3 == 0 or self.__finalize:
+            return self.__wrapped__.write(base64.b64encode(_bytes_to_write))
 
         # We're not finalizing the stream, so stash the trailing bytes and encode the rest.
-        trailing_byte_pos = -1 * (len(_b) % 3)
-        self.__write_buffer = _b[trailing_byte_pos:]
-        return self.__wrapped__.write(base64.b64encode(_b[:trailing_byte_pos]))
+        trailing_byte_pos = -1 * (len(_bytes_to_write) % 3)
+        self.__write_buffer = _bytes_to_write[trailing_byte_pos:]
+        return self.__wrapped__.write(base64.b64encode(_bytes_to_write[:trailing_byte_pos]))
 
     def read(self, b=None):
         # type: (Optional[int]) -> bytes
@@ -126,16 +126,17 @@ class Base64IO(ObjectProxy):
         """
         if self.closed:
             raise ValueError('I/O operation on closed file.')
-        _b = None
+
+        _bytes_to_read = None
         if b is not None:
             # Calculate number of encoded bytes that must be read to get b raw bytes.
-            _b = int((b - len(self.__read_buffer)) * 4 / 3)
-            _b += (4 - _b % 4)
+            _bytes_to_read = int((b - len(self.__read_buffer)) * 4 / 3)
+            _bytes_to_read += (4 - _bytes_to_read % 4)
 
-        _LOGGER.debug('%s bytes requested: adjusted to %s bytes', b, _b)
+        _LOGGER.debug('%s bytes requested: adjusted to %s bytes', b, _bytes_to_read)
 
         # Read encoded bytes from wrapped stream.
-        data = self.__wrapped__.read(_b)
+        data = self.__wrapped__.read(_bytes_to_read)
         _LOGGER.debug('read %d bytes from source', len(data))
 
         results = io.BytesIO()
