@@ -171,6 +171,11 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
     """
+    if os.path.realpath(source) == os.path.realpath(destination):
+        # File source, directory destination, empty suffix:
+        _LOGGER.warning('Skipping because the source (%s) and destination (%s) are the same', source, destination)
+        return
+
     with open(source, 'rb') as source_reader:
         process_single_operation(
             stream_args=stream_args,
