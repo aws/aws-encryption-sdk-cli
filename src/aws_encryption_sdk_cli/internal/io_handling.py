@@ -75,10 +75,7 @@ def _ensure_dir_exists(filename):
         # os.makedirs(... exist_ok=True) does not work in 2.7
         pass
     else:
-        _LOGGER.info(
-            'Replicating source child directory structure into destination: %s',
-            dest_final_dir
-        )
+        _LOGGER.info('Created directory: %s', dest_final_dir)
 
 
 def _single_io_write(stream_args, source, destination_writer):
