@@ -160,6 +160,22 @@ def test_base64io_encode(source_bytes):
     assert plaintext_stream.getvalue() == plaintext_b64
 
 
+@pytest.mark.parametrize('bytes_to_read, expected_bytes_read', (
+    (-1, io.DEFAULT_BUFFER_SIZE),
+    (0, io.DEFAULT_BUFFER_SIZE),
+    (1, 1),
+    (10, 10)
+))
+def test_base64io_decode_readline(bytes_to_read, expected_bytes_read):
+    source_plaintext = os.urandom(io.DEFAULT_BUFFER_SIZE * 2)
+    source_stream = io.BytesIO(base64.b64encode(source_plaintext))
+
+    with Base64IO(source_stream) as decoder:
+        test = decoder.readline(bytes_to_read)
+
+    assert test == source_plaintext[:expected_bytes_read]
+
+
 def test_base64io_decode_read_only_from_buffer():
     plaintext_source = b'12345'
     plaintext_b64 = io.BytesIO(base64.b64encode(plaintext_source))
@@ -200,16 +216,23 @@ def test_base64io_decode_context_manager_close_source():
     assert source_stream.closed
 
 
-def test_base64io_decode_readlines():
+@pytest.mark.parametrize('hint_bytes, expected_bytes_read', (
+    (-1, 102400),
+    (0, 102400),
+    (1, io.DEFAULT_BUFFER_SIZE),
+    (io.DEFAULT_BUFFER_SIZE + 99, io.DEFAULT_BUFFER_SIZE * 2)
+))
+def test_base64io_decode_readlines(hint_bytes, expected_bytes_read):
     source_plaintext = os.urandom(102400)
     source_stream = io.BytesIO(base64.b64encode(source_plaintext))
 
     test = io.BytesIO()
     with Base64IO(source_stream) as stream:
-        for chunk in stream.readlines():
+        for chunk in stream.readlines(hint_bytes):
             test.write(chunk)
 
-    assert test.getvalue() == source_plaintext
+    assert len(test.getvalue()) == expected_bytes_read
+    assert test.getvalue() == source_plaintext[:expected_bytes_read]
 
 
 def test_base64io_encode_writelines():

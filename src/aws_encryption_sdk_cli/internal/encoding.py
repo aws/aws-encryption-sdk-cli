@@ -15,7 +15,7 @@ from __future__ import division
 import base64
 import io
 import logging
-from typing import IO, List, Optional  # noqa pylint: disable=unused-import
+from typing import IO, Iterable, List, Optional  # noqa pylint: disable=unused-import
 from types import TracebackType  # noqa pylint: disable=unused-import
 
 import six
@@ -43,7 +43,7 @@ class Base64IO(io.IOBase):
     closed = False
 
     def __init__(self, wrapped, close_wrapped_on_close=False):
-        # type: (IO) -> None
+        # type: (IO, Optional[bool]) -> None
         """Check for required methods on wrapped stream and set up read buffer."""
         required_attrs = ('read', 'write', 'close', 'closed', 'flush')
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
@@ -83,7 +83,7 @@ class Base64IO(io.IOBase):
             self.__wrapped.close()
 
     def _passthrough_interactive_check(self, method_name, mode):
-        # type: (str) -> bool
+        # type: (str, str) -> bool
         """Attempts to call the specified method on the wrapped stream and return the result.
         If the method is not found on the wrapped stream, returns False.
 
@@ -129,7 +129,7 @@ class Base64IO(io.IOBase):
         return self.__wrapped.flush()
 
     def write(self, b):
-        # type: (bytes) -> None
+        # type: (bytes) -> int
         """Base64-encode the bytes and write them to the wrapped stream, buffering any
         bytes that would require padding for the next write call.
 
@@ -167,7 +167,7 @@ class Base64IO(io.IOBase):
         return self.__wrapped.write(base64.b64encode(_bytes_to_write[:trailing_byte_pos]))
 
     def writelines(self, lines):
-        # type: (List[bytes]) -> None
+        # type: (Iterable[bytes]) -> None
         """Write a list of lines.
 
         :param list lines: Lines to write
@@ -219,15 +219,20 @@ class Base64IO(io.IOBase):
         """Iterate with this class, not the wrapped stream."""
         return self
 
-    def readline(self):
-        # type: () -> bytes
+    def readline(self, limit=-1):
+        # type: (int) -> bytes
         """Readline with this class, not the wrapped stream."""
-        return self.read(io.DEFAULT_BUFFER_SIZE)
+        return self.read(limit if limit > 0 else io.DEFAULT_BUFFER_SIZE)
 
-    def readlines(self):
-        # type: () -> List[bytes]
+    def readlines(self, hint=-1):
+        # type: (hint) -> List[bytes]
         """Readlines with this class, not the wrapped stream."""
-        return [line for line in self]
+        lines = []
+        for line in self:
+            lines.append(line)
+            if hint > 0 and len(lines) * io.DEFAULT_BUFFER_SIZE > hint:
+                break
+        return lines
 
     def __next__(self):
         # type: () -> bytes
