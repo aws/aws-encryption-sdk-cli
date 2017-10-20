@@ -151,6 +151,11 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
         'encryption_context',
         {'some': 'data', 'not': 'secret'}
     ))
+    good_args.append((
+        default_encrypt + ' -c "key with a space=value with a space"',
+        'encryption_context',
+        {'key with a space': 'value with a space'}
+    ))
 
     # algorithm
     algorithm_name = 'AES_128_GCM_IV12_TAG16'

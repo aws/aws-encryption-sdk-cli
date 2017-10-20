@@ -15,6 +15,7 @@ import argparse
 from collections import defaultdict, OrderedDict
 import copy
 import logging
+import shlex
 from typing import Any, Dict, List, Optional, Sequence, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
@@ -39,11 +40,11 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         drops both full-line and in-line comments.
         """
         converted_line = []
-        for arg in arg_line.split():
+        for arg in shlex.split(str(arg_line)):
             arg = arg.strip()
             if arg.startswith('#'):
                 break
-            converted_line.append(str(arg))
+            converted_line.append(arg)
         return converted_line
 
 
