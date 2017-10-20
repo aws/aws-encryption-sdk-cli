@@ -16,6 +16,7 @@ from distutils.spawn import find_executable  # distutils confuses pylint: disabl
 import filecmp
 import os
 import shlex
+import shutil
 from subprocess import PIPE, Popen
 
 import pytest
@@ -91,61 +92,44 @@ def test_file_to_file_cycle_target_through_symlink(tmpdir):
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
-def test_file_to_file_base64_encode_only(tmpdir):
+@pytest.mark.parametrize('encode, decode', (
+    (True, False),
+    (False, True),
+    (True, True),
+    (False, False)
+))
+def test_file_to_file_base64(tmpdir, encode, decode):
     plaintext = tmpdir.join('source_plaintext')
-    b64_ciphertext = tmpdir.join('b64-ciphertext')
-    ciphertext = tmpdir.join('ciphertext')
+    ciphertext_a = tmpdir.join('ciphertext-a')
+    ciphertext_b = tmpdir.join('ciphertext-b')
     decrypted = tmpdir.join('decrypted')
     plaintext_source = os.urandom(10240)  # make sure we have more than one chunk
     with open(str(plaintext), 'wb') as f:
         f.write(plaintext_source)
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
-        source=str(plaintext),
-        target=str(b64_ciphertext)
-    ) + ' --encode'
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
-        source=str(ciphertext),
-        target=str(decrypted)
-    ) + ' -vv'
-
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-
-    with open(str(b64_ciphertext), 'rb') as b64_ct, open(str(ciphertext), 'wb') as ct:
-        raw_ct = base64.b64decode(b64_ct.read())
-        ct.write(raw_ct)
-
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
-
-    with open(str(decrypted), 'rb') as f:
-        decrypted_plaintext = f.read()
-
-    assert decrypted_plaintext == plaintext_source
-
-
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
-def test_file_to_file_base64_decode_only(tmpdir):
-    plaintext = tmpdir.join('source_plaintext')
-    b64_ciphertext = tmpdir.join('b64-ciphertext')
-    ciphertext = tmpdir.join('ciphertext')
-    decrypted = tmpdir.join('decrypted')
-    plaintext_source = os.urandom(10240)  # make sure we have more than one chunk
-    with open(str(plaintext), 'wb') as f:
-        f.write(plaintext_source)
+    encrypt_flag = ' --encode' if encode else ''
+    decrypt_flag = ' --decode' if decode else ''
 
     encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
         source=str(plaintext),
-        target=str(ciphertext)
-    )
+        target=str(ciphertext_a)
+    ) + encrypt_flag
     decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
-        source=str(b64_ciphertext),
+        source=str(ciphertext_b),
         target=str(decrypted)
-    ) + ' --decode'
+    ) + decrypt_flag
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
 
-    with open(str(ciphertext), 'rb') as ct, open(str(b64_ciphertext), 'wb') as b64_ct:
-        b64_ct.write(base64.b64encode(ct.read()))
+    if encode and not decode:
+        with open(str(ciphertext_a), 'rb') as ct_a, open(str(ciphertext_b), 'wb') as ct_b:
+            raw_ct = base64.b64decode(ct_a.read())
+            ct_b.write(raw_ct)
+    elif decode and not encode:
+        with open(str(ciphertext_a), 'rb') as ct, open(str(ciphertext_b), 'wb') as b64_ct:
+            b64_ct.write(base64.b64encode(ct.read()))
+    else:
+        shutil.copy2(str(ciphertext_a), str(ciphertext_b))
 
     aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
 
