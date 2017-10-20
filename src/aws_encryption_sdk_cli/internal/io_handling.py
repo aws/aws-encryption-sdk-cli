@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Helper functions for handling all input and output for this CLI."""
+from __future__ import division
 import copy
 import logging
 import os
@@ -211,7 +212,11 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
     # Because we can actually know size for files and Base64IO does not support seeking,
     # set the source length manually for files. This allows enables data key caching when
     # Base64-decoding a source file.
-    _stream_args['source_length'] = os.path.getsize(source)
+    source_file_size = os.path.getsize(source)
+    if decode_input and not encode_output:
+        _stream_args['source_length'] = int(source_file_size * (3 / 4))
+    else:
+        _stream_args['source_length'] = source_file_size
 
     with open(source, 'rb') as source_reader:
         process_single_operation(

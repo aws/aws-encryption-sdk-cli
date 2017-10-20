@@ -298,20 +298,38 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         assert not should_write
 
 
-def test_process_single_file(tmpdir, patch_process_single_operation):
+@pytest.mark.parametrize('mode, decode_input, encode_output, expected_multiplier', (
+    ('encrypt', False, False, 1.0),
+    ('encrypt', True, False, 0.75),
+    ('encrypt', False, True, 1.0),
+    ('encrypt', True, True, 1.0),
+    ('decrypt', False, False, 1.0),
+    ('decrypt', True, False, 0.75),
+    ('decrypt', False, True, 1.0),
+    ('decrypt', True, True, 1.0)
+))
+def test_process_single_file(
+        tmpdir,
+        patch_process_single_operation,
+        mode,
+        decode_input,
+        encode_output,
+        expected_multiplier
+):
     source = tmpdir.join('source_file')
     source.write('some data')
     destination = tmpdir.join('destination')
     initial_kwargs = dict(
-        mode='encrypt',
+        mode=mode,
         a=sentinel.a,
         b=sentinel.b
     )
+    expected_length = int(os.path.getsize(str(source)) * expected_multiplier)
     updated_kwargs = dict(
-        mode='encrypt',
+        mode=mode,
         a=sentinel.a,
         b=sentinel.b,
-        source_length=os.path.getsize(str(source))
+        source_length=expected_length
     )
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
         io_handling.process_single_file(
@@ -320,8 +338,8 @@ def test_process_single_file(tmpdir, patch_process_single_operation):
             destination=str(destination),
             interactive=sentinel.interactive,
             no_overwrite=sentinel.no_overwrite,
-            decode_input=sentinel.decode_input,
-            encode_output=sentinel.encode_output
+            decode_input=decode_input,
+            encode_output=encode_output
         )
     mock_open.assert_called_once_with(str(source), 'rb')
     patch_process_single_operation.assert_called_once_with(
@@ -330,8 +348,8 @@ def test_process_single_file(tmpdir, patch_process_single_operation):
         destination=str(destination),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        decode_input=decode_input,
+        encode_output=encode_output
     )
 
 
