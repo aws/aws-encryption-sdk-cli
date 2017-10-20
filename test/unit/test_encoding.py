@@ -15,6 +15,7 @@ import base64
 import io
 import os
 
+from mock import sentinel
 import pytest
 
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
@@ -54,19 +55,74 @@ def test_base64io_read_after_closed():
     excinfo.match(r'I/O operation on closed file.')
 
 
-def test_base64io_seekable():
+@pytest.mark.parametrize('method_name', ('isatty', 'seekable'))
+def test_base64io_always_false_methods(method_name):
     test = Base64IO(io.BytesIO())
 
-    assert not test.seekable
+    assert not getattr(test, method_name)()
 
 
-def test_base64io_seek():
+@pytest.mark.parametrize('method_name', ('fileno', 'seek', 'tell', 'truncate'))
+def test_unsupported_methods(method_name):
     test = Base64IO(io.BytesIO())
 
-    with pytest.raises(IOError) as excinfo:
-        test.seek(4)
+    with pytest.raises(IOError):
+        getattr(test, method_name)()
 
-    excinfo.match(r'Seek not allowed on Base64IO objects')
+
+@pytest.mark.parametrize('method_name', ('flush', 'writable', 'readable'))
+def test_passthrough_methods_present(monkeypatch, method_name):
+    wrapped = io.BytesIO()
+    monkeypatch.setattr(wrapped, method_name, lambda: sentinel.passthrough)
+    wrapper = Base64IO(wrapped)
+
+    assert getattr(wrapper, method_name)() is sentinel.passthrough
+
+
+@pytest.mark.parametrize('method_name', ('writable', 'readable'))
+def test_passthrough_methods_not_present(monkeypatch, method_name):
+    def _attr_not_present():
+        raise AttributeError()
+    wrapped = io.BytesIO()
+    monkeypatch.setattr(wrapped, method_name, _attr_not_present)
+    wrapper = Base64IO(wrapped)
+
+    assert not getattr(wrapper, method_name)()
+
+
+@pytest.mark.parametrize('mode, method_name, expected', (
+    ('wb', 'writable', True),
+    ('rb', 'readable', True),
+    ('rb', 'writable', False),
+    ('wb', 'readable', False)
+))
+def test_passthrough_methods_file(tmpdir, method_name, mode, expected):
+    source = tmpdir.join('source')
+    source.write('some data')
+
+    with open(str(source), mode) as reader:
+        with Base64IO(reader) as b64:
+            test = getattr(b64, method_name)()
+
+    if expected:
+        assert test
+    else:
+        assert not test
+
+
+@pytest.mark.parametrize('patch_method, call_method, call_arg', (
+    ('writable', 'write', b''),
+    ('readable', 'read', 0)
+))
+def test_non_interactive_error(monkeypatch, patch_method, call_method, call_arg):
+    wrapped = io.BytesIO()
+    monkeypatch.setattr(wrapped, patch_method, lambda: False)
+
+    with Base64IO(wrapped) as wrapper:
+        with pytest.raises(IOError) as excinfo:
+            getattr(wrapper, call_method)(call_arg)
+
+    excinfo.match(r'Stream is not ' + patch_method)
 
 
 TEST_CASES = (

@@ -18,7 +18,7 @@ import logging
 from typing import IO, List, Optional  # noqa pylint: disable=unused-import
 from types import TracebackType  # noqa pylint: disable=unused-import
 
-from wrapt import ObjectProxy
+import six
 
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
@@ -26,29 +26,30 @@ _LOGGER = logging.getLogger(LOGGER_NAME)
 __all__ = ('Base64IO',)
 
 
-class Base64IO(ObjectProxy):
+class Base64IO(io.IOBase):
     """Wraps a stream, base64-decoding read results before returning them.
+
+    .. note::
+
+        Provides iterator and context manager interfaces. Writes must be performed using
+        the context manager interface.
 
     :param wrapped: Stream to wrap
     :param bool close_wrapped_on_close: Should the wrapped stream be closed when this object is closed (default: False)
     """
 
-    # Prime ObjectProxy's attributes to allow setting in init.
-    __read_buffer = None
-    __write_buffer = None
     __finalize = False
     __in_context_manager = False
-    __close_wrapped_on_close = False
     closed = False
-    seekable = False
 
     def __init__(self, wrapped, close_wrapped_on_close=False):
         # type: (IO) -> None
         """Check for required methods on wrapped stream and set up read buffer."""
-        required_attrs = ('read', 'write', 'close', 'closed')
+        required_attrs = ('read', 'write', 'close', 'closed', 'flush')
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
             raise TypeError('Base64IO wrapped object must have attributes: {}'.format(repr(sorted(required_attrs))))
-        super(Base64IO, self).__init__(wrapped)
+        super(Base64IO, self).__init__()
+        self.__wrapped = wrapped
         self.__close_wrapped_on_close = close_wrapped_on_close
         self.__read_buffer = b''
         self.__write_buffer = b''
@@ -59,16 +60,11 @@ class Base64IO(ObjectProxy):
         self.__in_context_manager = True
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):  # ObjectProxy exit confuses pylint: disable=arguments-differ
+    def __exit__(self, exc_type, exc_value, traceback):
         # type: (type, BaseException, TracebackType) -> None
         """Properly close self on exit."""
         self.close()
         self.__in_context_manager = False
-
-    def seek(self, offset, whence=0):  # pylint: disable=unused-argument,no-self-use
-        # type: (int, int) -> None
-        """Seek is not allowed on Base64IO objects."""
-        raise IOError('Seek not allowed on Base64IO objects')
 
     def close(self):
         # type: () -> None
@@ -84,7 +80,53 @@ class Base64IO(ObjectProxy):
             self.write(b'')
         self.closed = True
         if self.__close_wrapped_on_close:
-            self.__wrapped__.close()
+            self.__wrapped.close()
+
+    def _passthrough_interactive_check(self, method_name, mode):
+        # type: (str) -> bool
+        """Attempts to call the specified method on the wrapped stream and return the result.
+        If the method is not found on the wrapped stream, returns False.
+
+        .. note::
+
+            Special Case: If wrapped stream is a Python 2 file, returns True.
+
+        :param str method_name: Name of method to call
+        :param str mode: Python 2 mode character
+        :rtype: bool
+        """
+        try:
+            return getattr(self.__wrapped, method_name)()
+        except AttributeError:
+            if six.PY2 and isinstance(self.__wrapped, file):  # noqa pylint: disable=undefined-variable
+                if mode in self.__wrapped.mode:
+                    return True
+            return False
+
+    def writable(self):
+        # type: () -> bool
+        """Determine if the stream can be written to.
+        Delegates to wrapped stream if present.
+        Otherwise returns False.
+
+        :rtype: bool
+        """
+        return self._passthrough_interactive_check('writable', 'w')
+
+    def readable(self):
+        # type: () -> bool
+        """Determine if the stream can be read from.
+        Delegates to wrapped stream if present.
+        Otherwise returns False.
+
+        :rtype: bool
+        """
+        return self._passthrough_interactive_check('readable', 'r')
+
+    def flush(self):
+        # type: () -> None
+        """Flushes the write buffer of the wrapped stream."""
+        return self.__wrapped.flush()
 
     def write(self, b):
         # type: (bytes) -> None
@@ -108,18 +150,21 @@ class Base64IO(ObjectProxy):
         if self.closed:
             raise ValueError('I/O operation on closed file.')
 
+        if not self.writable():
+            raise IOError('Stream is not writable')
+
         # Load any stashed bytes and clear the buffer
         _bytes_to_write = self.__write_buffer + b
         self.__write_buffer = b''
 
         # If an even base64 chunk or finalizing the stream, write through.
         if len(_bytes_to_write) % 3 == 0 or self.__finalize:
-            return self.__wrapped__.write(base64.b64encode(_bytes_to_write))
+            return self.__wrapped.write(base64.b64encode(_bytes_to_write))
 
         # We're not finalizing the stream, so stash the trailing bytes and encode the rest.
         trailing_byte_pos = -1 * (len(_bytes_to_write) % 3)
         self.__write_buffer = _bytes_to_write[trailing_byte_pos:]
-        return self.__wrapped__.write(base64.b64encode(_bytes_to_write[:trailing_byte_pos]))
+        return self.__wrapped.write(base64.b64encode(_bytes_to_write[:trailing_byte_pos]))
 
     def writelines(self, lines):
         # type: (List[bytes]) -> None
@@ -142,16 +187,19 @@ class Base64IO(ObjectProxy):
         if self.closed:
             raise ValueError('I/O operation on closed file.')
 
+        if not self.readable():
+            raise IOError('Stream is not readable')
+
         _bytes_to_read = None
         if b is not None:
             # Calculate number of encoded bytes that must be read to get b raw bytes.
             _bytes_to_read = int((b - len(self.__read_buffer)) * 4 / 3)
             _bytes_to_read += (4 - _bytes_to_read % 4)
 
-        _LOGGER.debug('%s bytes requested: reading %s bytes from underlying stream', b, _bytes_to_read)
+        _LOGGER.debug('%s bytes requested: reading %s bytes from wrapped stream', b, _bytes_to_read)
 
         # Read encoded bytes from wrapped stream.
-        data = self.__wrapped__.read(_bytes_to_read)
+        data = self.__wrapped.read(_bytes_to_read)
 
         results = io.BytesIO()
         # First, load any stashed bytes
