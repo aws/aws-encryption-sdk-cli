@@ -121,6 +121,15 @@ class Base64IO(ObjectProxy):
         self.__write_buffer = _bytes_to_write[trailing_byte_pos:]
         return self.__wrapped__.write(base64.b64encode(_bytes_to_write[:trailing_byte_pos]))
 
+    def writelines(self, lines):
+        # type: (List[bytes]) -> None
+        """Write a list of lines.
+
+        :param list lines: Lines to write
+        """
+        for line in lines:
+            self.write(line)
+
     def read(self, b=None):
         # type: (Optional[int]) -> bytes
         """Read bytes from source stream base64-decoding before return, and adjusting read

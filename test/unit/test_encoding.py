@@ -156,6 +156,17 @@ def test_base64io_decode_readlines():
     assert test.getvalue() == source_plaintext
 
 
+def test_base64io_encode_writelines():
+    source_plaintext = [os.urandom(1024) for _ in range(100)]
+    b64_plaintext = base64.b64encode(b''.join(source_plaintext))
+
+    test = io.BytesIO()
+    with Base64IO(test) as encoder:
+        encoder.writelines(source_plaintext)
+
+    assert test.getvalue() == b64_plaintext
+
+
 def test_base64io_decode_file(tmpdir):
     source_plaintext = os.urandom(1024 * 1024)
     b64_plaintext = tmpdir.join('base64_plaintext')
