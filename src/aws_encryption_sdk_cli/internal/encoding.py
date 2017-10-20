@@ -228,8 +228,6 @@ class Base64IO(io.IOBase):
             _bytes_to_read = int((b - len(self.__read_buffer)) * 4 / 3)
             _bytes_to_read += (4 - _bytes_to_read % 4)
 
-        _LOGGER.debug('%s bytes requested: reading %s bytes from wrapped stream', b, _bytes_to_read)
-
         # Read encoded bytes from wrapped stream.
         data = self.__wrapped.read(_bytes_to_read)
         if any([six.b(char) in data for char in string.whitespace]):
