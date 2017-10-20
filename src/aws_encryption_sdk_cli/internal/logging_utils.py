@@ -45,7 +45,7 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
 
     def __is_kms_encrypt_request(self, record):  # pylint: disable=no-self-use
         # type: (logging.LogRecord) -> bool
-        """Determmine if a record contains a kms:Encrypt request.
+        """Determine if a record contains a kms:Encrypt request.
 
         :param record: Logging record to filter
         :type record: logging.LogRecord
