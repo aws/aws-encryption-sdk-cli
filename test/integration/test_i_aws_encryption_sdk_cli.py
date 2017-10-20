@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Integration testing suite for AWS Encryption SDK CLI."""
-from distutils.spawn import find_executable
+from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import filecmp
 import os
 import shlex
