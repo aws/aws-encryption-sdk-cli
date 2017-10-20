@@ -128,6 +128,20 @@ def test_base64io_decode_context_manager():
             test.write(chunk)
 
     assert test.getvalue() == source_plaintext
+    assert not source_stream.closed
+
+
+def test_base64io_decode_context_manager_close_source():
+    source_plaintext = os.urandom(102400)
+    source_stream = io.BytesIO(base64.b64encode(source_plaintext))
+
+    test = io.BytesIO()
+    with Base64IO(source_stream, close_wrapped_on_close=True) as stream:
+        for chunk in stream:
+            test.write(chunk)
+
+    assert test.getvalue() == source_plaintext
+    assert source_stream.closed
 
 
 def test_base64io_decode_readlines():

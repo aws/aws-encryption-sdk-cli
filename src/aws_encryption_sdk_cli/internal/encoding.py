@@ -30,6 +30,7 @@ class Base64IO(ObjectProxy):
     """Wraps a stream, base64-decoding read results before returning them.
 
     :param wrapped: Stream to wrap
+    :param bool close_wrapped_on_close: Should the wrapped stream be closed when this object is closed (default: False)
     """
 
     # Prime ObjectProxy's attributes to allow setting in init.
@@ -37,16 +38,18 @@ class Base64IO(ObjectProxy):
     __write_buffer = None
     __finalize = False
     __in_context_manager = False
+    __close_wrapped_on_close = False
     closed = False
     seekable = False
 
-    def __init__(self, wrapped):
+    def __init__(self, wrapped, close_wrapped_on_close=False):
         # type: (IO) -> None
         """Check for required methods on wrapped stream and set up read buffer."""
         required_attrs = ('read', 'write', 'close', 'closed')
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
             raise TypeError('Base64IO wrapped object must have attributes: {}'.format(repr(sorted(required_attrs))))
         super(Base64IO, self).__init__(wrapped)
+        self.__close_wrapped_on_close = close_wrapped_on_close
         self.__read_buffer = b''
         self.__write_buffer = b''
 
@@ -73,12 +76,15 @@ class Base64IO(ObjectProxy):
 
         .. note::
 
-            This does **not** close the wrapped stream.
+            This does **not** close the wrapped stream unless otherwise specified when this
+            object was created.
         """
         self.__finalize = True
         if self.__write_buffer:
             self.write(b'')
         self.closed = True
+        if self.__close_wrapped_on_close:
+            self.__wrapped__.close()
 
     def write(self, b):
         # type: (bytes) -> None
@@ -149,8 +155,6 @@ class Base64IO(ObjectProxy):
         # Stash any extra bytes for the next run.
         self.__read_buffer = results.read()
 
-        if not output_data:
-            self.__wrapped__.close()
         return output_data
 
     def __iter__(self):
@@ -171,9 +175,10 @@ class Base64IO(ObjectProxy):
     def __next__(self):
         # type: () -> bytes
         """Iterate with this class, not the wrapped stream (Python 3 hook)."""
-        if self.__wrapped__.closed and not self.__read_buffer:
-            raise StopIteration()
-        return self.readline()
+        line = self.readline()
+        if line:
+            return line
+        raise StopIteration()
 
     def next(self):
         # type: () -> bytes
