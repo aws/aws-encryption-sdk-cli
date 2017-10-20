@@ -18,6 +18,7 @@ additional-builtins = raw_input
 
 [DESIGN]
 max-args = 10
+max-attributes = 10
 
 [FORMAT]
 max-line-length = 120
