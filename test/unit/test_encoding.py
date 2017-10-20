@@ -29,15 +29,6 @@ def test_base64io_bad_wrap():
     excinfo.match(r'Base64IO wrapped object must have attributes: *')
 
 
-def test_base64io_write_outside_context_manager():
-    test = Base64IO(io.BytesIO())
-
-    with pytest.raises(ValueError) as excinfo:
-        test.write(b'asuhdfiouhsad')
-
-    excinfo.match(r'Writes are only allowed on Base64IO objects when used as context managers.')
-
-
 def test_base64io_write_after_closed():
     with Base64IO(io.BytesIO()) as test:
         with pytest.raises(ValueError) as excinfo:
@@ -158,13 +149,28 @@ def test_base64io_decode(source_bytes, read_bytes):
 
 
 @pytest.mark.parametrize('source_bytes', [case[0] for case in TEST_CASES])
-def test_base64io_encode(source_bytes):
+def test_base64io_encode_context_manager(source_bytes):
     plaintext_source = os.urandom(source_bytes)
     plaintext_b64 = base64.b64encode(plaintext_source)
     plaintext_stream = io.BytesIO()
 
     with Base64IO(plaintext_stream) as plaintext_wrapped:
         plaintext_wrapped.write(plaintext_source)
+
+    assert plaintext_stream.getvalue() == plaintext_b64
+
+
+@pytest.mark.parametrize('source_bytes', [case[0] for case in TEST_CASES])
+def test_base64io_encode(source_bytes):
+    plaintext_source = os.urandom(source_bytes)
+    plaintext_b64 = base64.b64encode(plaintext_source)
+    plaintext_stream = io.BytesIO()
+
+    plaintext_wrapped = Base64IO(plaintext_stream)
+    try:
+        plaintext_wrapped.write(plaintext_source)
+    finally:
+        plaintext_wrapped.close()
 
     assert plaintext_stream.getvalue() == plaintext_b64
 

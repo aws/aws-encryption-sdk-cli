@@ -32,8 +32,13 @@ class Base64IO(io.IOBase):
 
     .. note::
 
-        Provides iterator and context manager interfaces. Writes must be performed using
-        the context manager interface.
+        Provides iterator and context manager interfaces.
+
+    .. warning::
+
+        Because up to two bytes of data must be buffered to ensure correct base64 encoding
+        of all data written, this object **must** be closed after you are done writing to
+        avoid data loss. If used as a context manager, we take care of that for you.
 
     :param wrapped: Stream to wrap
     :param bool close_wrapped_on_close: Should the wrapped stream be closed when this object is closed (default: False)
@@ -41,7 +46,6 @@ class Base64IO(io.IOBase):
     """
 
     __finalize = False
-    __in_context_manager = False
     closed = False
 
     def __init__(self, wrapped, close_wrapped_on_close=False, ignore_whitespace=False):
@@ -60,14 +64,12 @@ class Base64IO(io.IOBase):
     def __enter__(self):
         # type: () -> Base64IO
         """Return self on enter."""
-        self.__in_context_manager = True
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         # type: (type, BaseException, TracebackType) -> None
         """Properly close self on exit."""
         self.close()
-        self.__in_context_manager = False
 
     def close(self):
         # type: () -> None
@@ -139,17 +141,13 @@ class Base64IO(io.IOBase):
         .. warning::
 
             Because up to two bytes of data must be buffered to ensure correct base64 encoding
-            of all data written, this method is disabled except when the Base64IO object is
-            used as a context manager. This is enforced in order to ensure that your data
-            is not corrupted.
+            of all data written, this object **must** be closed after you are done writing to
+            avoid data loss. If used as a context manager, we take care of that for you.
 
         :param bytes b: Bytes to write to wrapped stream
         :raises ValueError: if called on closed Base64IO object
         :raises ValueError: if called on Base64IO object outside of a context manager
         """
-        if not self.__in_context_manager:
-            raise ValueError('Writes are only allowed on Base64IO objects when used as context managers.')
-
         if self.closed:
             raise ValueError('I/O operation on closed file.')
 
