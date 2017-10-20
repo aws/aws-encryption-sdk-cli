@@ -15,6 +15,7 @@ from __future__ import division
 import base64
 import io
 import logging
+import string
 from typing import IO, Iterable, List, Optional  # noqa pylint: disable=unused-import
 from types import TracebackType  # noqa pylint: disable=unused-import
 
@@ -36,14 +37,15 @@ class Base64IO(io.IOBase):
 
     :param wrapped: Stream to wrap
     :param bool close_wrapped_on_close: Should the wrapped stream be closed when this object is closed (default: False)
+    :param bool ignore_whitespace: Should whitespace be ignored when reading (default: False)
     """
 
     __finalize = False
     __in_context_manager = False
     closed = False
 
-    def __init__(self, wrapped, close_wrapped_on_close=False):
-        # type: (IO, Optional[bool]) -> None
+    def __init__(self, wrapped, close_wrapped_on_close=False, ignore_whitespace=False):
+        # type: (IO, Optional[bool], Optional[bool]) -> None
         """Check for required methods on wrapped stream and set up read buffer."""
         required_attrs = ('read', 'write', 'close', 'closed', 'flush')
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
@@ -51,6 +53,7 @@ class Base64IO(io.IOBase):
         super(Base64IO, self).__init__()
         self.__wrapped = wrapped
         self.__close_wrapped_on_close = close_wrapped_on_close
+        self.__ignore_whitespace = ignore_whitespace
         self.__read_buffer = b''
         self.__write_buffer = b''
 
@@ -175,6 +178,35 @@ class Base64IO(io.IOBase):
         for line in lines:
             self.write(line)
 
+    def _read_additional_data_removing_whitespace(self, data, total_bytes_to_read):
+        # type: (bytes) -> bytes
+        """Read additional data from wrapped stream, removing any whitespace found, until we
+        reach the desired number of bytes.
+
+        :param bytes data: Data that has already been read from wrapped stream
+        :param int total_bytes_to_read: Number of total non-whitespace bytes to read from wrapped stream
+        :returns: ``total_bytes_to_read`` bytes from wrapped stream with no whitespace
+        :rtype: bytes
+        """
+        if total_bytes_to_read is None:
+            # If the requested number of bytes is None, we read the entire message, in which
+            # case the base64 module happily removes any whitespace.
+            return data
+
+        _data_buffer = io.BytesIO()
+        _data_buffer.write(b''.join(data.split()))
+        _remaining_bytes_to_read = total_bytes_to_read - _data_buffer.tell()
+
+        while _remaining_bytes_to_read > 0:
+            _raw_additional_data = self.__wrapped.read(_remaining_bytes_to_read)
+            if not _raw_additional_data:
+                # No more data to read from wrapped stream.
+                break
+
+            _data_buffer.write(b''.join(_raw_additional_data.split()))
+            _remaining_bytes_to_read = total_bytes_to_read - _data_buffer.tell()
+        return _data_buffer.getvalue()
+
     def read(self, b=None):
         # type: (Optional[int]) -> bytes
         """Read bytes from source stream base64-decoding before return, and adjusting read
@@ -200,6 +232,13 @@ class Base64IO(io.IOBase):
 
         # Read encoded bytes from wrapped stream.
         data = self.__wrapped.read(_bytes_to_read)
+        if any([six.b(char) in data for char in string.whitespace]):
+            if self.__ignore_whitespace:
+                data = self._read_additional_data_removing_whitespace(data, _bytes_to_read)
+            else:
+                raise TypeError(
+                    'Whitespace found in base64-encoded data. Whitespace must be ignored to read this stream.'
+                )
 
         results = io.BytesIO()
         # First, load any stashed bytes

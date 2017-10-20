@@ -12,6 +12,7 @@
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.encoding``."""
 import base64
+import functools
 import io
 import os
 
@@ -182,6 +183,37 @@ def test_base64io_decode_readline(bytes_to_read, expected_bytes_read):
         test = decoder.readline(bytes_to_read)
 
     assert test == source_plaintext[:expected_bytes_read]
+
+
+def build_b64_with_whitespace(source_bytes, line_length):
+    plaintext_source = os.urandom(source_bytes)
+    b64_plaintext = io.BytesIO(base64.b64encode(plaintext_source))
+    b64_plaintext_with_whitespace = b'\n'.join([
+        line for line
+        in iter(functools.partial(b64_plaintext.read, line_length), b'')
+    ])
+    return plaintext_source, b64_plaintext_with_whitespace
+
+
+@pytest.mark.parametrize('source_bytes, read_bytes', TEST_CASES)
+def test_base64io_decode_do_not_ignore_whitespace(source_bytes, read_bytes):
+    _plaintext_source, b64_plaintext_with_whitespace = build_b64_with_whitespace(source_bytes, 1)
+
+    with pytest.raises(TypeError) as excinfo:
+        with Base64IO(io.BytesIO(b64_plaintext_with_whitespace)) as decoder:
+            decoder.read(read_bytes)
+
+    excinfo.match(r'Whitespace found in base64-encoded data. Whitespace must be ignored to read this stream.')
+
+
+@pytest.mark.parametrize('source_bytes, read_bytes', TEST_CASES)
+def test_base64io_decode_do_ignore_whitespace(source_bytes, read_bytes):
+    plaintext_source, b64_plaintext_with_whitespace = build_b64_with_whitespace(source_bytes, 1)
+
+    with Base64IO(io.BytesIO(b64_plaintext_with_whitespace), ignore_whitespace=True) as decoder:
+        test = decoder.read(read_bytes)
+
+    assert test == plaintext_source[:read_bytes]
 
 
 def test_base64io_decode_read_only_from_buffer():
