@@ -82,18 +82,18 @@ def _ensure_dir_exists(filename):
 
 
 def _encoder(stream, should_base64):
-    # type: (IO, bool) -> ObjectProxy
+    # type: (IO, bool) -> IO
     """Wraps a stream in either a Base64IO transformer or a transparent proxy.
 
     :param stream: Stream to wrap
     :type stream: file-like object
     :param bool should_base64: Should the stream be wrapped with Base64IO
     :returns: wrapped stream
-    :rtype: wrapt.ObjectProxy
+    :rtype: io.IOBase
     """
     if should_base64:
         return Base64IO(stream)
-    return ObjectProxy(stream)
+    return stream
 
 
 def _single_io_write(stream_args, source, destination_writer, decode_input, encode_output):

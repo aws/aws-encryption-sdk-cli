@@ -119,7 +119,6 @@ def test_ensure_dir_exists_current_directory(patch_makedirs):
 
 @pytest.mark.parametrize('should_base64', (True, False))
 def test_encoder(mocker, should_base64):
-    mocker.patch.object(io_handling, 'ObjectProxy')
     mocker.patch.object(io_handling, 'Base64IO')
 
     test = io_handling._encoder(sentinel.stream, should_base64)
@@ -127,7 +126,7 @@ def test_encoder(mocker, should_base64):
     if should_base64:
         assert test is io_handling.Base64IO.return_value
     else:
-        assert test is io_handling.ObjectProxy.return_value
+        assert test is sentinel.stream
 
 
 def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
