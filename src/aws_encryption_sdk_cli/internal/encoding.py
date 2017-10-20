@@ -84,12 +84,12 @@ class Base64IO(io.IOBase):
 
     def _passthrough_interactive_check(self, method_name, mode):
         # type: (str, str) -> bool
-        """Attempts to call the specified method on the wrapped stream and return the result.
+        """Attempt to call the specified method on the wrapped stream and return the result.
         If the method is not found on the wrapped stream, returns False.
 
         .. note::
 
-            Special Case: If wrapped stream is a Python 2 file, returns True.
+            Special Case: If wrapped stream is a Python 2 file, inspect the file mode.
 
         :param str method_name: Name of method to call
         :param str mode: Python 2 mode character
@@ -106,7 +106,7 @@ class Base64IO(io.IOBase):
     def writable(self):
         # type: () -> bool
         """Determine if the stream can be written to.
-        Delegates to wrapped stream if present.
+        Delegates to wrapped stream when possible.
         Otherwise returns False.
 
         :rtype: bool
@@ -116,7 +116,7 @@ class Base64IO(io.IOBase):
     def readable(self):
         # type: () -> bool
         """Determine if the stream can be read from.
-        Delegates to wrapped stream if present.
+        Delegates to wrapped stream when possible.
         Otherwise returns False.
 
         :rtype: bool
@@ -125,7 +125,7 @@ class Base64IO(io.IOBase):
 
     def flush(self):
         # type: () -> None
-        """Flushes the write buffer of the wrapped stream."""
+        """Flush the write buffer of the wrapped stream."""
         return self.__wrapped.flush()
 
     def write(self, b):
@@ -214,21 +214,35 @@ class Base64IO(io.IOBase):
 
         return output_data
 
-    def __iter__(self):
-        # type: () -> Base64IO
-        """Iterate with this class, not the wrapped stream."""
+    def __iter__(self):  # type: ignore
+        # Until https://github.com/python/typing/issues/11
+        # there's no good way to tell mypy about custom
+        # iterators that subclass io.IOBase.
+        """Let this class act as an iterator."""
         return self
 
     def readline(self, limit=-1):
         # type: (int) -> bytes
-        """Readline with this class, not the wrapped stream."""
+        """Read and return one line from the stream.
+        If limit is specified, at most limit bytes will be read.
+
+        :type limit: int
+        :rtype: bytes
+        """
         return self.read(limit if limit > 0 else io.DEFAULT_BUFFER_SIZE)
 
     def readlines(self, hint=-1):
-        # type: (hint) -> List[bytes]
-        """Readlines with this class, not the wrapped stream."""
+        # type: (int) -> List[bytes]
+        """Read and return a list of lines from the stream. hint can be specified to control
+        the number of lines read: no more lines will be read if the total size (in bytes/
+        characters) of all lines so far exceeds hint.
+
+        :type hint: int
+        :returns: Lines of data
+        :rtype: list of bytes
+        """
         lines = []
-        for line in self:
+        for line in self:  # type: ignore
             lines.append(line)
             if hint > 0 and len(lines) * io.DEFAULT_BUFFER_SIZE > hint:
                 break
@@ -236,7 +250,7 @@ class Base64IO(io.IOBase):
 
     def __next__(self):
         # type: () -> bytes
-        """Iterate with this class, not the wrapped stream (Python 3 hook)."""
+        """Python 3 iterator hook."""
         line = self.readline()
         if line:
             return line
@@ -244,5 +258,5 @@ class Base64IO(io.IOBase):
 
     def next(self):
         # type: () -> bytes
-        """Iterate with this class, not the wrapped stream (Python 2 hook)."""
+        """Python 2 iterator hook."""
         return self.__next__()
