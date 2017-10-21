@@ -61,7 +61,7 @@ def _catch_bad_destination_requests(destination):
     :raises BadUserArgument: if destination is a file in a directory that does not already exist
     """
     if destination != '-' and not os.path.isdir(destination):
-        if not os.path.isdir(os.path.abspath(os.path.dirname(destination))):
+        if not os.path.isdir(os.path.realpath(os.path.dirname(destination))):
             raise BadUserArgumentError('If destination is a file, the immediate parent directory must already exist.')
 
 
