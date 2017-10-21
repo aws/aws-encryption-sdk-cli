@@ -65,6 +65,31 @@ def test_file_to_file_cycle(tmpdir):
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_to_file_cycle_target_through_symlink(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    output_dir = tmpdir.mkdir('output')
+    os.symlink(str(output_dir), str(tmpdir.join('output_link')))
+    ciphertext = tmpdir.join('output_link', 'ciphertext')
+    decrypted = tmpdir.join('decrypted')
+    with open(str(plaintext), 'wb') as f:
+        f.write(os.urandom(1024))
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(ciphertext)
+    )
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(ciphertext),
+        target=str(decrypted)
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    assert filecmp.cmp(str(plaintext), str(decrypted))
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_file_cycle_with_caching(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
