@@ -25,7 +25,7 @@ LOGGING_LEVELS = {
 LOGGER_NAME = 'aws_encryption_sdk_cli'  # type: str
 FORMAT_STRING = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'  # type: str
 MAX_LOGGING_LEVEL = 2  # type: int
-_REDACTED = '<**-redacted-**>'
+_REDACTED = '<**-redacted-**>'  # type: str
 
 
 class _KMSKeyRedactingFormatter(logging.Formatter):
