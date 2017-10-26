@@ -12,7 +12,6 @@
 # language governing permissions and limitations under the License.
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.logging``."""
 import logging
-import sys
 
 from mock import call, MagicMock, sentinel
 import pytest
@@ -103,87 +102,3 @@ def test_blacklist_filter():
     assert test._BlacklistFilter__blacklist == (sentinel.a, sentinel.b)
     assert test.filter(FakeRecord(name=sentinel.c))
     assert not test.filter(FakeRecord(name=sentinel.b))
-
-
-@pytest.mark.parametrize('record, plaintext, expected', (
-    (  # kms:GenerateDataKey or kms:Decrypt response
-        logging.LogRecord(
-            name='botocore.parsers',
-            level=logging.DEBUG,
-            pathname='a_path_name',
-            lineno=0,
-            msg='Response body:\n%s',
-            args=((
-                b'{"CiphertextBlob":"AQEBAHhA84wnXjEJdBbBBylRUFcZZK2j7xwh6UyLoL28nQ+0FAAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBA'
-                b'DBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLozVMQGN3lHKyOlfwIBEIA7Rm/ZI8DKfmto0UhG5BGpmVwAGIzhc/9I3fp4m'
-                b'TWaZJpfSPLKCf0uPRmgXHwKAIhV5W4MYCwPjIRqDbw=","KeyId":"arn:aws:kms:us-west-2:658956600833:key/b3537ef'
-                b'1-d8dc-4780-9f5a-55776cbb2f7f","Plaintext":"5OAq/2/qUiytQmHVcFso2czUz/BRK/YwktO4JLSNrD8="}'
-            ),),
-            exc_info=None
-        ),
-        '5OAq/2/qUiytQmHVcFso2czUz/BRK/YwktO4JLSNrD8=',
-        (
-            'Response body:\n'
-            '{"CiphertextBlob": "AQEBAHhA84wnXjEJdBbBBylRUFcZZK2j7xwh6UyLoL28nQ+0FAAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoB'
-            'gkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLozVMQGN3lHKyOlfwIBEIA7Rm/ZI8DKfmto0UhG5BGpmVwAGIzhc/9I3fp4mTWaZJpfSP'
-            'LKCf0uPRmgXHwKAIhV5W4MYCwPjIRqDbw=", "KeyId": "arn:aws:kms:us-west-2:658956600833:key/b3537ef1-d8dc-4780-'
-            '9f5a-55776cbb2f7f", "Plaintext": "<**-redacted-**>"}'
-        )
-    ),
-    (  # kms:Encrypt request
-        logging.LogRecord(
-            name='botocore.endpoint',
-            level=logging.DEBUG,
-            pathname='a_path_name',
-            lineno=0,
-            msg='Making request for %s (verify_ssl=%s) with params: %s',
-            args=(
-                'OperationModel(name=Encrypt)',
-                True,
-                {
-                    'url_path': '/',
-                    'query_string': '',
-                    'method': 'POST',
-                    'headers': {
-                        'X-Amz-Target': 'TrentService.Encrypt',
-                        'Content-Type': 'application/x-amz-json-1.1',
-                        'User-Agent': 'Boto3/1.4.5 Python/3.6.2 Darwin/16.7.0 Botocore/1.7.21'
-                    },
-                    'body': (
-                        b'{'
-                        b'"KeyId": "arn:aws:kms:us-west-2:658956600833:key/b3537ef1-d8dc-4780-9f5a-55776cbb2f7f", '
-                        b'"Plaintext": "c29tZSBzdXBlciBzZWNyZXQgZGF0YQ=="'
-                        b'}'
-                    ),
-                    'url': 'https://kms.us-west-2.amazonaws.com/',
-                    'context': {
-                        'client_region': 'us-west-2',
-                        # Normally there is a "client_config" entry here with a botocore.config.Config object.
-                        # Removing that from this test case because it does not have a consistent repr value.
-                        'has_streaming_input': False,
-                        'auth_type': None
-                    }
-                }
-            ),
-            exc_info=None
-        ),
-        'c29tZSBzdXBlciBzZWNyZXQgZGF0YQ==',
-        (
-            """Making request for OperationModel(name=Encrypt) (verify_ssl=True) with params: {'url_path': '/', 'que"""
-            """ry_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'TrentService.Encrypt', 'Content-Type':"""
-            """ 'application/x-amz-json-1.1', 'User-Agent': 'Boto3/1.4.5 Python/3.6.2 Darwin/16.7.0 Botocore/1.7.21'"""
-            """}, 'body': '{"KeyId": "arn:aws:kms:us-west-2:658956600833:key/b3537ef1-d8dc-4780-9f5a-55776cbb2f7f","""
-            """ "Plaintext": "<**-redacted-**>"}', 'url': 'https://kms.us-west-2.amazonaws.com/', 'context': {'clien"""
-            """t_region': 'us-west-2', 'has_streaming_input': False, 'auth_type': None}}"""
-        )
-    ),
-))
-def test_kms_key_redacting_formatter(record, plaintext, expected):
-    formatter = logging_utils._KMSKeyRedactingFormatter('%(message)s')
-    test = formatter.format(record)
-
-    assert '<**-redacted-**>' in test
-    assert plaintext not in test
-    if sys.version >= '3.6':
-        # Dictionaries are only ordered in Python 3.6+
-        assert test == expected
