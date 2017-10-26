@@ -31,8 +31,40 @@ from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
+def _add_dummy_redirect_argument(parser, expected_name):
+    # type: (argparse.ArgumentParser, str) -> None
+    """Adds a dummy redirect argument to the provided parser to catch typos when calling
+    the specified valid long-form name.
+
+    :param parser: Parser to which to add argument
+    :type parser: CommentIgnoringArgumentParser
+    :param str expected_name: Valid long-form name for which to add dummy redirect
+    """
+    parser.add_argument(
+        expected_name[1:],
+        dest='dummy_redirect',
+        action='store_const',
+        const=expected_name[1:],
+        help=argparse.SUPPRESS
+    )
+
+
 class CommentIgnoringArgumentParser(argparse.ArgumentParser):
     """``ArgumentParser`` that ignores lines in ``fromfile_prefix_chars`` files which start with ``#``."""
+
+    def add_argument(self, *args, **kwargs):
+        # The type profile for this it really complex and we don't do anything substantive
+        # to it, so I would rather not duplicate the typeshed's effort keeping it up to date.
+        # https://github.com/python/typeshed/blob/master/stdlib/2and3/argparse.pyi#L53-L65
+        """Adds the requested argument to the parser, also adding a dummy redirect argument
+        if a long-form argument (starts with two starting prefix characters) is found.
+
+        See: https://docs.python.org/dev/library/argparse.html#the-add-argument-method
+        """
+        for long_arg in [arg for arg in args if arg.startswith(self.prefix_chars * 2)]:
+            _add_dummy_redirect_argument(super(CommentIgnoringArgumentParser, self), long_arg)
+
+        return super(CommentIgnoringArgumentParser, self).add_argument(*args, **kwargs)
 
     def convert_arg_line_to_args(self, arg_line):
         # type: (ARGPARSE_TEXT) -> List[str]
@@ -105,6 +137,7 @@ def _build_parser():
         action='version',
         version=_version_report()
     )
+    _add_dummy_redirect_argument(parser, '--version')
 
     operating_action = version_or_action.add_mutually_exclusive_group()
     operating_action.add_argument(
@@ -115,6 +148,7 @@ def _build_parser():
         const='encrypt',
         help='Encrypt data'
     )
+    _add_dummy_redirect_argument(parser, '--encrypt')
     operating_action.add_argument(
         '-d',
         '--decrypt',
@@ -123,6 +157,7 @@ def _build_parser():
         const='decrypt',
         help='Decrypt data'
     )
+    _add_dummy_redirect_argument(parser, '--decrypt')
 
     parser.add_argument(
         '-m',
@@ -383,6 +418,11 @@ def parse_args(raw_args=None):
     parsed_args = parser.parse_args(args=raw_args)
 
     try:
+        if parsed_args.dummy_redirect is not None:
+            raise ParameterParseError('Found invalid argument "{actual}". Did you mean "-{actual}"?'.format(
+                actual=parsed_args.dummy_redirect
+            ))
+
         parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
 
         if parsed_args.encryption_context is not None:

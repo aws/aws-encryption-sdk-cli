@@ -234,7 +234,36 @@ def build_bad_multiple_arguments():
     ]
 
 
-@pytest.mark.parametrize('args', build_bad_io_arguments() + build_bad_multiple_arguments())
+def build_bad_dummy_arguments():
+    prefix = '-d -i - -o -'
+    dummy_arguments = [
+        ' -version',
+        ' -decrypt',
+        ' -encrypt',
+        ' -master-keys',
+        ' -caching',
+        ' -input',
+        ' -output',
+        ' -encryption-context',
+        ' -algorithm',
+        ' -frame-length',
+        ' -max-length',
+        ' -suffix',
+        ' -interactive',
+        ' -no-overwrite',
+        ' -recursive',
+        ' -quiet'
+    ]
+    return [
+        prefix + arg
+        for arg in dummy_arguments
+    ]
+
+
+@pytest.mark.parametrize(
+    'args',
+    build_bad_io_arguments() + build_bad_multiple_arguments() + build_bad_dummy_arguments()
+)
 def test_parse_args_fail(args):
     with pytest.raises(SystemExit):
         arg_parsing.parse_args(shlex.split(args))
@@ -386,7 +415,8 @@ def test_parse_args(
         encryption_context=sentinel.raw_encryption_context,
         caching=sentinel.raw_caching,
         action=sentinel.action,
-        version=False
+        version=False,
+        dummy_redirect=None
     )
     patch_build_parser.return_value.parse_args.return_value = mock_parsed_args
     test = arg_parsing.parse_args(sentinel.raw_args)
@@ -400,6 +430,28 @@ def test_parse_args(
     patch_process_caching_config.assert_called_once_with(sentinel.raw_caching)
     assert test.caching is patch_process_caching_config.return_value
     assert test is mock_parsed_args
+
+
+def test_parse_args_dummy_redirect(
+        patch_build_parser,
+        patch_process_master_key_provider_configs,
+        patch_parse_and_collapse_config,
+        patch_process_caching_config
+):
+    mock_parsed_args = MagicMock(
+        master_keys=sentinel.raw_keys,
+        encryption_context=sentinel.raw_encryption_context,
+        caching=sentinel.raw_caching,
+        action=sentinel.action,
+        version=False,
+        dummy_redirect='-invalid-argument'
+    )
+    patch_build_parser.return_value.parse_args.return_value = mock_parsed_args
+    arg_parsing.parse_args(sentinel.raw_args)
+
+    patch_build_parser.return_value.error.assert_called_once_with(
+        'Found invalid argument "-invalid-argument". Did you mean "--invalid-argument"?'
+    )
 
 
 def test_parse_args_no_encryption_context(
@@ -434,7 +486,7 @@ def test_parse_args_error_raised_in_post_processing(
         patch_parse_and_collapse_config,
         patch_process_caching_config
 ):
-    patch_build_parser.return_value.parse_args.return_value = MagicMock(version=False)
+    patch_build_parser.return_value.parse_args.return_value = MagicMock(version=False, dummy_redirect=None)
     patch_process_caching_config.side_effect = ParameterParseError
 
     arg_parsing.parse_args()
