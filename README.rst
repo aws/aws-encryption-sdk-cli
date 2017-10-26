@@ -332,26 +332,6 @@ references to other configuration files.
 
    aws-crypto @my-encrypt -i $INPUT -o $OUTPUT
 
-
-Shorthand
-=========
-
-If you want to be more succint with your usage, you can combine short argument names.
-
-For example, these three commands are all equivalent:
-
-.. code-block:: sh
-
-   aws-crypto --decrypt --recursive --quiet --input $INPUT --output $OUTPUT
-   aws-crypto -d -r -q -i $INPUT -o $OUTPUT
-   aws-crypto -drqi $INPUT -o $OUTPUT
-
-However, this can have some side effects that are not immediately obvious.
-
-For example, if ``--recursive`` is mistyped as ``-recursive``, this will be interpretted
-as ``-r -e -c ursive``, which is both not valid syntax (see `Encryption Context`_) and
-probably not what you intended.
-
 Execution
 =========
 
