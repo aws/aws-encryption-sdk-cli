@@ -19,46 +19,61 @@ import aws_encryption_sdk
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 import pkg_resources
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
-from aws_encryption_sdk_cli.internal.args_post_processing import nop_post_processing
-from aws_encryption_sdk_cli.internal.identifiers import (
-    MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT,
-    MASTER_KEY_PROVIDERS_ENTRY_POINT
-)
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, PluginLoadError
+from aws_encryption_sdk_cli.internal.identifiers import MASTER_KEY_PROVIDERS_ENTRY_POINT
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
     CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
 )
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
+_ENTRY_POINTS = {}  # type: Dict[str, pkg_resources.EntryPoint]
 
 
-def _load_entry_points():
-    # type: () -> Dict[str, Dict[str, Callable]]
-    """Loads all discoverable entry points for required groups.
+def _discover_entry_points():
+    # type: () -> None
+    """Discover all registered entry points."""
+    _LOGGER.debug('Discovering master key provider plugins')
 
-    :returns: Mapping of group to name to loaded callable
+    for entry_point in pkg_resources.iter_entry_points(MASTER_KEY_PROVIDERS_ENTRY_POINT):
+        _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
+        _LOGGER.debug('Plugin details: %s', dict(
+            name=entry_point.name,
+            module_name=entry_point.module_name,
+            attrs=entry_point.attrs,
+            extras=entry_point.extras,
+            dist=entry_point.dist
+        ))
+
+        if entry_point.name in _ENTRY_POINTS:
+            raise PluginLoadError(
+                'Multiple registered entry points found for plugin "{name}" registered by ({plugins})'.format(
+                    name=entry_point.name,
+                    plugins=', '.join([
+                        entry_point.dist,
+                        _ENTRY_POINTS[entry_point.name].dist
+                    ])
+                )
+            )
+
+        _ENTRY_POINTS[entry_point.name] = entry_point
+
+
+def _entry_points():
+    # type: () -> Dict[str, pkg_resources.EntryPoint]
+    """Discover all entry points for required groups if they have not already been found.
+
+    :returns: Mapping of group to name to entry points
     :rtype: dict
     """
-    entry_points = {}  # type: Dict[str, Dict[str, Callable]]
-    for group in (
-            MASTER_KEY_PROVIDERS_ENTRY_POINT,
-            MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT
-    ):
-        entry_points[group] = {
-            entry_point.name: entry_point.load()
-            for entry_point
-            in pkg_resources.iter_entry_points(group)
-        }
-    return entry_points
-
-
-_ENTRY_POINTS = _load_entry_points()
+    if not _ENTRY_POINTS:
+        _discover_entry_points()
+    return _ENTRY_POINTS
 
 
 def _load_master_key_provider(name):
     # type: (str) -> Callable
-    """Finds the correct master key provider entry point for the specified name.
+    """Find the correct master key provider entry point for the specified name.
 
     :param str name: Name for which to look up entry point
     :returns: Loaded entry point
@@ -66,24 +81,11 @@ def _load_master_key_provider(name):
     :raises BadUserArgumentError: if entry point cannot be found
     """
     try:
-        return _ENTRY_POINTS[MASTER_KEY_PROVIDERS_ENTRY_POINT][name]
+        entry_point = _entry_points()[name]
+        _LOGGER.debug('Loading master key provider "%s" from module "%s"', entry_point.name, entry_point.module_name)
+        return entry_point.load()
     except KeyError:
         raise BadUserArgumentError('Unknown master key provider: "{}"'.format(name))
-
-
-def _load_arguments_post_processor(name):
-    # type: (str) -> Callable
-    """Finds the correct arguments post-processor entry point for the specified name.
-    If no entry point is found, a no-op post-processor is returned.
-
-    :param str name: Name for which to look up entry point
-    :returns: Loaded entry point
-    :rtype: callable
-    """
-    try:
-        return _ENTRY_POINTS[MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT][name]
-    except KeyError:
-        return nop_post_processing
 
 
 def _build_master_key_provider(provider, key, **kwargs):
@@ -99,9 +101,6 @@ def _build_master_key_provider(provider, key, **kwargs):
     _LOGGER.debug('Loading provider: %s', provider)
 
     provider_callable = _load_master_key_provider(provider)
-    post_processor = _load_arguments_post_processor(provider)
-
-    kwargs = post_processor(kwargs)
     key_provider = provider_callable(**kwargs)
     for single_key in key:
         key_provider.add_master_key(single_key)

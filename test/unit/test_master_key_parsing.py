@@ -11,33 +11,21 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.master_key_parsing``."""
-from aws_encryption_sdk.key_providers.kms import KMSMasterKeyProvider
+from collections import defaultdict
+
 from mock import call, MagicMock, sentinel
 import pytest
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, PluginLoadError
 from aws_encryption_sdk_cli.internal import master_key_parsing
-from aws_encryption_sdk_cli.internal.args_post_processing import (
-    kms_master_key_provider_post_processing,
-    nop_post_processing
-)
-from aws_encryption_sdk_cli.internal.identifiers import (
-    MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT,
-    MASTER_KEY_PROVIDERS_ENTRY_POINT
-)
+from aws_encryption_sdk_cli.key_providers import aws_kms_master_key_provider
 
 
 @pytest.yield_fixture
 def patch_load_master_key_provider(mocker):
     mocker.patch.object(master_key_parsing, '_load_master_key_provider')
     yield master_key_parsing._load_master_key_provider
-
-
-@pytest.yield_fixture
-def patch_load_arguments_post_processor(mocker):
-    mocker.patch.object(master_key_parsing, '_load_arguments_post_processor')
-    yield master_key_parsing._load_arguments_post_processor
 
 
 @pytest.yield_fixture
@@ -69,19 +57,33 @@ def patch_aws_encryption_sdk(mocker):
     yield master_key_parsing.aws_encryption_sdk
 
 
-def test_entry_points():
-    assert master_key_parsing._ENTRY_POINTS == master_key_parsing._load_entry_points()
+def test_entry_points(monkeypatch):
+    monkeypatch.setattr(master_key_parsing, '_ENTRY_POINTS', defaultdict(dict))
+    test = master_key_parsing._entry_points()
+
+    assert test == master_key_parsing._ENTRY_POINTS
 
 
 def test_entry_points_aws_kms():
-    assert master_key_parsing._ENTRY_POINTS[MASTER_KEY_PROVIDERS_ENTRY_POINT]['aws-kms'] == KMSMasterKeyProvider
-    assert master_key_parsing._ENTRY_POINTS[
-        MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT
-    ]['aws-kms'] == kms_master_key_provider_post_processing
+    assert master_key_parsing._entry_points()['aws-kms'].load() == aws_kms_master_key_provider
+
+
+def test_entry_points_duplicate_name(monkeypatch):
+    master_key_parsing._entry_points()
+    monkeypatch.setitem(
+        master_key_parsing._ENTRY_POINTS,
+        'aws-kms',
+        MagicMock(name='aws-kms', module_name='my.fake.module')
+    )
+
+    with pytest.raises(PluginLoadError) as excinfo:
+        master_key_parsing._discover_entry_points()
+
+    excinfo.match(r'Multiple registered entry points found *')
 
 
 def test_load_master_key_provider_known():
-    assert master_key_parsing._load_master_key_provider('aws-kms') == KMSMasterKeyProvider
+    assert master_key_parsing._load_master_key_provider('aws-kms') == aws_kms_master_key_provider
 
 
 def test_load_master_key_provider_unknown():
@@ -91,19 +93,9 @@ def test_load_master_key_provider_unknown():
     excinfo.match(r'Unknown master key provider: *')
 
 
-def test_load_arguments_post_processor_known():
-    assert master_key_parsing._load_arguments_post_processor('aws-kms') == kms_master_key_provider_post_processing
-
-
-def test_load_arguments_post_processor_unknown():
-    assert master_key_parsing._load_arguments_post_processor(sentinel.unknown_name) == nop_post_processing
-
-
-def test_build_master_key_provider_known_provider(patch_load_master_key_provider, patch_load_arguments_post_processor):
+def test_build_master_key_provider_known_provider(patch_load_master_key_provider):
     mock_provider_callable = MagicMock()
-    mock_post_processing = MagicMock(return_value={'c': sentinel.c})
     patch_load_master_key_provider.return_value = mock_provider_callable
-    patch_load_arguments_post_processor.return_value = mock_post_processing
     test = master_key_parsing._build_master_key_provider(
         provider=sentinel.known_provider_id,
         key=[],
@@ -111,14 +103,12 @@ def test_build_master_key_provider_known_provider(patch_load_master_key_provider
         b=sentinel.b
     )
     patch_load_master_key_provider.assert_called_once_with(sentinel.known_provider_id)
-    patch_load_arguments_post_processor.assert_called_once_with(sentinel.known_provider_id)
-    mock_post_processing.assert_called_once_with({'a': sentinel.a, 'b': sentinel.b})
-    mock_provider_callable.assert_called_once_with(c=sentinel.c)
+    mock_provider_callable.assert_called_once_with(a=sentinel.a, b=sentinel.b)
     assert not mock_provider_callable.return_value.add_master_key.called
     assert test is mock_provider_callable.return_value
 
 
-def test_build_master_key_provider_add_keys(patch_load_master_key_provider, patch_load_arguments_post_processor):
+def test_build_master_key_provider_add_keys(patch_load_master_key_provider):
     mock_provider = MagicMock()
     patch_load_master_key_provider.return_value.return_value = mock_provider
     master_key_parsing._build_master_key_provider(
@@ -137,20 +127,14 @@ def test_build_master_key_provider_add_keys(patch_load_master_key_provider, patc
     )
 
 
-def test_build_master_key_provider_additional_kwargs(
-        patch_load_master_key_provider,
-        patch_load_arguments_post_processor
-):
+def test_build_master_key_provider_additional_kwargs(patch_load_master_key_provider):
     kwargs = {'a': 1, 'b': 'asdf'}
-    kwargs2 = {'c': 5, 'd': None}
-    patch_load_arguments_post_processor.return_value.return_value = kwargs2
     master_key_parsing._build_master_key_provider(
         provider=sentinel.unknown_provider_id,
         key=[],
         **kwargs
     )
-    patch_load_arguments_post_processor.return_value.assert_called_once_with(kwargs)
-    patch_load_master_key_provider.return_value.assert_called_once_with(**kwargs2)
+    patch_load_master_key_provider.return_value.assert_called_once_with(**kwargs)
 
 
 def test_assemble_master_key_providers():

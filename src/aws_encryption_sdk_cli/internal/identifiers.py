@@ -26,5 +26,4 @@ OUTPUT_SUFFIX = {
 ALGORITHM_NAMES = set([
     alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith('_')
 ])  # type: Set[aws_encryption_sdk.Algorithm]
-MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk.master_key_providers'
-MASTER_KEY_PROVIDER_ARGUMENT_PROCESSORS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_provider_argument_processors'
+MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
