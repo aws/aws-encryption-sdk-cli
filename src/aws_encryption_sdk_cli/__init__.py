@@ -198,24 +198,24 @@ def cli(raw_args=None):
 
     :returns: Execution return value intended for ``sys.exit()``
     """
-    args = parse_args(raw_args)
-
-    setup_logger(args.verbosity, args.quiet)
-
-    _LOGGER.debug('Encryption mode: %s', args.action)
-    _LOGGER.debug('Encryption source: %s', args.input)
-    _LOGGER.debug('Encryption destination: %s', args.output)
-    _LOGGER.debug('Master key provider configuration: %s', args.master_keys)
-    _LOGGER.debug('Suffix requested: %s', args.suffix)
-
-    crypto_materials_manager = build_crypto_materials_manager_from_args(
-        key_providers_config=args.master_keys,
-        caching_config=args.caching
-    )
-
-    stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
-
     try:
+        args = parse_args(raw_args)
+
+        setup_logger(args.verbosity, args.quiet)
+
+        _LOGGER.debug('Encryption mode: %s', args.action)
+        _LOGGER.debug('Encryption source: %s', args.input)
+        _LOGGER.debug('Encryption destination: %s', args.output)
+        _LOGGER.debug('Master key provider configuration: %s', args.master_keys)
+        _LOGGER.debug('Suffix requested: %s', args.suffix)
+
+        crypto_materials_manager = build_crypto_materials_manager_from_args(
+            key_providers_config=args.master_keys,
+            caching_config=args.caching
+        )
+
+        stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
+
         process_cli_request(
             stream_args=stream_args,
             source=args.input,
