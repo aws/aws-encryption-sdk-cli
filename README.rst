@@ -132,16 +132,6 @@ as the primary. This master key is used to generate the data key.
    key_provider.add_master_key($KEY_ARN_1)
    key_provider.add_master_key($KEY_ARN_2)
 
-.. table::
-
-   +------------------------------------+
-   | Known Master Key Providers         |
-   +-------------+----------------------+
-   | Provider ID | Python callable      |
-   +=============+======================+
-   | aws-kms     | KMSMasterKeyProvider |
-   +-------------+----------------------+
-
 
 .. code-block:: sh
 
@@ -185,31 +175,23 @@ The logic for determining which region to use is shown in the pseudocode below:
 
 Advanced Configuration
 ``````````````````````
-If you want to use a different master key provider, that provider must register at least one
-`setuptools entry point`_. You can find examples of registering these entry points in the
+If you want to use a different master key provider, that provider must register a
+`setuptools entry point`_. You can find an example of registering this entry point in the
 ``setup.py`` for this package.
 
-When a provider name is specifed in a call to ``aws-crypto``, the appropriate entry points
-for that name are used.
+When a provider name is specifed in a call to ``aws-crypto``, the appropriate entry point
+for that name is used.
 
-Two types of entry points are recognized:
+External Master Key Providers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When called, these entry points must return an instance of a master key provider. They must
+accept the parameters prepared by the CLI as described in `Master Key Provider`_.
 
-Master Key Providers
-~~~~~~~~~~~~~~~~~~~~
-These entry points return an instance of a master key provider.
-
-These entry points must be registered in the  ``aws_encryption_sdk.master_key_providers`` group.
-
-Argument Processors
-~~~~~~~~~~~~~~~~~~~
-These entry points apply some post-processing to the collected master key provider construction
-arguments. They are useful if you want to apply some additional transformation to the arguments
-collected by the CLI prior to your master key provider being called.
-
-You are not required to register an argument processor entry point for your master key provider.
-
-These entry points must be registered in the ``aws_encryption_sdk_cli.master_key_provider_argument_processors``
+These entry points must be registered in the ``aws_encryption_sdk_cli.master_key_providers``
 group.
+
+If desired the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``,
+the CLI will present the raised error message to the user to indicate bad user input.
 
 Data Key Caching
 ----------------
