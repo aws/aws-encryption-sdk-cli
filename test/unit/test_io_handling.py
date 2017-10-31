@@ -257,7 +257,7 @@ def test_process_single_file(tmpdir, patch_process_single_operation):
     destination = tmpdir.join('destination')
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
         io_handling.process_single_file(
-            stream_args=sentinel.stream_args,
+            stream_args={'mode': 'encrypt'},
             source=str(source),
             destination=str(destination),
             interactive=sentinel.interactive,
@@ -265,7 +265,7 @@ def test_process_single_file(tmpdir, patch_process_single_operation):
         )
     mock_open.assert_called_once_with(str(source), 'rb')
     patch_process_single_operation.assert_called_once_with(
-        stream_args=sentinel.stream_args,
+        stream_args={'mode': 'encrypt'},
         source=mock_open.return_value.__enter__.return_value,
         destination=str(destination),
         interactive=sentinel.interactive,
