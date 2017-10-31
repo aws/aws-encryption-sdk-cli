@@ -235,29 +235,24 @@ def build_bad_multiple_arguments():
 
 
 def build_bad_dummy_arguments():
-    prefix = '-d -i - -o -'
-    dummy_arguments = [
-        ' -version',
-        ' -decrypt',
-        ' -encrypt',
-        ' -master-keys',
-        ' -caching',
-        ' -input',
-        ' -output',
-        ' -encryption-context',
-        ' -algorithm',
-        ' -frame-length',
-        ' -max-length',
-        ' -suffix',
-        ' -interactive',
-        ' -no-overwrite',
-        ' -recursive',
-        ' -quiet'
-    ]
-    return [
-        prefix + arg
-        for arg in dummy_arguments
-    ]
+    parser = arg_parsing._build_parser()
+    dummy_arguments = parser._CommentIgnoringArgumentParser__dummy_arguments
+    bad_commands = []
+    safe_pattern = '-d -i - -o - {arg}'
+    partial_patterns = {
+        '-decrypt': '{arg} -i - -o -',
+        '-encrypt': '{arg} -i - -o -',
+        '-input': '-d {arg} - -o -',
+        '-output': '-d -i - {arg} -',
+    }
+    for arg in dummy_arguments:
+        pattern = partial_patterns.get(arg, safe_pattern)
+        bad_commands.append(pattern.format(arg=arg))
+    return bad_commands
+
+
+def test_bad_commands_exist():
+    assert build_bad_dummy_arguments()
 
 
 @pytest.mark.parametrize(

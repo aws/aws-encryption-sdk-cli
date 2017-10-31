@@ -52,6 +52,13 @@ def _add_dummy_redirect_argument(parser, expected_name):
 class CommentIgnoringArgumentParser(argparse.ArgumentParser):
     """``ArgumentParser`` that ignores lines in ``fromfile_prefix_chars`` files which start with ``#``."""
 
+    def __init__(self, *args, **kwargs):
+        # The type profile for this it really complex and we don't do anything to it, so
+        # I would rather not duplicate the typeshed's effort keeping it up to date.
+        # https://github.com/python/typeshed/blob/master/stdlib/2and3/argparse.pyi#L27-L39
+        self.__dummy_arguments = []
+        super(CommentIgnoringArgumentParser, self).__init__(*args, **kwargs)
+
     def add_argument(self, *args, **kwargs):
         # The type profile for this it really complex and we don't do anything substantive
         # to it, so I would rather not duplicate the typeshed's effort keeping it up to date.
@@ -63,6 +70,7 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         """
         for long_arg in [arg for arg in args if arg.startswith(self.prefix_chars * 2)]:
             _add_dummy_redirect_argument(super(CommentIgnoringArgumentParser, self), long_arg)
+            self.__dummy_arguments.append(long_arg[1:])
 
         return super(CommentIgnoringArgumentParser, self).add_argument(*args, **kwargs)
 
