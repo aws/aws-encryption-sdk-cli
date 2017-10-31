@@ -23,7 +23,3 @@ class BadUserArgumentError(AWSEncryptionSDKCLIError):
 
 class ParameterParseError(AWSEncryptionSDKCLIError):
     """Exception class for any errors encountered parsing passed parameters."""
-
-
-class PluginLoadError(AWSEncryptionSDKCLIError):
-    """Exception class for any error encountered while loading plugins."""
