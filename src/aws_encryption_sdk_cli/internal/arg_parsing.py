@@ -58,6 +58,7 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
             const=expected_name[1:],
             help=argparse.SUPPRESS
         )
+        self.__dummy_arguments.append(expected_name[1:])
 
     def add_argument(self, *args, **kwargs):
         # The type profile for this it really complex and we don't do anything substantive
@@ -70,7 +71,6 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         """
         for long_arg in [arg for arg in args if arg.startswith(self.prefix_chars * 2)]:
             self.add_dummy_redirect_argument(long_arg)
-            self.__dummy_arguments.append(long_arg[1:])
 
         return super(CommentIgnoringArgumentParser, self).add_argument(*args, **kwargs)
 
