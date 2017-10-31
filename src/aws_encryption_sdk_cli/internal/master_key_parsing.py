@@ -11,23 +11,24 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Helper functions for building crypto materials manager and underlying master key provider(s) from arguments."""
+from collections import defaultdict
 import copy
 import logging
-from typing import Callable, Dict, List, Union  # noqa pylint: disable=unused-import
+from typing import Callable, DefaultDict, Dict, List, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 import pkg_resources
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, PluginLoadError
-from aws_encryption_sdk_cli.internal.identifiers import MASTER_KEY_PROVIDERS_ENTRY_POINT
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.internal.identifiers import MASTER_KEY_PROVIDERS_ENTRY_POINT, PLUGIN_NAMESPACE_DIVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
     CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
 )
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
-_ENTRY_POINTS = {}  # type: Dict[str, pkg_resources.EntryPoint]
+_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
 
 
 def _discover_entry_points():
@@ -45,22 +46,18 @@ def _discover_entry_points():
             dist=entry_point.dist
         ))
 
-        if entry_point.name in _ENTRY_POINTS:
-            raise PluginLoadError(
-                'Multiple registered entry points found for plugin "{name}" registered by ({plugins})'.format(
-                    name=entry_point.name,
-                    plugins=', '.join([
-                        entry_point.dist,
-                        _ENTRY_POINTS[entry_point.name].dist
-                    ])
-                )
+        if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
+            _LOGGER.warning(
+                'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
+                PLUGIN_NAMESPACE_DIVIDER,
+                entry_point.name
             )
 
-        _ENTRY_POINTS[entry_point.name] = entry_point
+        _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point
 
 
 def _entry_points():
-    # type: () -> Dict[str, pkg_resources.EntryPoint]
+    # type: () -> DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
     """Discover all entry points for required groups if they have not already been found.
 
     :returns: Mapping of group to name to entry points
@@ -80,12 +77,40 @@ def _load_master_key_provider(name):
     :rtype: callable
     :raises BadUserArgumentError: if entry point cannot be found
     """
+    if PLUGIN_NAMESPACE_DIVIDER in name:
+        package_name, entry_point_name = name.split(PLUGIN_NAMESPACE_DIVIDER, 1)
+    else:
+        package_name = ''
+        entry_point_name = name
+
+    entry_points = _entry_points()[entry_point_name]
+
+    if not entry_points:
+        raise BadUserArgumentError('Requested master key provider not found: "{}"'.format(entry_point_name))
+
+    if not package_name:
+        if len(entry_points) == 1:
+            return list(entry_points.values())[0].load()
+
+        raise BadUserArgumentError(
+            'Multiple entry points discovered and no package specified. Packages discovered registered by: ({})'.format(
+                ', '.join([str(entry.dist) for entry in entry_points.values()])
+            )
+        )
+
     try:
-        entry_point = _entry_points()[name]
-        _LOGGER.debug('Loading master key provider "%s" from module "%s"', entry_point.name, entry_point.module_name)
-        return entry_point.load()
+        return entry_points[package_name].load()
     except KeyError:
-        raise BadUserArgumentError('Unknown master key provider: "{}"'.format(name))
+        raise BadUserArgumentError(
+            (
+                'Requested master key provider not found: "{requested}".'
+                ' Packages discovered for "{entry_point}" registered by: ({discovered})'
+            ).format(
+                requested=name,
+                entry_point=entry_point_name,
+                discovered=', '.join([str(entry.dist) for entry in entry_points.values()])
+            )
+        )
 
 
 def _build_master_key_provider(provider, key, **kwargs):

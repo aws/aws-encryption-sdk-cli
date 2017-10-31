@@ -11,14 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.master_key_parsing``."""
-from collections import defaultdict
+from collections import defaultdict, namedtuple
+import logging
 
 from mock import call, MagicMock, sentinel
 import pytest
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
+import six
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, PluginLoadError
-from aws_encryption_sdk_cli.internal import master_key_parsing
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.internal import logging_utils, master_key_parsing
 from aws_encryption_sdk_cli.key_providers import aws_kms_master_key_provider
 
 
@@ -57,6 +59,29 @@ def patch_aws_encryption_sdk(mocker):
     yield master_key_parsing.aws_encryption_sdk
 
 
+@pytest.yield_fixture
+def patch_iter_entry_points(mocker):
+    mocker.patch.object(master_key_parsing.pkg_resources, 'iter_entry_points')
+    yield master_key_parsing.pkg_resources.iter_entry_points
+
+
+@pytest.fixture
+def logger_stream():
+    output_stream = six.StringIO()
+    formatter = logging.Formatter(logging_utils.FORMAT_STRING)
+    handler = logging.StreamHandler(stream=output_stream)
+    handler.setFormatter(formatter)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    return output_stream
+
+
+# "name" is a special, non-overridable attribute on mock objects
+FakeEntryPoint = namedtuple('FakeEntryPoint', ['name', 'module_name', 'attrs', 'extras', 'dist'])
+FakeEntryPoint.__new__.__defaults__ = ('MODULE', 'ATTRS', 'EXTRAS', MagicMock(project_name='PROJECT'))
+
+
 def test_entry_points(monkeypatch):
     monkeypatch.setattr(master_key_parsing, '_ENTRY_POINTS', defaultdict(dict))
     test = master_key_parsing._entry_points()
@@ -65,32 +90,77 @@ def test_entry_points(monkeypatch):
 
 
 def test_entry_points_aws_kms():
-    assert master_key_parsing._entry_points()['aws-kms'].load() == aws_kms_master_key_provider
+    assert master_key_parsing._entry_points()['aws-kms']['aws-encryption-sdk-cli'].load() == aws_kms_master_key_provider
 
 
-def test_entry_points_duplicate_name(monkeypatch):
+def test_entry_points_invalid_substring(logger_stream, patch_iter_entry_points):
+    patch_iter_entry_points.return_value = [FakeEntryPoint('BAD::NAME')]
+    master_key_parsing._discover_entry_points()
+
+    key = 'Invalid substring "::" in discovered entry point "BAD::NAME". It will not be usable.'
+    logging_results = logger_stream.getvalue()
+    assert key in logging_results
+
+
+def test_load_master_key_provider_unknown_name(monkeypatch):
     master_key_parsing._entry_points()
-    monkeypatch.setitem(
-        master_key_parsing._ENTRY_POINTS,
-        'aws-kms',
-        MagicMock(name='aws-kms', module_name='my.fake.module')
-    )
+    monkeypatch.setattr(master_key_parsing, '_ENTRY_POINTS', defaultdict(dict))
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        master_key_parsing._load_master_key_provider('unknown_name')
 
-    with pytest.raises(PluginLoadError) as excinfo:
-        master_key_parsing._discover_entry_points()
-
-    excinfo.match(r'Multiple registered entry points found *')
+    excinfo.match(r'Requested master key provider not found: "unknown_name"')
 
 
-def test_load_master_key_provider_known():
+def test_load_master_key_provider_known_name_only_single_entry_point():
     assert master_key_parsing._load_master_key_provider('aws-kms') == aws_kms_master_key_provider
 
 
-def test_load_master_key_provider_unknown():
-    with pytest.raises(BadUserArgumentError) as excinfo:
-        master_key_parsing._load_master_key_provider(sentinel.unknown_name)
+def test_load_master_key_provider_known_name_only_multiple_entry_points(monkeypatch):
+    monkeypatch.setitem(
+        master_key_parsing._ENTRY_POINTS,
+        'aws-kms',
+        {
+            'aws-encryption-sdk-cli': FakeEntryPoint(
+                name='aws-kms',
+                dist=MagicMock(project_name='aws-encryption-sdk-cli')
+            ),
+            'my-fake-package': FakeEntryPoint(
+                name='aws-kms',
+                module_name='my-fake-package'
+            )
+        }
+    )
 
-    excinfo.match(r'Unknown master key provider: *')
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        master_key_parsing._load_master_key_provider('aws-kms')
+
+    excinfo.match(r'Multiple entry points discovered and no package specified. *')
+
+
+def test_load_master_key_provider_known_package_and_name():
+    assert master_key_parsing._load_master_key_provider(
+        'aws-encryption-sdk-cli::aws-kms'
+    ) == aws_kms_master_key_provider
+
+
+def test_load_master_key_provider_known_name_unknown_name(monkeypatch):
+    monkeypatch.setitem(
+        master_key_parsing._ENTRY_POINTS,
+        'aws-kms',
+        {
+            'my-fake-package': FakeEntryPoint(
+                name='aws-kms',
+                module_name='my-fake-package'
+            )
+        }
+    )
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        master_key_parsing._load_master_key_provider('aws-encryption-sdk-cli::aws-kms')
+
+    excinfo.match(
+        r'Requested master key provider not found: "aws-encryption-sdk-cli::aws-kms". Packages discovered for *'
+    )
 
 
 def test_build_master_key_provider_known_provider(patch_load_master_key_provider):
