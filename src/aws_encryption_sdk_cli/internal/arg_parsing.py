@@ -31,33 +31,33 @@ from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
-def _add_dummy_redirect_argument(parser, expected_name):
-    # type: (argparse.ArgumentParser, str) -> None
-    """Adds a dummy redirect argument to the provided parser to catch typos when calling
-    the specified valid long-form name.
-
-    :param parser: Parser to which to add argument
-    :type parser: CommentIgnoringArgumentParser
-    :param str expected_name: Valid long-form name for which to add dummy redirect
-    """
-    parser.add_argument(
-        expected_name[1:],
-        dest='dummy_redirect',
-        action='store_const',
-        const=expected_name[1:],
-        help=argparse.SUPPRESS
-    )
-
-
 class CommentIgnoringArgumentParser(argparse.ArgumentParser):
     """``ArgumentParser`` that ignores lines in ``fromfile_prefix_chars`` files which start with ``#``."""
 
     def __init__(self, *args, **kwargs):
+        """Sets up the dummy argument registry."""
         # The type profile for this it really complex and we don't do anything to it, so
         # I would rather not duplicate the typeshed's effort keeping it up to date.
         # https://github.com/python/typeshed/blob/master/stdlib/2and3/argparse.pyi#L27-L39
         self.__dummy_arguments = []
         super(CommentIgnoringArgumentParser, self).__init__(*args, **kwargs)
+
+    def add_dummy_redirect_argument(self, expected_name):
+        # type: (argparse.ArgumentParser, str) -> None
+        """Adds a dummy redirect argument to the provided parser to catch typos when calling
+        the specified valid long-form name.
+
+        :param parser: Parser to which to add argument
+        :type parser: argparse.ArgumentParser
+        :param str expected_name: Valid long-form name for which to add dummy redirect
+        """
+        self.add_argument(
+            expected_name[1:],
+            dest='dummy_redirect',
+            action='store_const',
+            const=expected_name[1:],
+            help=argparse.SUPPRESS
+        )
 
     def add_argument(self, *args, **kwargs):
         # The type profile for this it really complex and we don't do anything substantive
@@ -69,7 +69,7 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         See: https://docs.python.org/dev/library/argparse.html#the-add-argument-method
         """
         for long_arg in [arg for arg in args if arg.startswith(self.prefix_chars * 2)]:
-            _add_dummy_redirect_argument(super(CommentIgnoringArgumentParser, self), long_arg)
+            self.add_dummy_redirect_argument(long_arg)
             self.__dummy_arguments.append(long_arg[1:])
 
         return super(CommentIgnoringArgumentParser, self).add_argument(*args, **kwargs)
@@ -145,7 +145,8 @@ def _build_parser():
         action='version',
         version=_version_report()
     )
-    _add_dummy_redirect_argument(parser, '--version')
+    # We want this to be caught at the top level parser, not in the group
+    parser.add_dummy_redirect_argument('--version')
 
     operating_action = version_or_action.add_mutually_exclusive_group()
     operating_action.add_argument(
@@ -156,7 +157,8 @@ def _build_parser():
         const='encrypt',
         help='Encrypt data'
     )
-    _add_dummy_redirect_argument(parser, '--encrypt')
+    # We want this to be caught at the top level parser, not in the group
+    parser.add_dummy_redirect_argument('--encrypt')
     operating_action.add_argument(
         '-d',
         '--decrypt',
@@ -165,7 +167,8 @@ def _build_parser():
         const='decrypt',
         help='Decrypt data'
     )
-    _add_dummy_redirect_argument(parser, '--decrypt')
+    # We want this to be caught at the top level parser, not in the group
+    parser.add_dummy_redirect_argument('--decrypt')
 
     parser.add_argument(
         '-m',
