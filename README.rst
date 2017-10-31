@@ -156,7 +156,7 @@ as the provider or simply not specify a provider and allow the default value to 
 There are some configuration options which are unique to the ``aws-kms`` master key provider:
 
 * **profile** : Providing this configuration value will use the specified `named profile`_
-   credentials.
+  credentials.
 * **region** : This allows you to specify the target region.
 
 The logic for determining which region to use is shown in the pseudocode below:
@@ -182,8 +182,33 @@ If you want to use a different master key provider, that provider must register 
 When a provider name is specifed in a call to ``aws-crypto``, the appropriate entry point
 for that name is used.
 
+Handling Multiple Entry Points
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If multiple entry points are registered for a given name, you will need to specify the package
+that registered the entry point you want to use.
+
+In order to specify the package name, use the format: ``PACKAGE_NAME::ENTRY_POINT``.
+
+
+* ``provider=aws-kms``
+* ``provider=aws-encryption-sdk-cli::aws-kms``
+
+If you supply only an entry point name and there is only one entry point registered for that
+name, that entry point will be used.
+
+If you supply only an entry point name and there is more than one entry point registered
+for that name, an error will be raised showing you all of the packages that have an entry
+point registered for that name.
+
+If you supply both a package and an entry point name, that exact entry point will be used.
+If it is not accessible, an error will be raised showing you all of the packages that have
+an entry point registered for that name.
+
 External Master Key Providers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The entry point name use must not contain the string ``::``. This is used as a namespace
+separator as descibed in `Handling Multiple Entry Points`_.
+
 When called, these entry points must return an instance of a master key provider. They must
 accept the parameters prepared by the CLI as described in `Master Key Provider`_.
 
