@@ -205,6 +205,8 @@ def _build_parser():
 
     parser.add_argument(
         '--suffix',
+        nargs='?',
+        const='',
         action=UniqueStoreAction,
         help='Custom suffix to use when target filename is not specified'
     )
