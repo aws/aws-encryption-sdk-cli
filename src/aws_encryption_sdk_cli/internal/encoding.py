@@ -100,12 +100,14 @@ class Base64IO(io.IOBase):
         :rtype: bool
         """
         try:
-            return getattr(self.__wrapped, method_name)()
+            method = getattr(self.__wrapped, method_name)
         except AttributeError:
             if six.PY2 and isinstance(self.__wrapped, file):  # noqa pylint: disable=undefined-variable
                 if mode in self.__wrapped.mode:
                     return True
             return False
+        else:
+            return method()
 
     def writable(self):
         # type: () -> bool

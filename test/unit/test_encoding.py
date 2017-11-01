@@ -16,7 +16,7 @@ import functools
 import io
 import os
 
-from mock import sentinel
+from mock import MagicMock, sentinel
 import pytest
 
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
@@ -73,10 +73,8 @@ def test_passthrough_methods_present(monkeypatch, method_name):
 
 @pytest.mark.parametrize('method_name', ('writable', 'readable'))
 def test_passthrough_methods_not_present(monkeypatch, method_name):
-    def _attr_not_present():
-        raise AttributeError()
-    wrapped = io.BytesIO()
-    monkeypatch.setattr(wrapped, method_name, _attr_not_present)
+    wrapped = MagicMock()
+    monkeypatch.delattr(wrapped, method_name, False)
     wrapper = Base64IO(wrapped)
 
     assert not getattr(wrapper, method_name)()
