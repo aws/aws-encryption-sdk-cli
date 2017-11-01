@@ -83,7 +83,7 @@ def _ensure_dir_exists(filename):
 
 def _encoder(stream, should_base64):
     # type: (IO, bool) -> Union[IO, Base64IO]
-    """Wraps a stream in either a Base64IO transformer or a transparent proxy.
+    """Wraps a stream in either a Base64IO transformer or results stream if wrapping is not requested.
 
     :param stream: Stream to wrap
     :type stream: file-like object
