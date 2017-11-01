@@ -45,7 +45,6 @@ class Base64IO(io.IOBase):
     :param bool ignore_whitespace: Should whitespace be ignored when reading (default: False)
     """
 
-    __finalize = False
     closed = False
 
     def __init__(self, wrapped, close_wrapped_on_close=False, ignore_whitespace=False):
@@ -80,9 +79,9 @@ class Base64IO(io.IOBase):
             This does **not** close the wrapped stream unless otherwise specified when this
             object was created.
         """
-        self.__finalize = True
         if self.__write_buffer:
-            self.write(b'')
+            self.__wrapped.write(base64.b64encode(self.__write_buffer))
+            self.__write_buffer = b''
         self.closed = True
         if self.__close_wrapped_on_close:
             self.__wrapped.close()
@@ -159,7 +158,7 @@ class Base64IO(io.IOBase):
         self.__write_buffer = b''
 
         # If an even base64 chunk or finalizing the stream, write through.
-        if len(_bytes_to_write) % 3 == 0 or self.__finalize:
+        if len(_bytes_to_write) % 3 == 0:
             return self.__wrapped.write(base64.b64encode(_bytes_to_write))
 
         # We're not finalizing the stream, so stash the trailing bytes and encode the rest.
