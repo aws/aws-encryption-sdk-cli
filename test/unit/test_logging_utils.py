@@ -37,6 +37,12 @@ def patch_blacklist_filter(mocker):
     yield logging_utils._BlacklistFilter
 
 
+@pytest.yield_fixture
+def patch_kms_key_redacting_formatter(mocker):
+    mocker.patch.object(logging_utils, '_KMSKeyRedactingFormatter')
+    yield logging_utils._KMSKeyRedactingFormatter
+
+
 @pytest.mark.parametrize('verbosity, quiet, local_level, root_level', (
     (None, False, logging.WARNING, logging.CRITICAL),
     (-1, False, logging.WARNING, logging.CRITICAL),
@@ -52,7 +58,7 @@ def test_logging_utils_levels(verbosity, quiet, local_level, root_level):
     assert logging_utils._logging_levels(verbosity, quiet) == (local_level, root_level)
 
 
-def test_setup_logger(patch_logging_levels, patch_blacklist_filter, patch_logging):
+def test_setup_logger(patch_logging_levels, patch_blacklist_filter, patch_logging, patch_kms_key_redacting_formatter):
     patch_logging_levels.return_value = sentinel.local_level, sentinel.root_level
     mock_local_logger = MagicMock()
     mock_root_logger = MagicMock()
@@ -69,15 +75,15 @@ def test_setup_logger(patch_logging_levels, patch_blacklist_filter, patch_loggin
     logging_utils.setup_logger(sentinel.verbosity, sentinel.quiet)
 
     patch_logging_levels.assert_called_once_with(sentinel.verbosity, sentinel.quiet)
-    patch_logging.Formatter.assert_called_once_with(logging_utils.FORMAT_STRING)
+    patch_kms_key_redacting_formatter.assert_called_once_with(logging_utils.FORMAT_STRING)
     patch_logging.StreamHandler.assert_has_calls(calls=(call(), call()), any_order=True)
-    mock_local_handler.setFormatter.assert_called_once_with(patch_logging.Formatter.return_value)
+    mock_local_handler.setFormatter.assert_called_once_with(patch_kms_key_redacting_formatter.return_value)
     patch_logging.getLogger.assert_has_calls(
         calls=(call(logging_utils.LOGGER_NAME), call()),
         any_order=False
     )
     patch_blacklist_filter.assert_called_once_with(logging_utils.LOGGER_NAME)
-    mock_root_handler.setFormatter.assert_called_once_with(patch_logging.Formatter.return_value)
+    mock_root_handler.setFormatter.assert_called_once_with(patch_kms_key_redacting_formatter.return_value)
     mock_root_handler.addFilter.assert_called_once_with(patch_blacklist_filter.return_value)
     mock_local_logger.setLevel.assert_called_once_with(sentinel.local_level)
     mock_local_logger.addHandler.assert_called_once_with(mock_local_handler)
