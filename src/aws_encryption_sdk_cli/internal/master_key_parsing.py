@@ -52,6 +52,7 @@ def _discover_entry_points():
                 PLUGIN_NAMESPACE_DIVIDER,
                 entry_point.name
             )
+            continue
 
         _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point
 
