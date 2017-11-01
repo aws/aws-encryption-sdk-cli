@@ -83,9 +83,41 @@ def test_catch_bad_stdin_stdout_requests_same_pipe():
     aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests('-', '-')
 
 
+def test_catch_bad_stdin_stdout_requests_same_file(tmpdir):
+    source = tmpdir.join('test_file')
+    source.write('some_data')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(str(source), str(source))
+
+    excinfo.match(r'Destination and source cannot be the same')
+
+
+def test_catch_bad_stdin_stdout_requests_same_file_symlink(tmpdir):
+    source = tmpdir.join('test_file')
+    source.write('some_data')
+    link_dest = str(tmpdir.join('destination'))
+    os.symlink(str(source), link_dest)
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(str(source), link_dest)
+
+    excinfo.match(r'Destination and source cannot be the same')
+
+
 def test_catch_bad_stdin_stdout_requests_same_dir(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(str(tmpdir), str(tmpdir))
+
+    excinfo.match(r'Destination and source cannot be the same')
+
+
+def test_catch_bad_stdin_stdout_requests_same_dir_symlink(tmpdir):
+    link_dest = str(tmpdir.join('destination'))
+    os.symlink(str(tmpdir), link_dest)
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(str(tmpdir), link_dest)
 
     excinfo.match(r'Destination and source cannot be the same')
 
