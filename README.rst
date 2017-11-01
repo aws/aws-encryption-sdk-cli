@@ -132,16 +132,6 @@ as the primary. This master key is used to generate the data key.
    key_provider.add_master_key($KEY_ARN_1)
    key_provider.add_master_key($KEY_ARN_2)
 
-.. table::
-
-   +------------------------------------+
-   | Known Master Key Providers         |
-   +-------------+----------------------+
-   | Provider ID | Python callable      |
-   +=============+======================+
-   | aws-kms     | KMSMasterKeyProvider |
-   +-------------+----------------------+
-
 
 .. code-block:: sh
 
@@ -166,7 +156,7 @@ as the provider or simply not specify a provider and allow the default value to 
 There are some configuration options which are unique to the ``aws-kms`` master key provider:
 
 * **profile** : Providing this configuration value will use the specified `named profile`_
-   credentials.
+  credentials.
 * **region** : This allows you to specify the target region.
 
 The logic for determining which region to use is shown in the pseudocode below:
@@ -185,23 +175,48 @@ The logic for determining which region to use is shown in the pseudocode below:
 
 Advanced Configuration
 ``````````````````````
-If you want to use some other master key provider, that provider must be available in
-your local ``$PYTHONPATH`` as a callable (class or function) which will return the
-desired master key provider when called with the defined parameters. The value that
-must be passed to ``aws-crypto`` as the provider parameter is the full Python namespace
-path leading to that callable.
+If you want to use a different master key provider, that provider must register a
+`setuptools entry point`_. You can find an example of registering this entry point in the
+``setup.py`` for this package.
 
-For example, if specifying the ``aws-kms`` master key provider using this option,
-you would define ``provider=aws_encryption_sdk.KMSMasterKeyProvider``.
+When a provider name is specifed in a call to ``aws-crypto``, the appropriate entry point
+for that name is used.
 
-If this option is used, the appropriate module will be imported and the callable loaded
-and called while building the master key provider.
+Handling Multiple Entry Points
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If multiple entry points are registered for a given name, you will need to specify the package
+that registered the entry point you want to use.
 
-.. code-block:: sh
+In order to specify the package name, use the format: ``PACKAGE_NAME::ENTRY_POINT``.
 
-   # Single KMS CMK, specifying the KMSMasterKeyProvider class directly
-   --master-keys provider=aws_encryption_sdk.KMSMasterKeyProvider key=$KEY_ARN_1
 
+* ``provider=aws-kms``
+* ``provider=aws-encryption-sdk-cli::aws-kms``
+
+If you supply only an entry point name and there is only one entry point registered for that
+name, that entry point will be used.
+
+If you supply only an entry point name and there is more than one entry point registered
+for that name, an error will be raised showing you all of the packages that have an entry
+point registered for that name.
+
+If you supply both a package and an entry point name, that exact entry point will be used.
+If it is not accessible, an error will be raised showing you all of the packages that have
+an entry point registered for that name.
+
+External Master Key Providers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The entry point name use must not contain the string ``::``. This is used as a namespace
+separator as descibed in `Handling Multiple Entry Points`_.
+
+When called, these entry points must return an instance of a master key provider. They must
+accept the parameters prepared by the CLI as described in `Master Key Provider`_.
+
+These entry points must be registered in the ``aws_encryption_sdk_cli.master_key_providers``
+group.
+
+If desired the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``,
+the CLI will present the raised error message to the user to indicate bad user input.
 
 Data Key Caching
 ----------------
@@ -411,3 +426,4 @@ Execution
 .. _KMSMasterKeyProvider: http://aws-encryption-sdk-python.readthedocs.io/en/latest/generated/aws_encryption_sdk.key_providers.kms.html#aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
+.. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins

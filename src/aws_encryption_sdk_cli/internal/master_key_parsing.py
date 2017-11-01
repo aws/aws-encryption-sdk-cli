@@ -11,50 +11,107 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Helper functions for building crypto materials manager and underlying master key provider(s) from arguments."""
+from collections import defaultdict
 import copy
-import importlib
 import logging
-from typing import Callable, List, Union  # noqa pylint: disable=unused-import
+from typing import Callable, DefaultDict, Dict, List, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
+import pkg_resources
 
-from aws_encryption_sdk_cli.internal.args_post_processing import nop_post_processing
-from aws_encryption_sdk_cli.internal.identifiers import KNOWN_MASTER_KEY_PROVIDERS
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.internal.identifiers import MASTER_KEY_PROVIDERS_ENTRY_POINT, PLUGIN_NAMESPACE_DIVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
     CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
 )
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
+_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
 
 
-def _callable_loader(namespace_string):
-    # type: (str) -> Callable
-    """Load a callable object from a namespace string.
+def _discover_entry_points():
+    # type: () -> None
+    """Discover all registered entry points."""
+    _LOGGER.debug('Discovering master key provider plugins')
 
-    :param str namespace_string: Full namespace path of desired callable
-    :returns: callable object
-    :raises ImportError: if unable to successfully import targetted callable
-    """
-    module_name, class_name = namespace_string.rsplit('.', 1)
-
-    try:
-        module = importlib.import_module(module_name)
-    except TypeError:
-        raise ImportError("No module named '{}'".format(module_name))
-
-    try:
-        loaded_callable = getattr(module, class_name)
-        if not callable(loaded_callable):
-            raise ImportError("Target callable '{target}' is not callable".format(target=namespace_string))
-    except AttributeError:
-        raise ImportError("Callable '{target}' not found in module '{module}'".format(
-            target=class_name,
-            module=module_name
+    for entry_point in pkg_resources.iter_entry_points(MASTER_KEY_PROVIDERS_ENTRY_POINT):
+        _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
+        _LOGGER.debug('Plugin details: %s', dict(
+            name=entry_point.name,
+            module_name=entry_point.module_name,
+            attrs=entry_point.attrs,
+            extras=entry_point.extras,
+            dist=entry_point.dist
         ))
 
-    return loaded_callable
+        if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
+            _LOGGER.warning(
+                'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
+                PLUGIN_NAMESPACE_DIVIDER,
+                entry_point.name
+            )
+            continue
+
+        _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point
+
+
+def _entry_points():
+    # type: () -> DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
+    """Discover all entry points for required groups if they have not already been found.
+
+    :returns: Mapping of group to name to entry points
+    :rtype: dict
+    """
+    if not _ENTRY_POINTS:
+        _discover_entry_points()
+    return _ENTRY_POINTS
+
+
+def _load_master_key_provider(name):
+    # type: (str) -> Callable
+    """Find the correct master key provider entry point for the specified name.
+
+    :param str name: Name for which to look up entry point
+    :returns: Loaded entry point
+    :rtype: callable
+    :raises BadUserArgumentError: if entry point cannot be found
+    """
+    if PLUGIN_NAMESPACE_DIVIDER in name:
+        package_name, entry_point_name = name.split(PLUGIN_NAMESPACE_DIVIDER, 1)
+    else:
+        package_name = ''
+        entry_point_name = name
+
+    entry_points = _entry_points()[entry_point_name]
+
+    if not entry_points:
+        raise BadUserArgumentError('Requested master key provider not found: "{}"'.format(entry_point_name))
+
+    if not package_name:
+        if len(entry_points) == 1:
+            return list(entry_points.values())[0].load()
+
+        raise BadUserArgumentError(
+            'Multiple entry points discovered and no package specified. Packages discovered registered by: ({})'.format(
+                ', '.join([str(entry.dist) for entry in entry_points.values()])
+            )
+        )
+
+    try:
+        return entry_points[package_name].load()
+    except KeyError:
+        raise BadUserArgumentError(
+            (
+                'Requested master key provider not found: "{requested}".'
+                ' Packages discovered for "{entry_point}" registered by: ({discovered})'
+            ).format(
+                requested=name,
+                entry_point=entry_point_name,
+                discovered=', '.join([str(entry.dist) for entry in entry_points.values()])
+            )
+        )
 
 
 def _build_master_key_provider(provider, key, **kwargs):
@@ -68,18 +125,9 @@ def _build_master_key_provider(provider, key, **kwargs):
     :rtype: aws_encryption_sdk.key_providers.base.MasterKeyProvider
     """
     _LOGGER.debug('Loading provider: %s', provider)
-    try:
-        provider_config = KNOWN_MASTER_KEY_PROVIDERS[provider]
-        provider_class_path = provider_config['callable']
-        provider_post_processing_path = provider_config['post-processing']
-        provider_post_processing = _callable_loader(provider_post_processing_path)
-    except KeyError:
-        provider_class_path = provider
-        provider_post_processing = nop_post_processing
 
-    provider_class = _callable_loader(provider_class_path)
-    kwargs = provider_post_processing(kwargs)
-    key_provider = provider_class(**kwargs)
+    provider_callable = _load_master_key_provider(provider)
+    key_provider = provider_callable(**kwargs)
     for single_key in key:
         key_provider.add_master_key(single_key)
     return key_provider

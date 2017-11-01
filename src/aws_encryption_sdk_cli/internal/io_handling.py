@@ -177,6 +177,7 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
         _LOGGER.warning('Skipping because the source (%s) and destination (%s) are the same', source, destination)
         return
 
+    _LOGGER.info('%sing file %s to %s', stream_args['mode'], source, destination)
     with open(source, 'rb') as source_reader:
         process_single_operation(
             stream_args=stream_args,
@@ -246,7 +247,6 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
                 mode=str(stream_args['mode']),
                 suffix=suffix
             )
-            _LOGGER.info('%sing file %s to %s', stream_args['mode'], source_filename, destination_filename)
             process_single_file(
                 stream_args=stream_args,
                 source=source_filename,

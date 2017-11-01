@@ -17,17 +17,6 @@ import aws_encryption_sdk
 
 __version__ = '1.0.2'  # type: str
 
-# Using string lookups here rather than direct references to remove special case logic
-#  and allow for future cases where known master key providers are provided by optional
-#  libraries.
-#: Known MasterKeyProviders which can be referenced by provider_id rather than namespace path.
-KNOWN_MASTER_KEY_PROVIDERS = {
-    'aws-kms': {
-        'callable': 'aws_encryption_sdk.KMSMasterKeyProvider',
-        'post-processing':
-            'aws_encryption_sdk_cli.internal.args_post_processing.kms_master_key_provider_post_processing'
-    }
-}  # type: Dict[str, Dict[str, str]]
 #: Suffix added to output files if specific output filename is not specified.
 OUTPUT_SUFFIX = {
     'encrypt': '.encrypted',
@@ -37,3 +26,5 @@ OUTPUT_SUFFIX = {
 ALGORITHM_NAMES = set([
     alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith('_')
 ])  # type: Set[aws_encryption_sdk.Algorithm]
+MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
+PLUGIN_NAMESPACE_DIVIDER = '::'

@@ -10,36 +10,25 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Arguments post-processors for known master key providers."""
+"""Master key providers."""
 import copy
 from typing import Dict, List, Text, Union  # noqa pylint: disable=unused-import
 
+from aws_encryption_sdk import KMSMasterKeyProvider
 import botocore.session
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 
 
-def nop_post_processing(kwargs):
-    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, List[Union[Text, str]]]
-    """Stand-in NOP post-processor. Does not modify kwargs.
+def aws_kms_master_key_provider(**kwargs):
+    # type: (**List[Union[Text, str]]) -> KMSMasterKeyProvider
+    """Apply post-processing to transform ``KMSMasterKeyProvider``-specific values from CLI
+    arguments to valid ``KMSMasterKeyProvider`` parameters, then call ``KMSMasterKeyprovider``
+    with those parameters.
 
     :param dict kwargs: Named parameters collected from CLI arguments as prepared
         in aws_encryption_sdk_cli.internal.master_key_parsing._parse_master_key_providers_from_args
-    :returns: Unmodified kwargs
-    :rtype: dict of lists
-    """
-    return copy.deepcopy(kwargs)
-
-
-def kms_master_key_provider_post_processing(kwargs):
-    # type: (Dict[str, List[Union[Text, str]]]) -> Dict[str, Union[List[Union[Text, str]], botocore.session.Session]]
-    """Apply post-processing to transform KMSMasterKeyProvider-specific arguments from CLI arguments
-    to class parameters.
-
-    :param dict kwargs: Named parameters collected from CLI arguments as prepared
-        in aws_encryption_sdk_cli.internal.master_key_parsing._parse_master_key_providers_from_args
-    :returns: Updated kwargs
-    :rtype: dict of lists
+    :rtype: aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
     """
     kwargs = copy.deepcopy(kwargs)
     try:
@@ -64,4 +53,4 @@ def kms_master_key_provider_post_processing(kwargs):
         kwargs['region_names'] = region_name
     except KeyError:
         pass
-    return kwargs
+    return KMSMasterKeyProvider(**kwargs)
