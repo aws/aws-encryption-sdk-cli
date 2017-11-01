@@ -77,6 +77,13 @@ def logger_stream():
     return output_stream
 
 
+@pytest.yield_fixture
+def entry_points_cleaner():
+    master_key_parsing._ENTRY_POINTS = defaultdict(dict)
+    yield
+    master_key_parsing._ENTRY_POINTS = defaultdict(dict)
+
+
 # "name" is a special, non-overridable attribute on mock objects
 FakeEntryPoint = namedtuple('FakeEntryPoint', ['name', 'module_name', 'attrs', 'extras', 'dist'])
 FakeEntryPoint.__new__.__defaults__ = ('MODULE', 'ATTRS', 'EXTRAS', MagicMock(project_name='PROJECT'))
@@ -100,6 +107,24 @@ def test_entry_points_invalid_substring(logger_stream, patch_iter_entry_points):
     key = 'Invalid substring "::" in discovered entry point "BAD::NAME". It will not be usable.'
     logging_results = logger_stream.getvalue()
     assert key in logging_results
+    assert 'BAD::NAME' not in master_key_parsing._ENTRY_POINTS
+
+
+def test_entry_points_multiple_per_name(entry_points_cleaner, patch_iter_entry_points):
+    entry_point_a = FakeEntryPoint(name='aws-kms', dist=MagicMock(project_name='aws-encryption-sdk-cli'))
+    entry_point_b = FakeEntryPoint(name='aws-kms', dist=MagicMock(project_name='some-other-thing'))
+    entry_point_c = FakeEntryPoint(name='zzz', dist=MagicMock(project_name='yet-another-thing'))
+    patch_iter_entry_points.return_value = [entry_point_a, entry_point_b, entry_point_c]
+
+    test = master_key_parsing._entry_points()
+
+    assert dict(test) == {
+        'aws-kms': {
+            'aws-encryption-sdk-cli': entry_point_a,
+            'some-other-thing': entry_point_b
+        },
+        'zzz': {'yet-another-thing': entry_point_c}
+    }
 
 
 def test_load_master_key_provider_unknown_name(monkeypatch):
