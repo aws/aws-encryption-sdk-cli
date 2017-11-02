@@ -115,38 +115,45 @@ def test_non_interactive_error(monkeypatch, patch_method, call_method, call_arg)
     excinfo.match(r'Stream is not ' + patch_method)
 
 
-TEST_CASES = (
-    (1024, 1024),
-    (222, 222),
-    (1024, None),
-    (1024, 1),
-    (1024, 2),
-    (1024, 3),
-    (1024, 4),
-    (1024, 5),
-    (5, 1024),
-    (4, 4),
-    (5, 5),
-    (6, 6),
-    (7, 7)
+def build_test_cases():
+    """Build test cases for read/write encoding checks.
+
+    :returns: (bytes_to_generate, bytes_per_round, number_of_rounds, total_bytes_to_expect)
+    """
+    test_cases = []
+
+    # exact single-shot, varying multiples
+    for size in (1, 2, 3, 4, 5, 6, 7, 222, 1024):
+        test_cases.append((size, size, 1, size))
+
+    test_cases.append((1024, None, 1, 1024))  # single-shot
+
+    # Odd multiples with operation smaller, equal to, and larger than total
+    for rounds in (1, 3, 5):
+        for read_size in (1, 2, 3, 4, 5, 1024, 1500):
+            test_cases.append((1024, read_size, rounds, min(read_size * rounds, 1024)))
+
+    return test_cases
+
+
+@pytest.mark.parametrize(
+    'bytes_to_generate, bytes_per_round, number_of_rounds, total_bytes_to_expect',
+    build_test_cases()
 )
-
-
-@pytest.mark.parametrize('source_bytes, read_bytes', TEST_CASES)
-def test_base64io_decode(source_bytes, read_bytes):
-    plaintext_source = os.urandom(source_bytes)
+def test_base64io_decode(bytes_to_generate, bytes_per_round, number_of_rounds, total_bytes_to_expect):
+    plaintext_source = os.urandom(bytes_to_generate)
     plaintext_b64 = io.BytesIO(base64.b64encode(plaintext_source))
     plaintext_wrapped = Base64IO(plaintext_b64)
 
-    test = plaintext_wrapped.read(read_bytes)
+    test = b''
+    for _round in range(number_of_rounds):
+        test += plaintext_wrapped.read(bytes_per_round)
 
-    if source_bytes == read_bytes or read_bytes is None:
-        assert test == plaintext_source
-    else:
-        assert test == plaintext_source[:read_bytes]
+    assert len(test) == total_bytes_to_expect
+    assert test == plaintext_source[:total_bytes_to_expect]
 
 
-@pytest.mark.parametrize('source_bytes', [case[0] for case in TEST_CASES])
+@pytest.mark.parametrize('source_bytes', [case[0] for case in build_test_cases()])
 def test_base64io_encode_context_manager(source_bytes):
     plaintext_source = os.urandom(source_bytes)
     plaintext_b64 = base64.b64encode(plaintext_source)
@@ -158,7 +165,7 @@ def test_base64io_encode_context_manager(source_bytes):
     assert plaintext_stream.getvalue() == plaintext_b64
 
 
-@pytest.mark.parametrize('source_bytes', [case[0] for case in TEST_CASES])
+@pytest.mark.parametrize('source_bytes', [case[0] for case in build_test_cases()])
 def test_base64io_encode(source_bytes):
     plaintext_source = os.urandom(source_bytes)
     plaintext_b64 = base64.b64encode(plaintext_source)
@@ -201,8 +208,8 @@ def build_b64_with_whitespace(source_bytes, line_length):
 
 def build_whitespace_testcases():
     scenarios = []
-    for test_case in TEST_CASES:
-        scenarios.append(build_b64_with_whitespace(test_case[0], 3) + (test_case[1],))
+    for test_case in build_test_cases():
+        scenarios.append(build_b64_with_whitespace(test_case[0], 3) + (test_case[-1],))
 
     # first read is mostly whitespace
     plaintext, b64_plaintext = build_b64_with_whitespace(100, 20)
