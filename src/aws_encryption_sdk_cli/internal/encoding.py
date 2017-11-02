@@ -42,13 +42,12 @@ class Base64IO(io.IOBase):
 
     :param wrapped: Stream to wrap
     :param bool close_wrapped_on_close: Should the wrapped stream be closed when this object is closed (default: False)
-    :param bool ignore_whitespace: Should whitespace be ignored when reading (default: False)
     """
 
     closed = False
 
-    def __init__(self, wrapped, close_wrapped_on_close=False, ignore_whitespace=False):
-        # type: (IO, Optional[bool], Optional[bool]) -> None
+    def __init__(self, wrapped, close_wrapped_on_close=False):
+        # type: (Base64IO, IO, Optional[bool]) -> None
         """Check for required methods on wrapped stream and set up read buffer."""
         required_attrs = ('read', 'write', 'close', 'closed', 'flush')
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
@@ -56,7 +55,6 @@ class Base64IO(io.IOBase):
         super(Base64IO, self).__init__()
         self.__wrapped = wrapped
         self.__close_wrapped_on_close = close_wrapped_on_close
-        self.__ignore_whitespace = ignore_whitespace
         self.__read_buffer = b''
         self.__write_buffer = b''
 
@@ -230,12 +228,7 @@ class Base64IO(io.IOBase):
         # Read encoded bytes from wrapped stream.
         data = self.__wrapped.read(_bytes_to_read)
         if any([six.b(char) in data for char in string.whitespace]):
-            if self.__ignore_whitespace:
-                data = self._read_additional_data_removing_whitespace(data, _bytes_to_read)
-            else:
-                raise TypeError(
-                    'Whitespace found in base64-encoded data. Whitespace must be ignored to read this stream.'
-                )
+            data = self._read_additional_data_removing_whitespace(data, _bytes_to_read)
 
         results = io.BytesIO()
         # First, load any stashed bytes
