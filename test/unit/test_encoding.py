@@ -199,22 +199,27 @@ def build_b64_with_whitespace(source_bytes, line_length):
     return plaintext_source, b64_plaintext_with_whitespace
 
 
-@pytest.mark.parametrize('source_bytes, read_bytes', TEST_CASES)
-def test_base64io_decode_do_not_ignore_whitespace(source_bytes, read_bytes):
-    _plaintext_source, b64_plaintext_with_whitespace = build_b64_with_whitespace(source_bytes, 1)
+def build_whitespace_testcases():
+    scenarios = []
+    for test_case in TEST_CASES:
+        scenarios.append(build_b64_with_whitespace(test_case[0], 3) + (test_case[1],))
 
-    with pytest.raises(TypeError) as excinfo:
-        with Base64IO(io.BytesIO(b64_plaintext_with_whitespace)) as decoder:
-            decoder.read(read_bytes)
+    # first read is mostly whitespace
+    plaintext, b64_plaintext = build_b64_with_whitespace(100, 20)
+    b64_plaintext = (b' ' * 80) + b64_plaintext
+    scenarios.append((plaintext, b64_plaintext, 100))
 
-    excinfo.match(r'Whitespace found in base64-encoded data. Whitespace must be ignored to read this stream.')
+    # first several reads are entirely whitespace
+    plaintext, b64_plaintext = build_b64_with_whitespace(100, 20)
+    b64_plaintext = (b' ' * 500) + b64_plaintext
+    scenarios.append((plaintext, b64_plaintext, 100))
+
+    return scenarios
 
 
-@pytest.mark.parametrize('source_bytes, read_bytes', TEST_CASES)
-def test_base64io_decode_do_ignore_whitespace(source_bytes, read_bytes):
-    plaintext_source, b64_plaintext_with_whitespace = build_b64_with_whitespace(source_bytes, 1)
-
-    with Base64IO(io.BytesIO(b64_plaintext_with_whitespace), ignore_whitespace=True) as decoder:
+@pytest.mark.parametrize('plaintext_source, b64_plaintext_with_whitespace, read_bytes', build_whitespace_testcases())
+def test_base64io_decode_with_whitespace(plaintext_source, b64_plaintext_with_whitespace, read_bytes):
+    with Base64IO(io.BytesIO(b64_plaintext_with_whitespace)) as decoder:
         test = decoder.read(read_bytes)
 
     assert test == plaintext_source[:read_bytes]
