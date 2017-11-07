@@ -115,6 +115,7 @@ def _single_io_write(stream_args, source, destination_writer, decode_input, enco
     with _encoder(source, decode_input) as _source, _encoder(destination_writer, encode_output) as _destination:
         with aws_encryption_sdk.stream(source=_source, **stream_args) as handler:
             metadata_writer.write_metadata(
+                mode=stream_args['mode'],
                 input=source.name,
                 output=destination_writer.name,
                 encryption_context=handler.header.encryption_context

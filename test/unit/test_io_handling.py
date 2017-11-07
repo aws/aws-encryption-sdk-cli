@@ -138,6 +138,7 @@ def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
     with open(str(target_file), 'wb') as destination_writer:
         io_handling._single_io_write(
             stream_args={
+                'mode': 'encrypt',
                 'a': sentinel.a,
                 'b': sentinel.b
             },
@@ -149,11 +150,13 @@ def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
         )
 
     patch_aws_encryption_sdk_stream.assert_called_once_with(
+        mode='encrypt',
         source=mock_source.__enter__.return_value,
         a=sentinel.a,
         b=sentinel.b
     )
     mock_metadata_writer.write_metadata.assert_called_once_with(
+        mode='encrypt',
         input=mock_source.name,
         output=destination_writer.name,
         encryption_context=sentinel.encryption_context
@@ -169,6 +172,7 @@ def test_single_io_write_stream_encode_output(tmpdir, patch_aws_encryption_sdk_s
     with open(str(target_file), 'wb') as destination_writer:
         io_handling._single_io_write(
             stream_args={
+                'mode': 'encrypt',
                 'a': sentinel.a,
                 'b': sentinel.b
             },

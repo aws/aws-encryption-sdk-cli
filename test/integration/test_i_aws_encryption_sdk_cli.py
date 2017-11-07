@@ -67,6 +67,7 @@ def test_encrypt_with_metadata_output_write_to_file(tmpdir):
     output_metadata = json.loads(raw_metadata)
     for key, value in (('a', 'b'), ('c', 'd')):
         assert output_metadata['encryption_context'][key] == value
+    assert output_metadata['mode'] == 'encrypt'
     assert output_metadata['input'] == str(plaintext)
     assert output_metadata['output'] == str(ciphertext)
 
@@ -89,6 +90,7 @@ def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     output_metadata = json.loads(out)
     for key, value in (('a', 'b'), ('c', 'd')):
         assert output_metadata['encryption_context'][key] == value
+    assert output_metadata['mode'] == 'encrypt'
     assert output_metadata['input'] == str(plaintext)
     assert output_metadata['output'] == str(ciphertext)
 
@@ -120,8 +122,10 @@ def test_cycle_with_metadata_output_append(tmpdir):
         for key, value in (('a', 'b'), ('c', 'd')):
             assert line['encryption_context'][key] == value
 
+    assert output_metadata[0]['mode'] == 'encrypt'
     assert output_metadata[0]['input'] == str(plaintext)
     assert output_metadata[0]['output'] == str(ciphertext)
+    assert output_metadata[1]['mode'] == 'decrypt'
     assert output_metadata[1]['input'] == str(ciphertext)
     assert output_metadata[1]['output'] == str(decrypted)
 
