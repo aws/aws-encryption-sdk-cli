@@ -14,6 +14,7 @@
 import base64
 from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import filecmp
+import json
 import os
 import shlex
 import shutil
@@ -26,8 +27,12 @@ import aws_encryption_sdk_cli
 ENABLE_TESTS_FLAG = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_CONTROL'
 HERE = os.path.abspath(os.path.dirname(__file__))
 CONFIG_FILE_NAME = os.path.join(HERE, 'integration_tests.conf')
-ENCRYPT_ARGS_TEMPLATE = '-e -i {source} -o {target} --encryption-context a=b c=d @' + CONFIG_FILE_NAME
-DECRYPT_ARGS_TEMPLATE = '-d -i {source} -o {target} @' + CONFIG_FILE_NAME
+ENCRYPT_ARGS_TEMPLATE_BASE = '-e -i {source} -o {target} --encryption-context a=b c=d @' + CONFIG_FILE_NAME
+ENCRYPT_ARGS_TEMPLATE = ENCRYPT_ARGS_TEMPLATE_BASE + ' -S'
+ENCRYPT_ARGS_TEMPLATE_WITH_METADATA = ENCRYPT_ARGS_TEMPLATE_BASE + ' {metadata}'
+DECRYPT_ARGS_TEMPLATE_BASE = '-d -i {source} -o {target} @' + CONFIG_FILE_NAME
+DECRYPT_ARGS_TEMPLATE = DECRYPT_ARGS_TEMPLATE_BASE + ' -S'
+DECRYPT_ARGS_TEMPLATE_WITH_METADATA = DECRYPT_ARGS_TEMPLATE_BASE + ' {metadata}'
 CACHING_CONFIG = ' --caching capacity=10 max_age=60.0'
 
 
@@ -41,6 +46,84 @@ def _aws_crypto_is_findable():
         UserWarning('aws-crypto executable could not be found')
         return False
     return True
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_encrypt_with_metadata_output_write_to_file(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join('ciphertext')
+    metadata = tmpdir.join('metadata')
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source=str(plaintext),
+        target=str(ciphertext),
+        metadata='--write-metadata ' + str(metadata)
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    raw_metadata = metadata.read()
+    output_metadata = json.loads(raw_metadata)
+    for key, value in (('a', 'b'), ('c', 'd')):
+        assert output_metadata['encryption_context'][key] == value
+    assert output_metadata['input'] == str(plaintext)
+    assert output_metadata['output'] == str(ciphertext)
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
+    plaintext = tmpdir.join('source_plaintext')
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join('ciphertext')
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source=str(plaintext),
+        target=str(ciphertext),
+        metadata='--write-metadata -'
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    out, _err = capsys.readouterr()
+    output_metadata = json.loads(out)
+    for key, value in (('a', 'b'), ('c', 'd')):
+        assert output_metadata['encryption_context'][key] == value
+    assert output_metadata['input'] == str(plaintext)
+    assert output_metadata['output'] == str(ciphertext)
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_cycle_with_metadata_output_append(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join('ciphertext')
+    decrypted = tmpdir.join('decrypted')
+    metadata = tmpdir.join('metadata')
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source=str(plaintext),
+        target=str(ciphertext),
+        metadata='--append-metadata ' + str(metadata)
+    )
+    decrypt_args = DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source=str(ciphertext),
+        target=str(decrypted),
+        metadata='--append-metadata ' + str(metadata)
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (('a', 'b'), ('c', 'd')):
+            assert line['encryption_context'][key] == value
+
+    assert output_metadata[0]['input'] == str(plaintext)
+    assert output_metadata[0]['output'] == str(ciphertext)
+    assert output_metadata[1]['input'] == str(ciphertext)
+    assert output_metadata[1]['output'] == str(decrypted)
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
