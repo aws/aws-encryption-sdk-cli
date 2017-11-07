@@ -58,7 +58,8 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
             const=expected_name[1:],
             help=argparse.SUPPRESS
         )
-        self.__dummy_arguments.append(expected_name[1:])
+        # ArgumentParser subclass confuses mypy
+        self.__dummy_arguments.append(expected_name[1:])  # type: ignore
 
     def add_argument(self, *args, **kwargs):
         # The type profile for this it really complex and we don't do anything substantive

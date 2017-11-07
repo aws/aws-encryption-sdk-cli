@@ -251,8 +251,15 @@ def build_bad_dummy_arguments():
     return bad_commands
 
 
-def test_bad_commands_exist():
-    assert build_bad_dummy_arguments()
+def test_dummy_arguments_covered():
+    parser = arg_parsing._build_parser()
+    expected_dummy_commands = []
+    for action in parser._actions:
+        for opt in action.option_strings:
+            if opt.startswith(parser.prefix_chars * 2):
+                expected_dummy_commands.append(opt[1:])
+
+    assert set(expected_dummy_commands) == set(parser._CommentIgnoringArgumentParser__dummy_arguments)
 
 
 @pytest.mark.parametrize(
