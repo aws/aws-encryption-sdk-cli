@@ -91,6 +91,31 @@ Parameters may be provided using `Parameter Values`_.
    --encryption-context key1=value1 key2=value2 "key 3=value with spaces"
 
 
+Output Metadata
+---------------
+In addition to the actual output of the operation, there is metadata about the operation
+that can be useful. This metadata includes some information about the operation as well as
+the complete header data from the ciphertext message.
+
+The metadata for each operation is written to the specified file as a single line containing
+formatted JSON, so if a single command performs multiple file operations, a separate line
+will be written for each operation. There are three operating modes:
+
+* ``--write-metadata FILE`` : Overwrites the specified file with a new file containing the
+  metadata
+* ``--append-metadata FILE`` : Appends the metadata to the end of the specified file, creating
+  a new file if it does not exist
+* ``-S/--suppress-metadata`` : Output metadata is suppressed
+
+Metadata Contents
+`````````````````
+The metadata JSON contains the following fields:
+
+* ``mode`` : ``encrypt``/``decrypt``
+* ``input`` : Full path to input file (or ``-`` if stdin)
+* ``output`` : Full path to output file (or ``-`` if stdout)
+* ``header`` : Full `message header data`_
+
 Master Key Provider
 -------------------
 Information for configuring a master key provider must be provided.
@@ -452,6 +477,7 @@ Execution
 
 
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
+.. _message header data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-structure
 .. _Read the Docs: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
 .. _GitHub: https://github.com/awslabs/aws-encryption-sdk-cli/
 .. _cryptography: https://cryptography.io/en/latest/
