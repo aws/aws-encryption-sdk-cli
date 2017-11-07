@@ -114,7 +114,7 @@ The metadata JSON contains the following fields:
 * ``mode`` : ``encrypt``/``decrypt``
 * ``input`` : Full path to input file (or ``-`` if stdin)
 * ``output`` : Full path to output file (or ``-`` if stdout)
-* ``header`` : Full `message header data`_
+* ``encryption_context`` : `Encryption Context`_ from ciphertext message
 
 Master Key Provider
 -------------------
