@@ -172,6 +172,35 @@ def _build_parser():
     )
     parser.add_dummy_redirect_argument('--decrypt')
 
+    metadata_group = parser.add_mutually_exclusive_group(required=True)
+
+    metadata_group.add_argument(
+        '-S',
+        '--suppress-metadata',
+        action='store_true',
+        help='Suppress metadata output.'
+    )
+    # We want this to be caught at the top level parser, not in the group
+    parser.add_dummy_redirect_argument('--suppress-metadata')
+
+    metadata_group.add_argument(
+        '--write-metadata',
+        type=argparse.FileType(mode='w'),
+        dest='metadata_output',
+        help='Overwrite contents of metadata file.'
+    )
+    # We want this to be caught at the top level parser, not in the group
+    parser.add_dummy_redirect_argument('--write-metadata')
+
+    metadata_group.add_argument(
+        '--append-metadata',
+        type=argparse.FileType(mode='a'),
+        dest='metadata_output',
+        help='Append to metadata file.'
+    )
+    # We want this to be caught at the top level parser, not in the group
+    parser.add_dummy_redirect_argument('--append-metadata')
+
     parser.add_argument(
         '-m',
         '--master-keys',
