@@ -28,3 +28,4 @@ ALGORITHM_NAMES = set([
 ])  # type: Set[aws_encryption_sdk.Algorithm]
 MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
 PLUGIN_NAMESPACE_DIVIDER = '::'
+USER_AGENT_SUFFIX = 'AwsEncryptionSdkCli/{}'.format(__version__)

@@ -18,6 +18,7 @@ from aws_encryption_sdk import KMSMasterKeyProvider
 import botocore.session
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 
 
 def aws_kms_master_key_provider(**kwargs):
@@ -32,16 +33,21 @@ def aws_kms_master_key_provider(**kwargs):
     """
     kwargs = copy.deepcopy(kwargs)
     try:
-        profile_name = kwargs.pop('profile')
-        if len(profile_name) != 1:
+        profile_names = kwargs.pop('profile')
+        if len(profile_names) != 1:
             raise BadUserArgumentError(
                 'Only one profile may be specified per master key provider configuration. {} provided.'.format(
-                    len(profile_name)
+                    len(profile_names)
                 )
             )
-        kwargs['botocore_session'] = botocore.session.Session(profile=profile_name[0])
+        profile_name = profile_names[0]
     except KeyError:
-        pass
+        profile_name = None
+
+    botocore_session = botocore.session.Session(profile=profile_name)
+    botocore_session.user_agent_extra = USER_AGENT_SUFFIX
+    kwargs['botocore_session'] = botocore_session
+
     try:
         region_name = kwargs.pop('region')
         if len(region_name) != 1:

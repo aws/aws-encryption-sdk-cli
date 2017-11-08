@@ -17,6 +17,7 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli import key_providers
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 
 
 @pytest.yield_fixture
@@ -39,22 +40,22 @@ def patch_kms_master_key_provider(mocker):
 
 
 @pytest.mark.parametrize('source, expected', (
-    ({}, {}),  # empty baseline
+    ({}, {'botocore_session': sentinel.botocore_session}),  # empty baseline
     (  # arbitrary non-empty baseline
         {'a': 'a thing', 'b': 'another thing'},
-        {'a': 'a thing', 'b': 'another thing'}
+        {'a': 'a thing', 'b': 'another thing', 'botocore_session': sentinel.botocore_session}
     ),
     (  # region_names without region
         {'a': 'a thing', 'region_names': ['us-east-2', 'ca-central-1']},
-        {'a': 'a thing', 'region_names': ['us-east-2', 'ca-central-1']}
+        {'a': 'a thing', 'region_names': ['us-east-2', 'ca-central-1'], 'botocore_session': sentinel.botocore_session}
     ),
     (  # region without region_names
         {'a': 'a thing', 'region': ['eu-central-1']},
-        {'a': 'a thing', 'region_names': ['eu-central-1']}
+        {'a': 'a thing', 'region_names': ['eu-central-1'], 'botocore_session': sentinel.botocore_session}
     ),
-    (  # reigon and region_names specified
+    (  # region and region_names specified
         {'a': 'a thing', 'region_names': ['us-east-2', 'ca-central-1'], 'region': ['eu-central-1']},
-        {'a': 'a thing', 'region_names': ['eu-central-1']}
+        {'a': 'a thing', 'region_names': ['eu-central-1'], 'botocore_session': sentinel.botocore_session}
     ),
     (  # profile specified
         {'a': 'a thing', 'profile': [sentinel.profile_name]},
@@ -73,13 +74,23 @@ def test_kms_master_key_provider_post_processing(
     assert test is patch_kms_master_key_provider.return_value
 
 
-def test_kms_master_key_provider_post_processing_botocore_session_call(
+def test_kms_master_key_provider_post_processing_named_profile(
         patch_botocore_session,
         patch_kms_master_key_provider
 ):
     key_providers.aws_kms_master_key_provider(profile=['a profile name'])
 
     patch_botocore_session.assert_called_once_with(profile='a profile name')
+    assert patch_botocore_session.return_value.user_agent_extra == USER_AGENT_SUFFIX
+
+
+def test_kms_master_key_provider_post_processing_default_profile(
+        patch_botocore_session,
+        patch_kms_master_key_provider
+):
+    key_providers.aws_kms_master_key_provider()
+
+    patch_botocore_session.assert_called_once_with(profile=None)
 
 
 @pytest.mark.parametrize('profile_names', ([], [sentinel.a, sentinel.b]))
