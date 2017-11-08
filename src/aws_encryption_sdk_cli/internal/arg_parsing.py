@@ -139,6 +139,8 @@ def _build_parser():
         fromfile_prefix_chars='@'
     )
 
+    # For each argument added to this group, a dummy redirect argument must
+    # be added to the parent parser for each long form option string.
     version_or_action = parser.add_mutually_exclusive_group(required=True)
 
     version_or_action.add_argument(
@@ -146,9 +148,10 @@ def _build_parser():
         action='version',
         version=_version_report()
     )
-    # We want this to be caught at the top level parser, not in the group
     parser.add_dummy_redirect_argument('--version')
 
+    # For each argument added to this group, a dummy redirect argument must
+    # be added to the parent parser for each long form option string.
     operating_action = version_or_action.add_mutually_exclusive_group()
     operating_action.add_argument(
         '-e',
@@ -158,7 +161,6 @@ def _build_parser():
         const='encrypt',
         help='Encrypt data'
     )
-    # We want this to be caught at the top level parser, not in the group
     parser.add_dummy_redirect_argument('--encrypt')
     operating_action.add_argument(
         '-d',
@@ -168,7 +170,6 @@ def _build_parser():
         const='decrypt',
         help='Decrypt data'
     )
-    # We want this to be caught at the top level parser, not in the group
     parser.add_dummy_redirect_argument('--decrypt')
 
     parser.add_argument(
