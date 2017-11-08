@@ -21,7 +21,6 @@ import pytest
 import six
 
 from aws_encryption_sdk_cli.internal import logging_utils
-
 from .test_i_aws_encryption_sdk_cli import _should_run_tests as meta_should_run_tests
 
 AWS_KMS_KEY_ID = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID'
