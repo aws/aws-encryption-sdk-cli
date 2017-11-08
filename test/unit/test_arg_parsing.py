@@ -12,7 +12,6 @@
 # language governing permissions and limitations under the License.
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.arg_parsing``."""
 import shlex
-import sys
 
 import aws_encryption_sdk
 from mock import MagicMock, sentinel
@@ -21,7 +20,7 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal import arg_parsing
+from aws_encryption_sdk_cli.internal import arg_parsing, metadata
 
 
 @pytest.yield_fixture
@@ -195,8 +194,22 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
         good_args.append((default_encrypt + ' -' + 'v' * count, 'verbosity', count))
 
     # metadata output
-    good_args.append((default_encrypt, 'suppress_metadata', True))
-    good_args.append((encrypt + valid_io + mkp_1 + ' --write-metadata -', 'metadata_output', sys.stdout))
+    good_args.append((default_encrypt, 'metadata_output', metadata.MetadataWriter(suppress_output=True)()))
+    good_args.append((
+        encrypt + valid_io + mkp_1 + ' --write-metadata -',
+        'metadata_output',
+        metadata.MetadataWriter(suppress_output=False, output_mode='w')(output_file='-')
+    ))
+    good_args.append((
+        encrypt + valid_io + mkp_1 + ' --write-metadata file',
+        'metadata_output',
+        metadata.MetadataWriter(suppress_output=False, output_mode='w')(output_file='file')
+    ))
+    good_args.append((
+        encrypt + valid_io + mkp_1 + ' --append-metadata file',
+        'metadata_output',
+        metadata.MetadataWriter(suppress_output=False, output_mode='a')(output_file='file')
+    ))
 
     return good_args
 

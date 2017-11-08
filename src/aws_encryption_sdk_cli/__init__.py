@@ -30,7 +30,6 @@ from aws_encryption_sdk_cli.internal.io_handling import (
 )
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
-from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
@@ -116,11 +115,6 @@ def process_cli_request(stream_args, parsed_args):
     _catch_bad_destination_requests(parsed_args.output)
     _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
-    metadata_writer = MetadataWriter(
-        suppress_output=parsed_args.suppress_metadata,
-        output_stream=parsed_args.metadata_output
-    )
-
     if parsed_args.input == '-':
         # read from stdin
         process_single_operation(
@@ -131,7 +125,7 @@ def process_cli_request(stream_args, parsed_args):
             no_overwrite=parsed_args.no_overwrite,
             decode_input=parsed_args.decode,
             encode_output=parsed_args.encode,
-            metadata_writer=metadata_writer
+            metadata_writer=parsed_args.metadata_output
         )
         return
 
@@ -155,7 +149,7 @@ def process_cli_request(stream_args, parsed_args):
                 suffix=parsed_args.suffix,
                 decode_input=parsed_args.decode,
                 encode_output=parsed_args.encode,
-                metadata_writer=metadata_writer
+                metadata_writer=parsed_args.metadata_output
             )
 
         elif os.path.isfile(_source):
@@ -176,7 +170,7 @@ def process_cli_request(stream_args, parsed_args):
                 no_overwrite=parsed_args.no_overwrite,
                 decode_input=parsed_args.decode,
                 encode_output=parsed_args.encode,
-                metadata_writer=metadata_writer
+                metadata_writer=parsed_args.metadata_output
             )
 
 

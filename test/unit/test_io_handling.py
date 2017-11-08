@@ -155,7 +155,7 @@ def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
         a=sentinel.a,
         b=sentinel.b
     )
-    mock_metadata_writer.write_metadata.assert_called_once_with(
+    mock_metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
         mode='encrypt',
         input=mock_source.name,
         output=destination_writer.name,
@@ -180,7 +180,7 @@ def test_single_io_write_stream_encode_output(tmpdir, patch_aws_encryption_sdk_s
             destination_writer=destination_writer,
             decode_input=False,
             encode_output=True,
-            metadata_writer=metadata.MetadataWriter(suppress_output=True, output_stream=None)
+            metadata_writer=metadata.MetadataWriter(suppress_output=True)()
         )
 
     assert target_file.read('rb') == base64.b64encode(DATA)
@@ -523,7 +523,7 @@ def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream):
         suffix=None,
         decode_input=False,
         encode_output=False,
-        metadata_writer=metadata.MetadataWriter(suppress_output=True, output_stream=None)
+        metadata_writer=metadata.MetadataWriter(suppress_output=True)()
     )
 
     for filename, suffix in (

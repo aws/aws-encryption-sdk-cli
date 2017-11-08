@@ -23,6 +23,7 @@ import aws_encryption_sdk
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
     ARGPARSE_TEXT, CACHING_CONFIG, COLLAPSED_CONFIG,
     MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
@@ -177,7 +178,9 @@ def _build_parser():
     metadata_group.add_argument(
         '-S',
         '--suppress-metadata',
-        action='store_true',
+        action='store_const',
+        const=MetadataWriter(suppress_output=True)(),
+        dest='metadata_output',
         help='Suppress metadata output.'
     )
     # We want this to be caught at the top level parser, not in the group
@@ -185,7 +188,7 @@ def _build_parser():
 
     metadata_group.add_argument(
         '--write-metadata',
-        type=argparse.FileType(mode='w'),
+        type=MetadataWriter(suppress_output=False, output_mode='w'),
         dest='metadata_output',
         help='Overwrite contents of metadata file.'
     )
@@ -194,7 +197,7 @@ def _build_parser():
 
     metadata_group.add_argument(
         '--append-metadata',
-        type=argparse.FileType(mode='a'),
+        type=MetadataWriter(suppress_output=False, output_mode='a'),
         dest='metadata_output',
         help='Append to metadata file.'
     )
