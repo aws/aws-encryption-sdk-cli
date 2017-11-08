@@ -332,7 +332,6 @@ references to other configuration files.
 
    aws-crypto @my-encrypt -i $INPUT -o $OUTPUT
 
-
 Execution
 =========
 
