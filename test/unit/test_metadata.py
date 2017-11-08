@@ -12,55 +12,140 @@
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.metadata``."""
 import json
+import os
 
 import pytest
-import six
 
 from aws_encryption_sdk_cli.internal import metadata
 
+GOOD_INIT_KWARGS = dict(
+    suppress_output=False,
+    output_mode='w'
+)
 
-def test_attrs_callthrough():
+
+@pytest.mark.parametrize('init_kwargs, call_kwargs', (
+    (dict(suppress_output=True), dict()),
+    (dict(suppress_output=False, output_mode='w'), dict(output_file='-')),
+    (dict(suppress_output=False, output_mode='w'), dict(output_file='asdf')),
+    (dict(suppress_output=False, output_mode='a'), dict(output_file='asdf'))
+))
+def test_attrs_good(init_kwargs, call_kwargs):
+    metadata.MetadataWriter(**init_kwargs)(**call_kwargs)
+
+
+@pytest.mark.parametrize('init_kwargs_patch, error_type', (
+    (dict(suppress_output='not a bool'), TypeError),
+    (dict(output_mode='u3982u'), ValueError)
+))
+def test_attrs_fail(init_kwargs_patch, error_type):
     """Verifying that validators are applied because we overwrite attrs init."""
-    with pytest.raises(TypeError):
-        metadata.MetadataWriter(suppress_output='not a bool')
+    init_kwargs = GOOD_INIT_KWARGS.copy()
+    init_kwargs.update(init_kwargs_patch)
+
+    with pytest.raises(error_type):
+        metadata.MetadataWriter(**init_kwargs)()
 
 
-def test_metadata_writer_no_output_stream():
-    with pytest.raises(AttributeError) as excinfo:
-        metadata.MetadataWriter(suppress_output=False)
+@pytest.mark.parametrize('init_kwargs, call_kwargs, error_type, error_message', (
+    (
+        dict(suppress_output=False),
+        dict(),
+        TypeError,
+        r'output_mode cannot be None when suppress_output is False'
+    ),
+    (
+        dict(suppress_output=False, output_mode='w'),
+        dict(),
+        TypeError,
+        r'output_file cannot be None when suppress_output is False'
+    ),
+    (
+        dict(suppress_output=False, output_mode='a'),
+        dict(output_file='-'),
+        ValueError,
+        r'output_mode must be "w" when output_file is stdout'
+    )
+))
+def test_custom_fail(init_kwargs, call_kwargs, error_type, error_message):
+    with pytest.raises(error_type) as excinfo:
+        metadata.MetadataWriter(**init_kwargs)(**call_kwargs)
 
-    excinfo.match(r'output_stream must be specified when suppress_output is False.')
+    excinfo.match(error_message)
 
 
-def test_metadata_writer_bad_output_stream():
-    with pytest.raises(AttributeError) as excinfo:
-        metadata.MetadataWriter(suppress_output=False, output_stream=5)
-
-    excinfo.match(r'Metadata output stream must have "write" method.')
-
-
-def test_metadata_writer_write_metadata():
-    output = six.StringIO()
+@pytest.mark.parametrize('suppress', (True, False))
+def test_write_or_suppress_metadata_stdout(capsys, suppress):
     my_metadata = {
         'some': 'data',
         'for': 'this metadata'
     }
-    writer = metadata.MetadataWriter(suppress_output=False, output_stream=output)
+    writer_factory = metadata.MetadataWriter(suppress_output=suppress, output_mode='w')
+    writer = writer_factory('-')
 
-    writer.write_metadata(**my_metadata)
+    with writer:
+        writer.write_metadata(**my_metadata)
 
-    raw_metadata = output.getvalue()
-    assert json.loads(raw_metadata) == my_metadata
+    out, _err = capsys.readouterr()
+    if suppress:
+        assert out == ''
+    else:
+        assert json.loads(out) == my_metadata
 
 
-def test_metadata_writer_suppress_metadata():
-    output = six.StringIO()
+@pytest.mark.parametrize('suppress', (True, False))
+def test_write_or_suppress_metadata_file(tmpdir, suppress):
     my_metadata = {
         'some': 'data',
         'for': 'this metadata'
     }
-    writer = metadata.MetadataWriter(suppress_output=True, output_stream=output)
+    output_file = tmpdir.join('metadata')
+    writer_factory = metadata.MetadataWriter(suppress_output=suppress, output_mode='w')
+    writer = writer_factory(str(output_file))
 
-    writer.write_metadata(**my_metadata)
+    with writer:
+        writer.write_metadata(**my_metadata)
 
-    assert output.getvalue() == ''
+    if suppress:
+        assert not output_file.isfile()
+    else:
+        assert json.loads(output_file.read()) == my_metadata
+
+
+def test_write_or_suppress_metadata_file_open_close(tmpdir):
+    my_metadata = {
+        'some': 'data',
+        'for': 'this metadata'
+    }
+    output_file = tmpdir.join('metadata')
+    writer_factory = metadata.MetadataWriter(suppress_output=False, output_mode='w')
+    writer = writer_factory(str(output_file))
+
+    writer.open()
+    try:
+        writer.write_metadata(**my_metadata)
+    finally:
+        writer.close()
+
+    assert json.loads(output_file.read()) == my_metadata
+
+
+def test_append_metadata_file(tmpdir):
+    initial_data = 'some data'
+    my_metadata = {
+        'some': 'data',
+        'for': 'this metadata'
+    }
+    output_file = tmpdir.join('metadata')
+    output_file.write(initial_data + os.linesep)
+
+    writer_factory = metadata.MetadataWriter(suppress_output=False, output_mode='a')
+    writer = writer_factory(str(output_file))
+
+    with writer:
+        writer.write_metadata(**my_metadata)
+
+    lines = output_file.readlines()
+    assert len(lines) == 2
+    assert lines[0].strip() == initial_data
+    assert json.loads(lines[1].strip()) == my_metadata
