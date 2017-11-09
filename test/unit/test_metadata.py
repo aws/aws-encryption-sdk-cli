@@ -11,9 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.metadata``."""
+import base64
 import json
 import os
 
+from aws_encryption_sdk.identifiers import Algorithm, ContentType, ObjectType, SerializationVersion
+from aws_encryption_sdk.structures import EncryptedDataKey, MasterKeyInfo, MessageHeader
 import pytest
 
 from aws_encryption_sdk_cli.internal import metadata
@@ -149,3 +152,93 @@ def test_append_metadata_file(tmpdir):
     assert len(lines) == 2
     assert lines[0].strip() == initial_data
     assert json.loads(lines[1].strip()) == my_metadata
+
+
+def test_json_ready_message_header():
+    # pylint: disable=too-many-locals
+    message_id = b'a message ID'
+    encryption_context = {'a': 'b', 'c': 'd'}
+    content_aad_length = 8
+    iv_length = 17
+    frame_length = 99
+    master_key_provider_id_1 = b'provider 1'
+    master_key_provider_info_1 = b'master key 1'
+    encrypted_data_key_1 = b'an encrypted data key1'
+    master_key_provider_id_2 = b'provider 1'
+    master_key_provider_info_2 = b'master key 2'
+    encrypted_data_key_2 = b'an encrypted data key2'
+    master_key_provider_id_3 = b'another provider'
+    master_key_provider_info_3 = b'master key 3'
+    encrypted_data_key_3 = b'an encrypted data key3'
+    raw_header = MessageHeader(
+        version=SerializationVersion.V1,
+        type=ObjectType.CUSTOMER_AE_DATA,
+        algorithm=Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
+        message_id=message_id,
+        encryption_context=encryption_context,
+        encrypted_data_keys=set([
+            EncryptedDataKey(
+                key_provider=MasterKeyInfo(
+                    provider_id=master_key_provider_id_1,
+                    key_info=master_key_provider_info_1
+                ),
+                encrypted_data_key=encrypted_data_key_1
+            ),
+            EncryptedDataKey(
+                key_provider=MasterKeyInfo(
+                    provider_id=master_key_provider_id_2,
+                    key_info=master_key_provider_info_2
+                ),
+                encrypted_data_key=encrypted_data_key_2
+            ),
+            EncryptedDataKey(
+                key_provider=MasterKeyInfo(
+                    provider_id=master_key_provider_id_3,
+                    key_info=master_key_provider_info_3
+                ),
+                encrypted_data_key=encrypted_data_key_3
+            )
+        ]),
+        content_type=ContentType.FRAMED_DATA,
+        content_aad_length=content_aad_length,
+        header_iv_length=iv_length,
+        frame_length=frame_length
+    )
+    expected_header_dict = {
+        'version': '1.0',
+        'type': ObjectType.CUSTOMER_AE_DATA.value,
+        'algorithm': Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384.name,
+        'message_id': base64.b64encode(message_id),
+        'encryption_context': encryption_context,
+        'encrypted_data_keys': [
+            {
+                'key_provider': {
+                    'provider_id': base64.b64encode(master_key_provider_id_3),
+                    'key_info': base64.b64encode(master_key_provider_info_3)
+                },
+                'encrypted_data_key': base64.b64encode(encrypted_data_key_3)
+            },
+            {
+                'key_provider': {
+                    'provider_id': base64.b64encode(master_key_provider_id_1),
+                    'key_info': base64.b64encode(master_key_provider_info_1)
+                },
+                'encrypted_data_key': base64.b64encode(encrypted_data_key_1)
+            },
+            {
+                'key_provider': {
+                    'provider_id': base64.b64encode(master_key_provider_id_2),
+                    'key_info': base64.b64encode(master_key_provider_info_2)
+                },
+                'encrypted_data_key': base64.b64encode(encrypted_data_key_2)
+            }
+        ],
+        'content_type': ContentType.FRAMED_DATA.value,
+        'content_aad_length': content_aad_length,
+        'header_iv_length': iv_length,
+        'frame_length': frame_length
+    }
+
+    test = metadata.json_ready_header(raw_header)
+
+    assert test == expected_header_dict

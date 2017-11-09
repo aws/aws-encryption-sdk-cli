@@ -11,13 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Utilities for handling operation metadata."""
+import base64
+from enum import Enum
 import json
 import os
 import sys
-from typing import Any, IO, Optional  # noqa pylint: disable=unused-import
+from typing import Any, Dict, IO, Optional  # noqa pylint: disable=unused-import
 from types import TracebackType  # noqa pylint: disable=unused-import
 
 import attr
+from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=unused-import
 import six
 
 
@@ -116,3 +119,34 @@ class MetadataWriter(object):
 
         metadata_line = json.dumps(metadata, sort_keys=True)
         return self.output_stream.write(metadata_line + os.linesep)
+
+
+def json_ready_header(header):
+    # type: (MessageHeader) -> Dict[str, Any]
+    """Create a JSON-serializable representation of a :class:`aws_encryption_sdk.structures.MessageHeader`.
+
+    :param header: header for which to create a JSON-serializable representation
+    :type header: aws_encryption_sdk.structures.MessageHeader
+    :rtype: dict
+    """
+    dict_header = attr.asdict(header)
+
+    dict_header['version'] = str(float(dict_header['version'].value))
+    dict_header['algorithm'] = dict_header['algorithm'].name
+
+    for key, value in dict_header.items():
+        if isinstance(value, Enum):
+            dict_header[key] = value.value
+
+    dict_header['message_id'] = base64.b64encode(dict_header['message_id'])
+
+    dict_header['encrypted_data_keys'] = sorted(
+        list(dict_header['encrypted_data_keys']),
+        key=lambda x: six.b(x['key_provider']['provider_id']) + x['key_provider']['key_info']
+    )
+    for data_key in dict_header['encrypted_data_keys']:
+        data_key['key_provider']['provider_id'] = base64.b64encode(six.b(data_key['key_provider']['provider_id']))
+        data_key['key_provider']['key_info'] = base64.b64encode(data_key['key_provider']['key_info'])
+        data_key['encrypted_data_key'] = base64.b64encode(data_key['encrypted_data_key'])
+
+    return dict_header
