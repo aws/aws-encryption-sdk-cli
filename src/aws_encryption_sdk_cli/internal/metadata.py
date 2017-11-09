@@ -12,11 +12,12 @@
 # language governing permissions and limitations under the License.
 """Utilities for handling operation metadata."""
 import base64
+import codecs
 from enum import Enum
 import json
 import os
 import sys
-from typing import Any, Dict, IO, Optional  # noqa pylint: disable=unused-import
+from typing import Any, Dict, IO, Optional, Text  # noqa pylint: disable=unused-import
 from types import TracebackType  # noqa pylint: disable=unused-import
 
 import attr
@@ -121,6 +122,12 @@ class MetadataWriter(object):
         return self.output_stream.write(metadata_line + os.linesep)
 
 
+def _unicode_b64_encode(value):
+    # type: (bytes) -> Text
+    """"""
+    return codecs.decode(base64.b64encode(value), 'utf-8')
+
+
 def json_ready_header(header):
     # type: (MessageHeader) -> Dict[str, Any]
     """Create a JSON-serializable representation of a :class:`aws_encryption_sdk.structures.MessageHeader`.
@@ -138,15 +145,15 @@ def json_ready_header(header):
         if isinstance(value, Enum):
             dict_header[key] = value.value
 
-    dict_header['message_id'] = base64.b64encode(dict_header['message_id'])
+    dict_header['message_id'] = _unicode_b64_encode(dict_header['message_id'])
 
     dict_header['encrypted_data_keys'] = sorted(
         list(dict_header['encrypted_data_keys']),
         key=lambda x: six.b(x['key_provider']['provider_id']) + x['key_provider']['key_info']
     )
     for data_key in dict_header['encrypted_data_keys']:
-        data_key['key_provider']['provider_id'] = base64.b64encode(six.b(data_key['key_provider']['provider_id']))
-        data_key['key_provider']['key_info'] = base64.b64encode(data_key['key_provider']['key_info'])
-        data_key['encrypted_data_key'] = base64.b64encode(data_key['encrypted_data_key'])
+        data_key['key_provider']['provider_id'] = _unicode_b64_encode(six.b(data_key['key_provider']['provider_id']))
+        data_key['key_provider']['key_info'] = _unicode_b64_encode(data_key['key_provider']['key_info'])
+        data_key['encrypted_data_key'] = _unicode_b64_encode(data_key['encrypted_data_key'])
 
     return dict_header

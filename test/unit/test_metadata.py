@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.metadata``."""
-import base64
 import json
 import os
 
@@ -208,29 +207,29 @@ def test_json_ready_message_header():
         'version': '1.0',
         'type': ObjectType.CUSTOMER_AE_DATA.value,
         'algorithm': Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384.name,
-        'message_id': base64.b64encode(message_id),
+        'message_id': metadata._unicode_b64_encode(message_id),
         'encryption_context': encryption_context,
         'encrypted_data_keys': [
             {
                 'key_provider': {
-                    'provider_id': base64.b64encode(master_key_provider_id_3),
-                    'key_info': base64.b64encode(master_key_provider_info_3)
+                    'provider_id': metadata._unicode_b64_encode(master_key_provider_id_3),
+                    'key_info': metadata._unicode_b64_encode(master_key_provider_info_3)
                 },
-                'encrypted_data_key': base64.b64encode(encrypted_data_key_3)
+                'encrypted_data_key': metadata._unicode_b64_encode(encrypted_data_key_3)
             },
             {
                 'key_provider': {
-                    'provider_id': base64.b64encode(master_key_provider_id_1),
-                    'key_info': base64.b64encode(master_key_provider_info_1)
+                    'provider_id': metadata._unicode_b64_encode(master_key_provider_id_1),
+                    'key_info': metadata._unicode_b64_encode(master_key_provider_info_1)
                 },
-                'encrypted_data_key': base64.b64encode(encrypted_data_key_1)
+                'encrypted_data_key': metadata._unicode_b64_encode(encrypted_data_key_1)
             },
             {
                 'key_provider': {
-                    'provider_id': base64.b64encode(master_key_provider_id_2),
-                    'key_info': base64.b64encode(master_key_provider_info_2)
+                    'provider_id': metadata._unicode_b64_encode(master_key_provider_id_2),
+                    'key_info': metadata._unicode_b64_encode(master_key_provider_info_2)
                 },
-                'encrypted_data_key': base64.b64encode(encrypted_data_key_2)
+                'encrypted_data_key': metadata._unicode_b64_encode(encrypted_data_key_2)
             }
         ],
         'content_type': ContentType.FRAMED_DATA.value,
@@ -242,3 +241,5 @@ def test_json_ready_message_header():
     test = metadata.json_ready_header(raw_header)
 
     assert test == expected_header_dict
+    # verify that the dict is actually JSON-encodable
+    json.dumps(test)
