@@ -19,6 +19,7 @@ import pytest
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 
 
 def patch_reactive_side_effect(kwargs):
@@ -208,7 +209,7 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
             suffix=sentinel.suffix,
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
-            metadata_output=sentinel.metadata_output
+            metadata_output=MetadataWriter(True)()
         )
     )
 
@@ -221,7 +222,7 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         suffix=sentinel.suffix,
         decode_input=sentinel.decode_input,
         encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_output
+        metadata_writer=MetadataWriter(True)()
     )
     assert not aws_encryption_sdk_cli.process_single_file.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -252,7 +253,7 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request)
         no_overwrite=sentinel.no_overwrite,
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
-        metadata_output=sentinel.metadata_output
+        metadata_output=MetadataWriter(True)()
     )
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
@@ -268,7 +269,7 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request)
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
         encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_output
+        metadata_writer=MetadataWriter(True)()
     )
 
 
@@ -287,7 +288,7 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
             suffix='CUSTOM_SUFFIX',
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
-            metadata_output=sentinel.metadata_output
+            metadata_output=MetadataWriter(True)()
         )
     )
     assert not aws_encryption_sdk_cli.process_dir.called
@@ -300,7 +301,7 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
         encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_output
+        metadata_writer=MetadataWriter(True)()
     )
 
 
@@ -319,7 +320,7 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
             no_overwrite=sentinel.no_overwrite,
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
-            metadata_output=sentinel.metadata_output
+            metadata_output=MetadataWriter(True)()
         )
     )
     assert not aws_encryption_sdk_cli.process_dir.called
@@ -332,7 +333,7 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
         encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_output
+        metadata_writer=MetadataWriter(True)()
     )
 
 
@@ -403,7 +404,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
             no_overwrite=False,
             encode=False,
             decode=False,
-            metadata_output=sentinel.metadata_output
+            metadata_output=MetadataWriter(True)()
         )
     )
 
@@ -418,7 +419,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
                 no_overwrite=False,
                 decode_input=False,
                 encode_output=False,
-                metadata_writer=sentinel.metadata_output
+                metadata_writer=MetadataWriter(True)()
             )
             for source_file in (test_file_a, test_file_c)
         ],

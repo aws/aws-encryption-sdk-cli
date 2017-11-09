@@ -30,6 +30,7 @@ from aws_encryption_sdk_cli.internal.io_handling import (
 )
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
 from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
@@ -104,6 +105,46 @@ def _catch_bad_file_and_directory_requests(expanded_sources, destination):
                 )
 
 
+def _catch_bad_metadata_file_requests(metadata_output, source, destination):
+    # type: (MetadataWriter, str, str) -> None
+    """Catches bad requests based on characteristics of source, destination, and metadata
+    output target.
+
+    :raises BadUserArgumentError: if destination and metadata file are both stdout
+    :raises BadUserArgumentError: if metadata file is source
+    :raises BadUserArgumentError: if metadata file is destination
+    :raises BadUserArgumentError: if metadata file is a directory
+    :raises BadUserArgumentError: if source is directory and metadata file is in source
+    :raises BadUserArgumentError: if destination is directory and metadata file is in destination
+    """
+    if metadata_output.suppress_output:
+        return
+
+    if metadata_output.output_file == '-':
+        if destination == '-':
+            raise BadUserArgumentError('Metadata output cannot be stdout when output is stdout')
+        return
+
+    if source == '-' or destination == '-':
+        return
+
+    real_source = os.path.realpath(source)
+    real_destination = os.path.realpath(destination)
+    real_metadata = os.path.realpath(metadata_output.output_file)
+
+    if os.path.isdir(real_metadata):
+        raise BadUserArgumentError('Metadata output cannot be a directory')
+
+    if real_metadata == real_source or real_metadata == real_destination:
+        raise BadUserArgumentError('Metadata output file cannot be the input or output')
+
+    if os.path.isdir(real_destination) and real_metadata.startswith(real_destination):
+        raise BadUserArgumentError('Metadata output file cannot be in the output directory')
+
+    if os.path.isdir(real_source) and real_metadata.startswith(real_source):
+        raise BadUserArgumentError('Metadata output file cannot be in the input directory')
+
+
 def process_cli_request(stream_args, parsed_args):
     # type: (STREAM_KWARGS, Namespace) -> None
     """Maps the operation request to the appropriate function based on the type of input and output provided.
@@ -113,6 +154,11 @@ def process_cli_request(stream_args, parsed_args):
     :type args: argparse.Namespace
     """
     _catch_bad_destination_requests(parsed_args.output)
+    _catch_bad_metadata_file_requests(
+        metadata_output=parsed_args.metadata_output,
+        source=parsed_args.input,
+        destination=parsed_args.output
+    )
     _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
     if parsed_args.input == '-':
