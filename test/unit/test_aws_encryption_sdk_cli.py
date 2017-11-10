@@ -50,28 +50,106 @@ def patch_for_process_cli_request(mocker, patch_process_dir, patch_process_singl
     mocker.patch.object(aws_encryption_sdk_cli, 'process_single_operation')
 
 
-def test_process_cli_request_source_is_destination_dir_to_dir(tmpdir):
+def test_catch_bad_destination_requests_stdout():
+    aws_encryption_sdk_cli._catch_bad_destination_requests('-')
+
+
+def test_catch_bad_destination_requests_dir(tmpdir):
+    aws_encryption_sdk_cli._catch_bad_destination_requests(str(tmpdir))
+
+
+def test_catch_bad_destination_requests_file(tmpdir):
+    destination = tmpdir.join('dir1', 'dir2', 'file')
     with pytest.raises(BadUserArgumentError) as excinfo:
-        aws_encryption_sdk_cli.process_cli_request(
-            stream_args={'mode': 'encrypt'},
-            source=str(tmpdir),
-            destination=str(tmpdir),
-            recursive=True,
-            interactive=False,
-            no_overwrite=False
-        )
+        aws_encryption_sdk_cli._catch_bad_destination_requests(str(destination))
+
+    assert excinfo.match(r'If destination is a file, the immediate parent directory must already exist.')
+
+
+def test_catch_bad_stdin_stdout_requests_same_pipe():
+    aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests('-', '-')
+
+
+def build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_files):
+    """Build temporary files or directories to test indication of same source and destination.
+
+    :param bool source_is_symlink: Should the source be a symlink to the destination (both cannot be True)
+    :param bool dest is symlink: Should the destination be a symlink to the source (both cannot be True)
+    :param bool use_files: Should files be created (if False, directories are used instead)
+    """
+    if use_files:
+        real = tmpdir.join('real')
+        real.write('some data')
+    else:
+        real = tmpdir.mkdir('real')
+    link = tmpdir.join('link')
+    os.symlink(str(real), str(link))
+
+    if source_is_symlink:
+        return str(link), str(real)
+    elif dest_is_symlink:
+        return str(real), str(link)
+    return str(real), str(real)
+
+
+def build_same_file_and_dir_test_cases():
+    test_cases = []
+    for use_files in (True, False):
+        test_cases.extend([
+            (False, False, use_files),
+            (True, False, use_files),
+            (False, True, use_files)
+        ])
+    return test_cases
+
+
+@pytest.mark.parametrize('source_is_symlink, dest_is_symlink, use_files', build_same_file_and_dir_test_cases())
+def test_catch_bad_stdin_stdout_requests_source_is_dest(tmpdir, source_is_symlink, dest_is_symlink, use_files):
+    source, dest = build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_files)
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests(source, dest)
+
     excinfo.match(r'Destination and source cannot be the same')
 
 
-def test_process_cli_request_source_is_destination_file_to_file(tmpdir):
-    single_file = tmpdir.join('a_file')
-    single_file.write('some data')
+def test_catch_bad_stdin_stdout_requests_stdin_dir(tmpdir):
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_stdin_stdout_requests('-', str(tmpdir))
+
+    excinfo.match(r'Destination may not be a directory when source is stdin')
+
+
+def test_catch_bad_file_and_directory_requests_multiple_source_nondir_destination(tmpdir):
+    a = tmpdir.join('a')
+    a.write('asdf')
+    b = tmpdir.join('b')
+    b.write('asdf')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_file_and_directory_requests((str(a), str(b)), str(tmpdir.join('c')))
+
+    excinfo.match(r'If operating on multiple sources, destination must be an existing directory')
+
+
+def test_catch_bad_file_and_directory_requests_contains_dir(tmpdir):
+    b = tmpdir.mkdir('b')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_file_and_directory_requests((str(b),), str(tmpdir.join('c')))
+
+    excinfo.match(r'If operating on a source directory, destination must be an existing directory')
+
+
+@pytest.mark.parametrize('source_is_symlink, dest_is_symlink, use_files', build_same_file_and_dir_test_cases())
+def test_process_cli_request_source_is_destination(tmpdir, source_is_symlink, dest_is_symlink, use_files):
+    source, dest = build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_files)
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source=str(single_file),
-            destination=str(single_file),
+            source=source,
+            destination=dest,
             recursive=True,
             interactive=False,
             no_overwrite=False
@@ -97,10 +175,11 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_for_process_c
 
 
 def test_process_cli_request_source_dir_destination_nondir(tmpdir):
+    source = tmpdir.mkdir('source')
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source=str(tmpdir),
+            source=str(source),
             destination=str(tmpdir.join('destination')),
             recursive=True,
             interactive=False,
@@ -109,9 +188,9 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
 
-def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_process_cli_request, patch_output_filename):
-    source = tmpdir.mkdir('source')
-    destination = tmpdir.mkdir('destination')
+def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_process_cli_request):
+    source = tmpdir.mkdir('source_dir')
+    destination = tmpdir.mkdir('destination_dir')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
         source=str(source),
@@ -121,6 +200,7 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix
     )
+
     aws_encryption_sdk_cli.process_dir.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=str(source),
@@ -129,7 +209,6 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix
     )
-    assert not aws_encryption_sdk_cli.output_filename.called
     assert not aws_encryption_sdk_cli.process_single_file.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
 
@@ -147,7 +226,7 @@ def test_process_cli_request_source_stdin_destination_dir(tmpdir):
     excinfo.match(r'Destination may not be a directory when source is stdin')
 
 
-def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request, patch_output_filename):
+def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request):
     destination = tmpdir.join('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
@@ -158,7 +237,6 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request,
         no_overwrite=sentinel.no_overwrite
     )
     assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.output_filename.called
     assert not aws_encryption_sdk_cli.process_single_file.called
     aws_encryption_sdk_cli.process_single_operation.assert_called_once_with(
         stream_args=sentinel.stream_args,
@@ -193,10 +271,11 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
     )
 
 
-def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_process_cli_request, patch_output_filename):
+def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_process_cli_request):
     source = tmpdir.join('source')
     source.write('some data')
     destination = tmpdir.join('destination')
+
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': sentinel.mode},
         source=str(source),
@@ -207,7 +286,6 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
-    assert not aws_encryption_sdk_cli.output_filename.called
     aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
         stream_args={'mode': sentinel.mode},
         source=str(source),
