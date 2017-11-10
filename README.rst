@@ -114,7 +114,8 @@ The metadata JSON contains the following fields:
 * ``mode`` : ``encrypt``/``decrypt``
 * ``input`` : Full path to input file (or ``-`` if stdin)
 * ``output`` : Full path to output file (or ``-`` if stdout)
-* ``encryption_context`` : `Encryption Context`_ from ciphertext message
+* ``header`` : JSON representation of `message header data`_
+* ``header_auth`` : JSON representation of `message header authentication data`_ (only on decrypt)
 
 Master Key Provider
 -------------------
@@ -478,6 +479,7 @@ Execution
 
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
 .. _message header data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-structure
+.. _message header authentication data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-authentication
 .. _Read the Docs: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
 .. _GitHub: https://github.com/awslabs/aws-encryption-sdk-cli/
 .. _cryptography: https://cryptography.io/en/latest/

@@ -15,6 +15,7 @@ import json
 import os
 
 from aws_encryption_sdk.identifiers import Algorithm, ContentType, ObjectType, SerializationVersion
+from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication
 from aws_encryption_sdk.structures import EncryptedDataKey, MasterKeyInfo, MessageHeader
 import pytest
 
@@ -207,33 +208,32 @@ def test_json_ready_message_header():
         'version': '1.0',
         'type': ObjectType.CUSTOMER_AE_DATA.value,
         'algorithm': Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384.name,
-        'message_id': metadata._unicode_b64_encode(message_id),
+        'message_id': metadata.unicode_b64_encode(message_id),
         'encryption_context': encryption_context,
         'encrypted_data_keys': [
             {
                 'key_provider': {
-                    'provider_id': metadata._unicode_b64_encode(master_key_provider_id_3),
-                    'key_info': metadata._unicode_b64_encode(master_key_provider_info_3)
+                    'provider_id': metadata.unicode_b64_encode(master_key_provider_id_3),
+                    'key_info': metadata.unicode_b64_encode(master_key_provider_info_3)
                 },
-                'encrypted_data_key': metadata._unicode_b64_encode(encrypted_data_key_3)
+                'encrypted_data_key': metadata.unicode_b64_encode(encrypted_data_key_3)
             },
             {
                 'key_provider': {
-                    'provider_id': metadata._unicode_b64_encode(master_key_provider_id_1),
-                    'key_info': metadata._unicode_b64_encode(master_key_provider_info_1)
+                    'provider_id': metadata.unicode_b64_encode(master_key_provider_id_1),
+                    'key_info': metadata.unicode_b64_encode(master_key_provider_info_1)
                 },
-                'encrypted_data_key': metadata._unicode_b64_encode(encrypted_data_key_1)
+                'encrypted_data_key': metadata.unicode_b64_encode(encrypted_data_key_1)
             },
             {
                 'key_provider': {
-                    'provider_id': metadata._unicode_b64_encode(master_key_provider_id_2),
-                    'key_info': metadata._unicode_b64_encode(master_key_provider_info_2)
+                    'provider_id': metadata.unicode_b64_encode(master_key_provider_id_2),
+                    'key_info': metadata.unicode_b64_encode(master_key_provider_info_2)
                 },
-                'encrypted_data_key': metadata._unicode_b64_encode(encrypted_data_key_2)
+                'encrypted_data_key': metadata.unicode_b64_encode(encrypted_data_key_2)
             }
         ],
         'content_type': ContentType.FRAMED_DATA.value,
-        'content_aad_length': content_aad_length,
         'header_iv_length': iv_length,
         'frame_length': frame_length
     }
@@ -241,5 +241,21 @@ def test_json_ready_message_header():
     test = metadata.json_ready_header(raw_header)
 
     assert test == expected_header_dict
+    # verify that the dict is actually JSON-encodable
+    json.dumps(test)
+
+
+def test_json_ready_header_auth():
+    iv = b'some random bytes'
+    tag = b'some not random bytes'
+    raw_header_auth = MessageHeaderAuthentication(iv=iv, tag=tag)
+    expected_header_auth_dict = {
+        'iv': metadata.unicode_b64_encode(iv),
+        'tag': metadata.unicode_b64_encode(tag)
+    }
+
+    test = metadata.json_ready_header_auth(raw_header_auth)
+
+    assert test == expected_header_auth_dict
     # verify that the dict is actually JSON-encodable
     json.dumps(test)

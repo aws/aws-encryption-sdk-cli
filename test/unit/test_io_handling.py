@@ -68,6 +68,18 @@ def patch_should_write_file(mocker):
     yield io_handling._should_write_file
 
 
+@pytest.fixture
+def patch_json_ready_header(mocker):
+    mocker.patch.object(io_handling, 'json_ready_header')
+    return io_handling.json_ready_header
+
+
+@pytest.fixture
+def patch_json_ready_header_auth(mocker):
+    mocker.patch.object(io_handling, 'json_ready_header_auth')
+    return io_handling.json_ready_header_auth
+
+
 def test_stdout():
     if six.PY2:
         assert io_handling._stdout() is sys.stdout
@@ -129,9 +141,14 @@ def test_encoder(mocker, should_base64):
         assert test is sentinel.stream
 
 
-def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
+def test_single_io_write_stream_encrypt(
+        tmpdir,
+        patch_aws_encryption_sdk_stream,
+        patch_json_ready_header,
+        patch_json_ready_header_auth
+):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
-    patch_aws_encryption_sdk_stream.return_value.header = MagicMock(encryption_context=sentinel.encryption_context)
+    patch_aws_encryption_sdk_stream.return_value.header = MagicMock()
     target_file = tmpdir.join('target')
     mock_source = MagicMock()
     mock_metadata_writer = MagicMock()
@@ -155,16 +172,58 @@ def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
         a=sentinel.a,
         b=sentinel.b
     )
+    patch_json_ready_header.assert_called_once_with(patch_aws_encryption_sdk_stream.return_value.header)
+    assert not patch_json_ready_header_auth.called
     mock_metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
         mode='encrypt',
         input=mock_source.name,
         output=destination_writer.name,
-        encryption_context=sentinel.encryption_context
+        header=patch_json_ready_header.return_value
     )
     assert target_file.read('rb') == DATA
 
 
-def test_single_io_write_stream_encode_output(tmpdir, patch_aws_encryption_sdk_stream):
+def test_single_io_write_stream_decrypt(
+        tmpdir,
+        patch_aws_encryption_sdk_stream,
+        patch_json_ready_header,
+        patch_json_ready_header_auth
+):
+    patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
+    patch_aws_encryption_sdk_stream.return_value.header = MagicMock()
+    patch_aws_encryption_sdk_stream.return_value.header_auth = MagicMock()
+    target_file = tmpdir.join('target')
+    mock_source = MagicMock()
+    mock_metadata_writer = MagicMock()
+    with open(str(target_file), 'wb') as destination_writer:
+        io_handling._single_io_write(
+            stream_args={
+                'mode': 'decrypt',
+                'a': sentinel.a,
+                'b': sentinel.b
+            },
+            source=mock_source,
+            destination_writer=destination_writer,
+            decode_input=False,
+            encode_output=False,
+            metadata_writer=mock_metadata_writer
+        )
+    patch_json_ready_header_auth.assert_called_once_with(patch_aws_encryption_sdk_stream.return_value.header_auth)
+    mock_metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
+        mode='decrypt',
+        input=mock_source.name,
+        output=destination_writer.name,
+        header=patch_json_ready_header.return_value,
+        header_auth=patch_json_ready_header_auth.return_value
+    )
+
+
+def test_single_io_write_stream_encode_output(
+        tmpdir,
+        patch_aws_encryption_sdk_stream,
+        patch_json_ready_header,
+        patch_json_ready_header_auth
+):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
     patch_aws_encryption_sdk_stream.return_value.header = MagicMock(encryption_context=sentinel.encryption_context)
     target_file = tmpdir.join('target')
@@ -498,7 +557,7 @@ def _mock_aws_encryption_sdk_stream_output(source, *args, **kwargs):
     return mock_stream
 
 
-def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream):
+def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header):
     patch_aws_encryption_sdk_stream.side_effect = _mock_aws_encryption_sdk_stream_output
     source = tmpdir.mkdir('source')
     source.mkdir('a')

@@ -25,6 +25,7 @@ import six
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.metadata import json_ready_header, json_ready_header_auth
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
 from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
 
@@ -114,12 +115,19 @@ def _single_io_write(stream_args, source, destination_writer, decode_input, enco
     """
     with _encoder(source, decode_input) as _source, _encoder(destination_writer, encode_output) as _destination:
         with aws_encryption_sdk.stream(source=_source, **stream_args) as handler, metadata_writer as metadata:
-            metadata.write_metadata(
+            metadata_kwargs = dict(
                 mode=stream_args['mode'],
                 input=source.name,
                 output=destination_writer.name,
-                encryption_context=handler.header.encryption_context
+                header=json_ready_header(handler.header)
             )
+            try:
+                header_auth = handler.header_auth
+                metadata_kwargs['header_auth'] = json_ready_header_auth(header_auth)
+            except AttributeError:
+                # EncryptStream doesn't expose the header auth at this time
+                pass
+            metadata.write_metadata(**metadata_kwargs)
             for chunk in handler:
                 _destination.write(chunk)
                 _destination.flush()
