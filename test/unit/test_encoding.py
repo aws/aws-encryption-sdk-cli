@@ -166,6 +166,39 @@ def test_base64io_encode_context_manager(source_bytes):
     assert plaintext_stream.getvalue() == plaintext_b64
 
 
+def test_base64io_encode_context_manager_reuse():
+    plaintext_source = os.urandom(10)
+    plaintext_stream = io.BytesIO()
+
+    stream = Base64IO(plaintext_stream)
+
+    with stream as plaintext_wrapped:
+        plaintext_wrapped.write(plaintext_source)
+
+    with pytest.raises(ValueError) as excinfo:
+        with stream as plaintext_wrapped:
+            plaintext_wrapped.read()
+
+    excinfo.match(r'I/O operation on closed file.')
+
+
+def test_base64io_encode_use_after_context_manager_exit():
+    plaintext_source = os.urandom(10)
+    plaintext_stream = io.BytesIO()
+
+    stream = Base64IO(plaintext_stream)
+
+    with stream as plaintext_wrapped:
+        plaintext_wrapped.write(plaintext_source)
+
+    assert stream.closed
+
+    with pytest.raises(ValueError) as excinfo:
+        stream.read()
+
+    excinfo.match(r'I/O operation on closed file.')
+
+
 @pytest.mark.parametrize('source_bytes', [case[0] for case in build_test_cases()])
 def test_base64io_encode(source_bytes):
     plaintext_source = os.urandom(source_bytes)
