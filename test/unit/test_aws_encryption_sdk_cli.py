@@ -142,6 +142,92 @@ def test_catch_bad_file_and_directory_requests_contains_dir(tmpdir):
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
 
+def test_catch_bad_metadata_file_requests_metadata_and_output_are_stdout():
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file='-')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
+
+    excinfo.match(r'Metadata output cannot be stdout when output is stdout')
+
+
+def test_catch_bad_metadata_file_requests_metadata_metadata_is_stdout_but_output_is_not():
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file='-')
+
+    aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, 'not-std-in', 'not-std-out')
+
+
+def test_catch_bad_metadata_file_requests_metadata_is_dir(tmpdir):
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(tmpdir))
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
+
+    excinfo.match(r'Metadata output cannot be a directory')
+
+
+def test_catch_bad_metadata_file_requests_metadata_metadata_is_not_stdout_but_input_and_output_are_pipes(tmpdir):
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(tmpdir.join('metadata')))
+
+    aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
+
+
+def test_catch_bad_metadata_file_requests_metadata_all_are_unique_files(tmpdir):
+    source = tmpdir.join('source')
+    metadata_file = tmpdir.join('metadata')
+    destination = tmpdir.join('destination')
+
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(metadata_file))
+
+    aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
+
+
+@pytest.mark.parametrize('metadata_is_symlink, match_is_symlink, match', (
+    (False, False, 'source'),
+    (True, False, 'source'),
+    (False, True, 'source'),
+    (False, False, 'dest'),
+    (True, False, 'dest'),
+    (False, True, 'dest')
+))
+def test_catch_bad_metadata_file_requests_metadata_is_source_or_dest(
+        tmpdir,
+        metadata_is_symlink,
+        match_is_symlink,
+        match
+):
+    if match == 'source':
+        source, metadata_file = build_same_files_and_dirs(tmpdir, metadata_is_symlink, match_is_symlink, True)
+        destination = tmpdir.join('destination')
+    else:
+        source = tmpdir.join('source')
+        destination, metadata_file = build_same_files_and_dirs(tmpdir, metadata_is_symlink, match_is_symlink, True)
+
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(metadata_file))
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
+
+    excinfo.match(r'Metadata output file cannot be the input or output')
+
+
+@pytest.mark.parametrize('match', ('input', 'output'))
+def test_catch_bad_metadata_file_requests_metadata_in_source_or_dest_dir(tmpdir, match):
+    source = tmpdir.mkdir('source')
+    destination = tmpdir.mkdir('destination')
+    if match == 'input':
+        metadata_file = source.join('metadata')
+    else:
+        metadata_file = destination.join('metadata')
+
+    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(metadata_file))
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
+
+    excinfo.match(r'Metadata output file cannot be in the {} directory'.format(match))
+
+
 @pytest.mark.parametrize('source_is_symlink, dest_is_symlink, use_files', build_same_file_and_dir_test_cases())
 def test_process_cli_request_source_is_destination(tmpdir, source_is_symlink, dest_is_symlink, use_files):
     source, dest = build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_files)
