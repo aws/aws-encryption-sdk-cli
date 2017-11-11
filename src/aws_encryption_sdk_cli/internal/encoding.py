@@ -226,6 +226,8 @@ class Base64IO(io.IOBase):
         if not self.readable():
             raise IOError('Stream is not readable')
 
+        if b is not None and b < 0:
+            b = None
         _bytes_to_read = None
         if b is not None:
             # Calculate number of encoded bytes that must be read to get b raw bytes.

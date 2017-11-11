@@ -127,6 +127,7 @@ def build_test_cases():
         test_cases.append((size, size, 1, size))
 
     test_cases.append((1024, None, 1, 1024))  # single-shot
+    test_cases.append((1024, -1, 1, 1024))  # single-shot
 
     # Odd multiples with operation smaller, equal to, and larger than total
     for rounds in (1, 3, 5):
