@@ -28,7 +28,11 @@ __all__ = ('Base64IO',)
 
 
 class Base64IO(io.IOBase):
-    """Wraps a stream, base64-decoding read results before returning them.
+    """Wraps a stream, base64-decoding read results before returning them and base64-encoding
+    written bytes before writing them to the stream. Unless ``close_wrapped_on_close`` is
+    set to True, the underlying stream is not closed when this object is closed. Instances
+    of this class are not reusable in order maintain consistency with the :class:`io.IOBase`
+    behavior on ``close()``.
 
     .. note::
 
@@ -48,7 +52,10 @@ class Base64IO(io.IOBase):
 
     def __init__(self, wrapped, close_wrapped_on_close=False):
         # type: (Base64IO, IO, Optional[bool]) -> None
-        """Check for required methods on wrapped stream and set up read buffer."""
+        """Check for required methods on wrapped stream and set up read buffer.
+
+        :raises TypeError: if ``wrapped`` does not have attributes needed to determine the stream's state
+        """
         required_attrs = ('read', 'write', 'close', 'closed', 'flush')
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
             raise TypeError('Base64IO wrapped object must have attributes: {}'.format(repr(sorted(required_attrs))))
@@ -145,7 +152,7 @@ class Base64IO(io.IOBase):
 
         :param bytes b: Bytes to write to wrapped stream
         :raises ValueError: if called on closed Base64IO object
-        :raises ValueError: if called on Base64IO object outside of a context manager
+        :raises IOError: if underlying stream is not writable
         """
         if self.closed:
             raise ValueError('I/O operation on closed file.')
@@ -227,6 +234,8 @@ class Base64IO(io.IOBase):
 
         # Read encoded bytes from wrapped stream.
         data = self.__wrapped.read(_bytes_to_read)
+        # Remove whitespace from read data and attempt to read more data to get the desired
+        # number of bytes.
         if any([six.b(char) in data for char in string.whitespace]):
             data = self._read_additional_data_removing_whitespace(data, _bytes_to_read)
 
@@ -254,6 +263,11 @@ class Base64IO(io.IOBase):
         # type: (int) -> bytes
         """Read and return one line from the stream.
         If limit is specified, at most limit bytes will be read.
+
+        .. note::
+
+            Because the source that this reads from may not contain any OEL characters, we
+            read "lines" in chunks of length ``io.DEFAULT_BUFFER_SIZE``.
 
         :type limit: int
         :rtype: bytes
