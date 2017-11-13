@@ -11,14 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Helper functions for handling all input and output for this CLI."""
+from __future__ import division
+
+import copy
 import logging
 import os
 import sys
-from typing import IO, Type  # noqa pylint: disable=unused-import
+from typing import cast, IO, Type, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 import six
 
+from aws_encryption_sdk_cli.internal.encoding import Base64IO
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
@@ -78,24 +82,42 @@ def _ensure_dir_exists(filename):
         _LOGGER.info('Created directory: %s', dest_final_dir)
 
 
-def _single_io_write(stream_args, source, destination_writer):
-    # type: (STREAM_KWARGS, SOURCE, IO) -> None
+def _encoder(stream, should_base64):
+    # type: (IO, bool) -> Union[IO, Base64IO]
+    """Wraps a stream in either a Base64IO transformer or results stream if wrapping is not requested.
+
+    :param stream: Stream to wrap
+    :type stream: file-like object
+    :param bool should_base64: Should the stream be wrapped with Base64IO
+    :returns: wrapped stream
+    :rtype: io.IOBase
+    """
+    if should_base64:
+        return Base64IO(stream)
+    return stream
+
+
+def _single_io_write(stream_args, source, destination_writer, decode_input, encode_output):
+    # type: (STREAM_KWARGS, IO, IO, bool, bool) -> None
     """Performs the actual write operations for a single operation.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
     :param source: source to write
-    :type source: str, stream, or file-like object
+    :type source: file-like object
     :param destination_writer: destination object to which to write
-    :type source: stream or file-like object
+    :type destination_writer: file-like object
+    :param bool decode_input: Should input be base64 decoded before operation
+    :param bool encode_output: Should output be base64 encoded after operation
     """
-    with aws_encryption_sdk.stream(source=source, **stream_args) as handler:
-        for chunk in handler:
-            destination_writer.write(chunk)
-            destination_writer.flush()
+    with _encoder(source, decode_input) as _source, _encoder(destination_writer, encode_output) as _destination:
+        with aws_encryption_sdk.stream(source=_source, **stream_args) as handler:
+            for chunk in handler:
+                _destination.write(chunk)
+                _destination.flush()
 
 
-def process_single_operation(stream_args, source, destination, interactive, no_overwrite):
-    # type: (STREAM_KWARGS, SOURCE, str, bool, bool) -> None
+def process_single_operation(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output):
+    # type: (STREAM_KWARGS, SOURCE, str, bool, bool, bool, bool) -> None
     """Processes a single encrypt/decrypt operation given a pre-loaded source.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -104,6 +126,8 @@ def process_single_operation(stream_args, source, destination, interactive, no_o
     :param str destination: destination identifier
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
+    :param bool decode_input: Should input be base64 decoded before operation
+    :param bool encode_output: Should output be base64 encoded after operation
     """
     if destination == '-':
         destination_writer = _stdout()
@@ -112,16 +136,20 @@ def process_single_operation(stream_args, source, destination, interactive, no_o
             return
         _ensure_dir_exists(destination)
         destination_writer = open(destination, 'wb')
+
     if source == '-':
-        source = _stdin()
-    try:
+        source_reader = _stdin()
+    else:
+        source_reader = cast(IO, source)
+
+    with destination_writer:
         _single_io_write(
             stream_args=stream_args,
-            source=source,
-            destination_writer=destination_writer
+            source=source_reader,
+            destination_writer=destination_writer,
+            decode_input=decode_input,
+            encode_output=encode_output
         )
-    finally:
-        destination_writer.close()
 
 
 def _should_write_file(filepath, interactive, no_overwrite):
@@ -162,8 +190,8 @@ def _should_write_file(filepath, interactive, no_overwrite):
     return True
 
 
-def process_single_file(stream_args, source, destination, interactive, no_overwrite):
-    # type: (STREAM_KWARGS, str, str, bool, bool) -> None
+def process_single_file(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output):
+    # type: (STREAM_KWARGS, str, str, bool, bool, bool, bool) -> None
     """Processes a single encrypt/decrypt operation on a source file.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -171,6 +199,8 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
     :param str destination: Full file path to destination file
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
+    :param bool decode_input: Should input be base64 decoded before operation
+    :param bool encode_output: Should output be base64 encoded after operation
     """
     if os.path.realpath(source) == os.path.realpath(destination):
         # File source, directory destination, empty suffix:
@@ -178,13 +208,26 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
         return
 
     _LOGGER.info('%sing file %s to %s', stream_args['mode'], source, destination)
+
+    _stream_args = copy.copy(stream_args)
+    # Because we can actually know size for files and Base64IO does not support seeking,
+    # set the source length manually for files. This allows enables data key caching when
+    # Base64-decoding a source file.
+    source_file_size = os.path.getsize(source)
+    if decode_input and not encode_output:
+        _stream_args['source_length'] = int(source_file_size * (3 / 4))
+    else:
+        _stream_args['source_length'] = source_file_size
+
     with open(source, 'rb') as source_reader:
         process_single_operation(
-            stream_args=stream_args,
+            stream_args=_stream_args,
             source=source_reader,
             destination=destination,
             interactive=interactive,
-            no_overwrite=no_overwrite
+            no_overwrite=no_overwrite,
+            decode_input=decode_input,
+            encode_output=encode_output
         )
 
 
@@ -221,8 +264,8 @@ def _output_dir(source_root, destination_root, source_dir):
     return os.path.join(destination_root, suffix)
 
 
-def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix):
-    # type: (STREAM_KWARGS, str, str, bool, bool, str) -> None
+def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix, decode_input, encode_output):
+    # type: (STREAM_KWARGS, str, str, bool, bool, str, bool, bool) -> None
     """Processes encrypt/decrypt operations on all files in a directory tree.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -231,6 +274,8 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
     :param bool interactive: Should prompt before overwriting existing files
     :param bool no_overwrite: Should never overwrite existing files
     :param str suffix: Suffix to append to output filename
+    :param bool decode_input: Should input be base64 decoded before operation
+    :param bool encode_output: Should output be base64 encoded after operation
     """
     _LOGGER.debug('%sing directory %s to %s', stream_args['mode'], source, destination)
     for base_dir, _dirs, files in os.walk(source):
@@ -252,5 +297,7 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
                 source=source_filename,
                 destination=destination_filename,
                 interactive=interactive,
-                no_overwrite=no_overwrite
+                no_overwrite=no_overwrite,
+                decode_input=decode_input,
+                encode_output=encode_output
             )

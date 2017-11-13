@@ -1,12 +1,24 @@
+[MESSAGES CONTROL]
+# Disabling messages that we either don't care about
+# for tests or are necessary to break for tests.
+#
+# R0801 : duplicate-code (we have several functions in io_handling with similar profiles)
+disable = R0801
+
 [BASIC]
 # Allow function names up to 50 characters
 function-rgx = [a-z_][a-z0-9_]{2,50}$
+# Whitelist argument names: iv, b
+argument-rgx = ([a-z_][a-z0-9_]{2,30}$)|(^b$)
+# Whitelist variable names: b, _b
+variable-rgx = ([a-z_][a-z0-9_]{2,30}$)|(^b$)
 
 [VARIABLES]
 additional-builtins = raw_input
 
 [DESIGN]
 max-args = 10
+max-attributes = 10
 
 [FORMAT]
 max-line-length = 120

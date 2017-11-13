@@ -198,7 +198,9 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         recursive=True,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix
+        suffix=sentinel.suffix,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
 
     aws_encryption_sdk_cli.process_dir.assert_called_once_with(
@@ -207,7 +209,9 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         destination=str(destination),
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix
+        suffix=sentinel.suffix,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     assert not aws_encryption_sdk_cli.process_single_file.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -234,7 +238,9 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request)
         destination=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_file.called
@@ -243,7 +249,9 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request)
         source='-',
         destination=str(destination),
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
 
 
@@ -258,7 +266,9 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
         recursive=False,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        suffix='CUSTOM_SUFFIX'
+        suffix='CUSTOM_SUFFIX',
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -267,7 +277,9 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
         source=str(source),
         destination=str(destination.join('sourceCUSTOM_SUFFIX')),
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
 
 
@@ -282,7 +294,9 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
         destination=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -291,7 +305,9 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
         source=str(source),
         destination=str(destination),
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
 
 
@@ -365,7 +381,9 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
                 source=str(source_file),
                 destination=ANY,
                 interactive=False,
-                no_overwrite=False
+                no_overwrite=False,
+                decode_input=False,
+                encode_output=False
             )
             for source_file in (test_file_a, test_file_c)
         ],
@@ -507,7 +525,9 @@ def patch_for_cli(mocker):
         recursive=sentinel.recursive,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix
+        suffix=sentinel.suffix,
+        decode=sentinel.decode_input,
+        encode=sentinel.encode_output
     )
     mocker.patch.object(aws_encryption_sdk_cli, 'setup_logger')
     mocker.patch.object(aws_encryption_sdk_cli, 'build_crypto_materials_manager_from_args')
@@ -540,7 +560,9 @@ def test_cli(patch_for_cli):
         recursive=sentinel.recursive,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix
+        suffix=sentinel.suffix,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     assert test is None
 

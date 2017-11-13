@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.io_handling``."""
+import base64
 import io
 import os
 import sys
@@ -116,25 +117,59 @@ def test_ensure_dir_exists_current_directory(patch_makedirs):
     assert not patch_makedirs.called
 
 
+@pytest.mark.parametrize('should_base64', (True, False))
+def test_encoder(mocker, should_base64):
+    mocker.patch.object(io_handling, 'Base64IO')
+
+    test = io_handling._encoder(sentinel.stream, should_base64)
+
+    if should_base64:
+        assert test is io_handling.Base64IO.return_value
+    else:
+        assert test is sentinel.stream
+
+
 def test_single_io_write_stream(tmpdir, patch_aws_encryption_sdk_stream):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
     target_file = tmpdir.join('target')
+    mock_source = MagicMock()
     with open(str(target_file), 'wb') as destination_writer:
         io_handling._single_io_write(
             stream_args={
                 'a': sentinel.a,
                 'b': sentinel.b
             },
-            source=sentinel.source,
-            destination_writer=destination_writer
+            source=mock_source,
+            destination_writer=destination_writer,
+            decode_input=False,
+            encode_output=False
         )
 
     patch_aws_encryption_sdk_stream.assert_called_once_with(
-        source=sentinel.source,
+        source=mock_source.__enter__.return_value,
         a=sentinel.a,
         b=sentinel.b
     )
     assert target_file.read('rb') == DATA
+
+
+def test_single_io_write_stream_encode_output(tmpdir, patch_aws_encryption_sdk_stream):
+    patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
+    target_file = tmpdir.join('target')
+    mock_source = MagicMock()
+    with open(str(target_file), 'wb') as destination_writer:
+        io_handling._single_io_write(
+            stream_args={
+                'a': sentinel.a,
+                'b': sentinel.b
+            },
+            source=mock_source,
+            destination_writer=destination_writer,
+            decode_input=False,
+            encode_output=True
+        )
+
+    assert target_file.read('rb') == base64.b64encode(DATA)
 
 
 def test_process_single_operation_stdout(patch_for_process_single_operation, patch_should_write_file):
@@ -143,15 +178,18 @@ def test_process_single_operation_stdout(patch_for_process_single_operation, pat
         source=sentinel.source,
         destination='-',
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     io_handling._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=sentinel.source,
-        destination_writer=io_handling._stdout.return_value
+        destination_writer=io_handling._stdout.return_value,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     assert not patch_should_write_file.called
-    io_handling._stdout.return_value.close.assert_called_once_with()
 
 
 def test_process_single_operation_stdin_stdout(patch_for_process_single_operation, patch_should_write_file):
@@ -160,12 +198,16 @@ def test_process_single_operation_stdin_stdout(patch_for_process_single_operatio
         source='-',
         destination='-',
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
     io_handling._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=io_handling._stdin.return_value,
-        destination_writer=io_handling._stdout.return_value
+        destination_writer=io_handling._stdout.return_value,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
 
 
@@ -176,7 +218,9 @@ def test_process_single_operation_file(patch_for_process_single_operation, patch
             source=sentinel.source,
             destination=sentinel.destination_file,
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=sentinel.decode_input,
+            encode_output=sentinel.encode_output
         )
     io_handling._ensure_dir_exists.assert_called_once_with(sentinel.destination_file)
     patch_should_write_file.assert_called_once_with(
@@ -188,9 +232,10 @@ def test_process_single_operation_file(patch_for_process_single_operation, patch
     io_handling._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=sentinel.source,
-        destination_writer=mock_open.return_value
+        destination_writer=mock_open.return_value,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
     )
-    mock_open.return_value.close.assert_called_once_with()
 
 
 def test_process_single_operation_file_should_not_write(patch_for_process_single_operation, patch_should_write_file):
@@ -201,7 +246,9 @@ def test_process_single_operation_file_should_not_write(patch_for_process_single
             source=sentinel.source,
             destination=sentinel.destination_file,
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=sentinel.decode_input,
+            encode_output=sentinel.encode_output
         )
     assert not io_handling._ensure_dir_exists.called
     assert not mock_open.called
@@ -251,25 +298,58 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         assert not should_write
 
 
-def test_process_single_file(tmpdir, patch_process_single_operation):
-    source = tmpdir.join('source')
+@pytest.mark.parametrize('mode, decode_input, encode_output, expected_multiplier', (
+    ('encrypt', False, False, 1.0),
+    ('encrypt', True, False, 0.75),
+    ('encrypt', False, True, 1.0),
+    ('encrypt', True, True, 1.0),
+    ('decrypt', False, False, 1.0),
+    ('decrypt', True, False, 0.75),
+    ('decrypt', False, True, 1.0),
+    ('decrypt', True, True, 1.0)
+))
+def test_process_single_file(
+        tmpdir,
+        patch_process_single_operation,
+        mode,
+        decode_input,
+        encode_output,
+        expected_multiplier
+):
+    source = tmpdir.join('source_file')
     source.write('some data')
     destination = tmpdir.join('destination')
+    initial_kwargs = dict(
+        mode=mode,
+        a=sentinel.a,
+        b=sentinel.b
+    )
+    expected_length = int(os.path.getsize(str(source)) * expected_multiplier)
+    updated_kwargs = dict(
+        mode=mode,
+        a=sentinel.a,
+        b=sentinel.b,
+        source_length=expected_length
+    )
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
         io_handling.process_single_file(
-            stream_args={'mode': 'encrypt'},
+            stream_args=initial_kwargs,
             source=str(source),
             destination=str(destination),
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=decode_input,
+            encode_output=encode_output
         )
     mock_open.assert_called_once_with(str(source), 'rb')
     patch_process_single_operation.assert_called_once_with(
-        stream_args={'mode': 'encrypt'},
+        stream_args=updated_kwargs,
         source=mock_open.return_value.__enter__.return_value,
         destination=str(destination),
         interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=decode_input,
+        encode_output=encode_output
     )
 
 
@@ -283,7 +363,9 @@ def test_process_single_file_source_is_destination(tmpdir, patch_process_single_
             source=str(source),
             destination=str(source),
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=sentinel.decode_input,
+            encode_output=sentinel.encode_output
         )
 
     assert not mock_open.called
@@ -302,7 +384,9 @@ def test_process_single_file_destination_is_symlink_to_source(tmpdir, patch_proc
             source=str(source),
             destination=destination,
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            decode_input=sentinel.decode_input,
+            encode_output=sentinel.encode_output
         )
 
     assert not mock_open.called
@@ -409,7 +493,9 @@ def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream):
         destination=str(target),
         interactive=False,
         no_overwrite=False,
-        suffix=None
+        suffix=None,
+        decode_input=False,
+        encode_output=False
     )
 
     for filename, suffix in (

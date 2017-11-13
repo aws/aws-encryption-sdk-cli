@@ -332,6 +332,40 @@ references to other configuration files.
 
    aws-crypto @my-encrypt -i $INPUT -o $OUTPUT
 
+
+Encoding
+--------
+By default, ``aws-crypto`` will always output raw binary data and expect raw binary data
+as input. However, there are some cases where you might not want this to be the case.
+
+Sometimes this might be for convenience:
+
+* Accepting ciphertext through stdin from a human.
+* Presenting ciphertext through stdout to a human.
+
+Sometimes it might be out of necessity:
+
+* Saving ciphertext output to a shell variable.
+
+   * Most shells apply a system encoding to any data stored in a variable. As a result, this
+     often results in corrupted data if binary data is stored without additional encoding.
+
+* Piping ciphertext in PowerShell.
+
+   * Similar to the above, all data passed through a PowerShell pipe is encoded using the
+     system encoding.
+
+In order to address these scenarios, we provide two optional arguments:
+
+* ``--decode`` : Base64-decode input before processing.
+* ``--encode`` : Base64-encode output after processing.
+
+These can be used independently or together, on any valid input or output.
+
+Be aware, however, that if you target multiple files either through a path expansion or by
+targetting a directory, the requested decoding/encoding will be applied to all files.
+
+
 Execution
 =========
 
@@ -381,6 +415,8 @@ Execution
      -o OUTPUT, --output OUTPUT
                            Output file or directory for encrypt/decrypt
                            operation, or - for stdout.
+     --encode              Base64-encode output after processing
+     --decode              Base64-decode input before processing
      -c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...], --encryption-context ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]
                            key-value pair encryption context values (encryption
                            only). Must a set of "key=value" pairs. ex: -c
