@@ -12,6 +12,7 @@
 # language governing permissions and limitations under the License.
 """Base64 context manager."""
 from __future__ import division
+
 import base64
 import io
 import logging
