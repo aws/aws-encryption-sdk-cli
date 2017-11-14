@@ -79,6 +79,10 @@ form of ``parameter=value`` as demonstrated below.
 
 Encryption Context
 ------------------
+
+Encrypt
+```````
+
 The `encryption context`_ is an optional, but recommended, set of key-value pairs that contain
 arbitrary nonsecret data. The encryption context can contain any data you choose, but it
 typically consists of data that is useful in logging and tracking, such as data about the file
@@ -90,6 +94,32 @@ Parameters may be provided using `Parameter Values`_.
 
    --encryption-context key1=value1 key2=value2 "key 3=value with spaces"
 
+Decrypt
+```````
+
+If an encryption context is provided on decrypt, it is instead used to require that the message
+being decrypted was encrypted using an encryption context that matches the specified requirements.
+
+If ``key=value`` elements are provided, the decryption will only continue if the encryption
+context found in the encrypted message contains matching pairs.
+
+.. code-block:: sh
+
+   --encryption-context required_key=required_value classification=secret
+
+If bare ``key`` elements are provided, the decryption will continue if those keys are found,
+regardless of the values. ``key`` and ``key=value`` elements can be mixed.
+
+.. code-block:: sh
+
+   --encryption-context required_key classification=secret
+
+.. warning::
+
+   If encryption context requirements are not satisfied by the ciphertext message, the
+   message will not be decrypted. One side effect of this is that if you chose to write
+   the plaintext output to a file and that file already existed, it will be deleted when
+   we stop the decryption.
 
 Output Metadata
 ---------------
