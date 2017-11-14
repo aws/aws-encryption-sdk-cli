@@ -16,7 +16,7 @@ from collections import defaultdict, OrderedDict
 import copy
 import logging
 import shlex
-from typing import Any, Dict, List, Optional, Sequence, Union  # noqa pylint: disable=unused-import
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 
@@ -265,6 +265,14 @@ def _build_parser():
         )
     )
 
+    # Note: This is added as an argument for argparse API consistency, but it should not be used directly.
+    parser.add_argument(
+        '--required-encryption-context-keys',
+        nargs='+',
+        action=UniqueStoreAction,
+        help=argparse.SUPPRESS
+    )
+
     parser.add_argument(
         '--algorithm',
         action=UniqueStoreAction,
@@ -373,7 +381,7 @@ def _parse_and_collapse_config(raw_config):
     # type: (RAW_CONFIG) -> COLLAPSED_CONFIG
     """Copies, parses, and collapses a raw configuration of "key=value" pairs.
 
-    :param list raw_config: Unprocessed encryption context
+    :param list raw_config: Unprocessed key=value configuration
     :returns: Processed configuration
     :rtype: dict
     """
@@ -381,6 +389,40 @@ def _parse_and_collapse_config(raw_config):
     parsed_config = _parse_kwargs(config)
     collapsed_config = _collapse_config(parsed_config)
     return collapsed_config
+
+
+def _process_encryption_context(
+        action,
+        raw_encryption_context,
+        raw_required_encryption_context_keys
+):  # pylint: disable=invalid-name
+    # type: (str, RAW_CONFIG, RAW_CONFIG) -> Tuple[Dict[str, str], List[str]]
+    """Applies processing to prepare the encryption context and required encryption context keys.
+
+    :param list raw_encryption_context: Unprocessed encryption context
+    :param list raw_required_encryption_context_keys: Unprocessed required encryption context keys
+    :returns: Processed encryption context and required encryption context keys
+    :rtype: tuple of dict and list
+    """
+    if raw_required_encryption_context_keys is not None:
+        required_keys = copy.copy(raw_required_encryption_context_keys)
+    else:
+        required_keys = []
+
+    if raw_encryption_context is None:
+        return {}, required_keys
+
+    if action == 'encrypt':
+        return _parse_and_collapse_config(raw_encryption_context), required_keys
+
+    initial_encryption_context = []  # type: List[str]
+    for param in raw_encryption_context:
+        if '=' in param:
+            initial_encryption_context.append(param)
+        else:
+            required_keys.append(param)
+    encryption_context = _parse_and_collapse_config(initial_encryption_context)
+    return encryption_context, required_keys
 
 
 def _process_caching_config(raw_caching_config):
@@ -480,8 +522,11 @@ def parse_args(raw_args=None):
 
         parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
 
-        if parsed_args.encryption_context is not None:
-            parsed_args.encryption_context = _parse_and_collapse_config(parsed_args.encryption_context)
+        parsed_args.encryption_context, parsed_args.required_encryption_context_keys = _process_encryption_context(
+            action=parsed_args.action,
+            raw_encryption_context=parsed_args.encryption_context,
+            raw_required_encryption_context_keys=parsed_args.required_encryption_context_keys
+        )
 
         if parsed_args.caching is not None:
             parsed_args.caching = _process_caching_config(parsed_args.caching)

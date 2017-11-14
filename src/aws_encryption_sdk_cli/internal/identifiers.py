@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Static identifier values for the AWS Encryption SDK CLI."""
+from enum import Enum
 from typing import Dict, Set  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
@@ -29,3 +30,20 @@ ALGORITHM_NAMES = set([
 MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
 PLUGIN_NAMESPACE_DIVIDER = '::'
 USER_AGENT_SUFFIX = 'AwsEncryptionSdkCli/{}'.format(__version__)
+
+
+class OperationResult(Enum):
+    """Identifies the resulting state of an operation.
+
+    :param bool needs_cleanup: If true, the output file needs to be deleted
+    """
+
+    FAILED = (True,)
+    SUCCESS = (False,)
+    SKIPPED = (False,)
+    FAILED_VALIDATION = (True,)
+
+    def __init__(self, needs_cleanup):
+        # type: (bool) -> None
+        """Prepares new OperationResult."""
+        self.needs_cleanup = needs_cleanup
