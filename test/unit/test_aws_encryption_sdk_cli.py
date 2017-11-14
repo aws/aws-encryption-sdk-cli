@@ -237,7 +237,9 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
             no_overwrite=sentinel.no_overwrite,
             metadata_output=metadata_writer,
             decode=sentinel.decode_input,
-            encode=sentinel.encode_output
+            encode=sentinel.encode_output,
+            encryption_context=sentinel.encryption_context,
+            required_encryption_context_keys=sentinel.required_keys
         )
     )
 
@@ -246,7 +248,9 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        encode_output=sentinel.encode_output,
+        required_encryption_context=sentinel.encryption_context,
+        required_encryption_context_keys=sentinel.required_keys
     )
     assert not patch_iohandler.return_value.process_single_operation.called
     assert not patch_iohandler.return_value.process_dir.called
@@ -266,7 +270,9 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 no_overwrite=False,
                 decode=False,
                 encode=False,
-                metadata_output=MetadataWriter(True)()
+                metadata_output=MetadataWriter(True)(),
+                encryption_context={},
+                required_encryption_context_keys=[]
             )
         )
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
@@ -407,7 +413,9 @@ def test_process_cli_request_invalid_source(tmpdir):
                 no_overwrite=False,
                 decode=False,
                 encode=False,
-                metadata_output=MetadataWriter(True)()
+                metadata_output=MetadataWriter(True)(),
+                encryption_context={},
+                required_encryption_context_keys=[]
             )
         )
     excinfo.match(r'Invalid source.  Must be a valid pathname pattern or stdin \(-\)')
@@ -535,7 +543,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
     (
         MagicMock(
             action='encrypt',
-            encryption_context=sentinel.encryption_context,
+            encryption_context={'encryption': 'context', 'with': 'keys'},
             algorithm='AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384',
             frame_length=sentinel.frame_length,
             max_length=None
@@ -543,7 +551,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
         {
             'materials_manager': sentinel.materials_manager,
             'mode': 'encrypt',
-            'encryption_context': sentinel.encryption_context,
+            'encryption_context': {'encryption': 'context', 'with': 'keys'},
             'algorithm': aws_encryption_sdk.Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
             'frame_length': sentinel.frame_length,
         }
@@ -551,7 +559,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
     (
         MagicMock(
             action='encrypt',
-            encryption_context=None,
+            encryption_context={},
             algorithm='AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384',
             frame_length=sentinel.frame_length,
             max_length=None
@@ -561,12 +569,13 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
             'mode': 'encrypt',
             'algorithm': aws_encryption_sdk.Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
             'frame_length': sentinel.frame_length,
+            'encryption_context': {}
         }
     ),
     (
         MagicMock(
             action='encrypt',
-            encryption_context=sentinel.encryption_context,
+            encryption_context={'encryption': 'context', 'with': 'keys'},
             algorithm=None,
             frame_length=sentinel.frame_length,
             max_length=None
@@ -574,14 +583,14 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
         {
             'materials_manager': sentinel.materials_manager,
             'mode': 'encrypt',
-            'encryption_context': sentinel.encryption_context,
+            'encryption_context': {'encryption': 'context', 'with': 'keys'},
             'frame_length': sentinel.frame_length
         }
     ),
     (
         MagicMock(
             action='encrypt',
-            encryption_context=sentinel.encryption_context,
+            encryption_context={'encryption': 'context', 'with': 'keys'},
             algorithm='AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384',
             frame_length=None,
             max_length=None
@@ -589,7 +598,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
         {
             'materials_manager': sentinel.materials_manager,
             'mode': 'encrypt',
-            'encryption_context': sentinel.encryption_context,
+            'encryption_context': {'encryption': 'context', 'with': 'keys'},
             'algorithm': aws_encryption_sdk.Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384
         }
     )

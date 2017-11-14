@@ -133,6 +133,59 @@ def test_cycle_with_metadata_output_append(tmpdir):
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_file_to_file_decrypt_required_encryption_context_success(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    ciphertext = tmpdir.join('ciphertext')
+    decrypted = tmpdir.join('decrypted')
+    with open(str(plaintext), 'wb') as f:
+        f.write(os.urandom(1024))
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(ciphertext)
+    )
+    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+        source=str(ciphertext),
+        target=str(decrypted)
+    ) + ' --encryption-context a=b c=d'
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    assert filecmp.cmp(str(plaintext), str(decrypted))
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
+def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
+    plaintext = tmpdir.join('source_plaintext')
+    ciphertext = tmpdir.join('ciphertext')
+    metadata_file = tmpdir.join('metadata')
+    decrypted = tmpdir.join('decrypted')
+    with open(str(plaintext), 'wb') as f:
+        f.write(os.urandom(1024))
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(ciphertext)
+    )
+    decrypt_args = DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source=str(ciphertext),
+        target=str(decrypted),
+        metadata=' --write-metadata ' + str(metadata_file)
+    ) + ' --encryption-context ' + required_encryption_context
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+
+    assert not decrypted.isfile()
+    raw_metadata = metadata_file.read()
+    parsed_metadata = json.loads(raw_metadata)
+    assert parsed_metadata['skipped']
+    assert parsed_metadata['reason'] == 'Missing encryption context key or value'
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_file_cycle(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
