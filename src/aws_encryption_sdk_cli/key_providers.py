@@ -12,7 +12,7 @@
 # language governing permissions and limitations under the License.
 """Master key providers."""
 import copy
-from typing import Any, Dict, List, Text, Union  # noqa pylint: disable=unused-import
+from typing import Dict, List, Text, Union  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk import KMSMasterKeyProvider
 import botocore.session
