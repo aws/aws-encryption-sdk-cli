@@ -166,7 +166,7 @@ def test_catch_bad_metadata_file_requests_metadata_is_dir(tmpdir):
     excinfo.match(r'Metadata output cannot be a directory')
 
 
-def test_catch_bad_metadata_file_requests_metadata_metadata_is_not_stdout_but_input_and_output_are_pipes(tmpdir):
+def test_catch_bad_metadata_file_requests_metadata_is_not_stdout_but_input_and_output_are_pipes(tmpdir):
     metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(tmpdir.join('metadata')))
 
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
