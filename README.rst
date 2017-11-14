@@ -111,11 +111,11 @@ Metadata Contents
 `````````````````
 The metadata JSON contains the following fields:
 
-* ``mode`` : ``encrypt``/``decrypt``
-* ``input`` : Full path to input file (or ``-`` if stdin)
-* ``output`` : Full path to output file (or ``-`` if stdout)
-* ``header`` : JSON representation of `message header data`_
-* ``header_auth`` : JSON representation of `message header authentication data`_ (only on decrypt)
+* ``"mode"`` : ``"encrypt"``/``"decrypt"``
+* ``"input"`` : Full path to input file (or ``"<stdin>"`` if stdin)
+* ``"output"`` : Full path to output file (or ``"<stdout>"`` if stdout)
+* ``"header"`` : JSON representation of `message header data`_
+* ``"header_auth"`` : JSON representation of `message header authentication data`_ (only on decrypt)
 
 Master Key Provider
 -------------------
