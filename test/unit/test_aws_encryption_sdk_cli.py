@@ -22,33 +22,10 @@ from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserA
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 
 
-def patch_reactive_side_effect(kwargs):
-    def _check(path):
-        return kwargs[path]
-    return _check
-
-
-@pytest.yield_fixture
-def patch_process_dir(mocker):
-    mocker.patch.object(aws_encryption_sdk_cli, 'process_dir')
-    yield aws_encryption_sdk_cli.process_dir
-
-
-@pytest.yield_fixture
-def patch_process_single_file(mocker):
-    mocker.patch.object(aws_encryption_sdk_cli, 'process_single_file')
-    yield aws_encryption_sdk_cli.process_single_file
-
-
-@pytest.yield_fixture
-def patch_output_filename(mocker):
-    mocker.patch.object(aws_encryption_sdk_cli, 'output_filename')
-    aws_encryption_sdk_cli.output_filename.return_value = sentinel.destination_filename
-
-
 @pytest.fixture
-def patch_for_process_cli_request(mocker, patch_process_dir, patch_process_single_file):
-    mocker.patch.object(aws_encryption_sdk_cli, 'process_single_operation')
+def patch_iohandler(mocker):
+    mocker.patch.object(aws_encryption_sdk_cli, 'IOHandler')
+    return aws_encryption_sdk_cli.IOHandler
 
 
 def test_catch_bad_destination_requests_stdout():
@@ -246,9 +223,10 @@ def test_process_cli_request_source_is_destination(tmpdir, source_is_symlink, de
     excinfo.match(r'Destination and source cannot be the same')
 
 
-def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_for_process_cli_request):
+def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
     source = tmpdir.mkdir('source')
     destination = tmpdir.mkdir('destination')
+    metadata_writer = MetadataWriter(True)()
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
         parsed_args=MagicMock(
@@ -256,13 +234,23 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_for_process_c
             output=str(destination),
             recursive=False,
             interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite
+            no_overwrite=sentinel.no_overwrite,
+            metadata_output=metadata_writer,
+            decode=sentinel.decode_input,
+            encode=sentinel.encode_output
         )
     )
 
-    assert not aws_encryption_sdk_cli.process_single_operation.called
-    assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.process_single_file.called
+    patch_iohandler.assert_called_once_with(
+        metadata_writer=metadata_writer,
+        interactive=sentinel.interactive,
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output
+    )
+    assert not patch_iohandler.return_value.process_single_operation.called
+    assert not patch_iohandler.return_value.process_dir.called
+    assert not patch_iohandler.return_value.process_single_file.called
 
 
 def test_process_cli_request_source_dir_destination_nondir(tmpdir):
@@ -275,13 +263,16 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 output=str(tmpdir.join('destination')),
                 recursive=True,
                 interactive=False,
-                no_overwrite=False
+                no_overwrite=False,
+                decode=False,
+                encode=False,
+                metadata_output=MetadataWriter(True)()
             )
         )
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
 
-def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_process_cli_request):
+def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_iohandler):
     source = tmpdir.mkdir('source_dir')
     destination = tmpdir.mkdir('destination_dir')
     aws_encryption_sdk_cli.process_cli_request(
@@ -299,19 +290,14 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         )
     )
 
-    aws_encryption_sdk_cli.process_dir.assert_called_once_with(
+    patch_iohandler.return_value.process_dir.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=str(source),
         destination=str(destination),
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=MetadataWriter(True)()
+        suffix=sentinel.suffix
     )
-    assert not aws_encryption_sdk_cli.process_single_file.called
-    assert not aws_encryption_sdk_cli.process_single_operation.called
+    assert not patch_iohandler.return_value.process_single_file.called
+    assert not patch_iohandler.return_value.process_single_operation.called
 
 
 def test_process_cli_request_source_stdin_destination_dir(tmpdir):
@@ -329,7 +315,7 @@ def test_process_cli_request_source_stdin_destination_dir(tmpdir):
     excinfo.match(r'Destination may not be a directory when source is stdin')
 
 
-def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request):
+def test_process_cli_request_source_stdin(tmpdir, patch_iohandler):
     destination = tmpdir.join('destination')
     mock_parsed_args = MagicMock(
         input='-',
@@ -345,21 +331,16 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request)
         stream_args=sentinel.stream_args,
         parsed_args=mock_parsed_args
     )
-    assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.process_single_file.called
-    aws_encryption_sdk_cli.process_single_operation.assert_called_once_with(
+    assert not patch_iohandler.return_value.process_dir.called
+    assert not patch_iohandler.return_value.process_single_file.called
+    patch_iohandler.return_value.process_single_operation.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source='-',
-        destination=str(destination),
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=MetadataWriter(True)()
+        destination=str(destination)
     )
 
 
-def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_process_cli_request):
+def test_process_cli_request_source_file_destination_dir(tmpdir, patch_iohandler):
     source = tmpdir.join('source')
     source.write('some data')
     destination = tmpdir.mkdir('destination')
@@ -377,21 +358,16 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
             metadata_output=MetadataWriter(True)()
         )
     )
-    assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.process_single_operation.called
-    aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
+    assert not patch_iohandler.return_value.process_dir.called
+    assert not patch_iohandler.return_value.process_single_operation.called
+    patch_iohandler.return_value.process_single_file.assert_called_once_with(
         stream_args={'mode': sentinel.mode},
         source=str(source),
-        destination=str(destination.join('sourceCUSTOM_SUFFIX')),
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=MetadataWriter(True)()
+        destination=str(destination.join('sourceCUSTOM_SUFFIX'))
     )
 
 
-def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_process_cli_request):
+def test_process_cli_request_source_file_destination_file(tmpdir, patch_iohandler):
     source = tmpdir.join('source')
     source.write('some data')
     destination = tmpdir.join('destination')
@@ -409,17 +385,12 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
             metadata_output=MetadataWriter(True)()
         )
     )
-    assert not aws_encryption_sdk_cli.process_dir.called
-    assert not aws_encryption_sdk_cli.process_single_operation.called
-    aws_encryption_sdk_cli.process_single_file.assert_called_once_with(
+    assert not patch_iohandler.return_value.process_dir.called
+    assert not patch_iohandler.return_value.process_single_operation.called
+    patch_iohandler.return_value.process_single_file.assert_called_once_with(
         stream_args={'mode': sentinel.mode},
         source=str(source),
-        destination=str(destination),
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=MetadataWriter(True)()
+        destination=str(destination)
     )
 
 
@@ -433,13 +404,16 @@ def test_process_cli_request_invalid_source(tmpdir):
                 output='a specific destination',
                 recursive=False,
                 interactive=False,
-                no_overwrite=False
+                no_overwrite=False,
+                decode=False,
+                encode=False,
+                metadata_output=MetadataWriter(True)()
             )
         )
     excinfo.match(r'Invalid source.  Must be a valid pathname pattern or stdin \(-\)')
 
 
-def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_process_dir, patch_process_single_file):
+def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_iohandler):
     plaintext_dir = tmpdir.mkdir('plaintext')
     test_file = plaintext_dir.join('testing.aa')
     test_file.write(b'some data here!')
@@ -462,15 +436,11 @@ def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_p
         )
 
     excinfo.match('If operating on multiple sources, destination must be an existing directory')
-    assert not patch_process_dir.called
-    assert not patch_process_single_file.called
+    assert not patch_iohandler.return_value.process_dir.called
+    assert not patch_iohandler.return_value.process_single_file.called
 
 
-def test_process_cli_request_source_contains_directory_nonrecursive(
-        tmpdir,
-        patch_process_dir,
-        patch_process_single_file
-):
+def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patch_iohandler):
     plaintext_dir = tmpdir.mkdir('plaintext')
     test_file_a = plaintext_dir.join('testing.aa')
     test_file_a.write(b'some data here!')
@@ -494,18 +464,13 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
         )
     )
 
-    assert not patch_process_dir.called
-    patch_process_single_file.assert_has_calls(
+    assert not patch_iohandler.return_value.process_dir.called
+    patch_iohandler.return_value.process_single_file.assert_has_calls(
         calls=[
             call(
                 stream_args={'mode': 'encrypt'},
                 source=str(source_file),
-                destination=ANY,
-                interactive=False,
-                no_overwrite=False,
-                decode_input=False,
-                encode_output=False,
-                metadata_writer=MetadataWriter(True)()
+                destination=ANY
             )
             for source_file in (test_file_a, test_file_c)
         ],

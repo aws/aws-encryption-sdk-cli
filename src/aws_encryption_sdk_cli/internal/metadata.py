@@ -25,6 +25,8 @@ from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=
 from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication  # noqa pylint: disable=unused-import
 import six
 
+__all__ = ('MetadataWriter', 'unicode_b64_encode', 'json_ready_header', 'json_ready_header_auth')
+
 
 @attr.s(hash=False, init=False, cmp=True)
 class MetadataWriter(object):

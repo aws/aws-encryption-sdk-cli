@@ -19,6 +19,7 @@ import os
 import sys
 from typing import cast, IO, Type, Union  # noqa pylint: disable=unused-import
 
+import attr
 import aws_encryption_sdk
 import six
 
@@ -26,9 +27,10 @@ from aws_encryption_sdk_cli.internal.encoding import Base64IO
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import json_ready_header, json_ready_header_auth
-from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
 
+__all__ = ('IOHandler', 'output_filename')
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
@@ -99,161 +101,6 @@ def _encoder(stream, should_base64):
     return stream
 
 
-def _single_io_write(stream_args, source, destination_writer, decode_input, encode_output, metadata_writer):
-    # type: (STREAM_KWARGS, IO, IO, bool, bool, MetadataWriter) -> None
-    """Performs the actual write operations for a single operation.
-
-    :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
-    :param source: source to write
-    :type source: file-like object
-    :param destination_writer: destination object to which to write
-    :type destination_writer: file-like object
-    :param bool decode_input: Should input be base64 decoded before operation
-    :param bool encode_output: Should output be base64 encoded after operation
-    :param metadata_writer: File-like to which metadata should be written
-    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
-    """
-    with _encoder(source, decode_input) as _source, _encoder(destination_writer, encode_output) as _destination:
-        with aws_encryption_sdk.stream(source=_source, **stream_args) as handler, metadata_writer as metadata:
-            metadata_kwargs = dict(
-                mode=stream_args['mode'],
-                input=source.name,
-                output=destination_writer.name,
-                header=json_ready_header(handler.header)
-            )
-            try:
-                header_auth = handler.header_auth
-                metadata_kwargs['header_auth'] = json_ready_header_auth(header_auth)
-            except AttributeError:
-                # EncryptStream doesn't expose the header auth at this time
-                pass
-            metadata.write_metadata(**metadata_kwargs)
-            for chunk in handler:
-                _destination.write(chunk)
-                _destination.flush()
-
-
-def process_single_operation(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output, metadata_writer):
-    # type: (STREAM_KWARGS, SOURCE, str, bool, bool, bool, bool, MetadataWriter) -> None
-    """Processes a single encrypt/decrypt operation given a pre-loaded source.
-
-    :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
-    :param source: source to write
-    :type source: str or file-like object
-    :param str destination: destination identifier
-    :param bool interactive: Should prompt before overwriting existing files
-    :param bool no_overwrite: Should never overwrite existing files
-    :param bool decode_input: Should input be base64 decoded before operation
-    :param bool encode_output: Should output be base64 encoded after operation
-    :param metadata_writer: File-like to which metadata should be written
-    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
-    """
-    if destination == '-':
-        destination_writer = _stdout()
-    else:
-        if not _should_write_file(filepath=destination, interactive=interactive, no_overwrite=no_overwrite):
-            return
-        _ensure_dir_exists(destination)
-        destination_writer = open(destination, 'wb')
-
-    if source == '-':
-        source_reader = _stdin()
-    else:
-        source_reader = cast(IO, source)
-
-    with destination_writer:
-        _single_io_write(
-            stream_args=stream_args,
-            source=source_reader,
-            destination_writer=destination_writer,
-            decode_input=decode_input,
-            encode_output=encode_output,
-            metadata_writer=metadata_writer
-        )
-
-
-def _should_write_file(filepath, interactive, no_overwrite):
-    # type: (str, bool, bool) -> bool
-    """Determines whether a specific file should be written.
-
-    :param str filepath: Full file path to file in question
-    :param bool interactive: Should prompt before overwriting existing files
-    :param bool no_overwrite: Should never overwrite existing files
-    :rtype: bool
-    """
-    if not os.path.isfile(filepath):
-        # The file does not exist, nothing to overwrite
-        return True
-
-    if no_overwrite:
-        # The file exists and the caller specifically asked us not to overwrite anything
-        _LOGGER.warning('Skipping existing target file because of "no overwrite" option: %s', filepath)
-        return False
-
-    if interactive:
-        # The file exists and the caller asked us to be consulted on action before overwriting
-        decision = six.moves.input(  # type: ignore # six.moves confuses mypy
-            'Overwrite existing target file "{}" with new contents? [y/N]:'.format(filepath)
-        )
-        try:
-            if decision.lower()[0] == 'y':
-                _LOGGER.warning('Overwriting existing target file based on interactive user decision: %s', filepath)
-                return True
-            return False
-        except IndexError:
-            # No input is interpreted as 'do not overwrite'
-            _LOGGER.warning('Skipping existing target file based on interactive user decision: %s', filepath)
-            return False
-
-    # If we get to this point, the file exists and we should overwrite it
-    _LOGGER.warning('Overwriting existing target file because no action was specified otherwise: %s', filepath)
-    return True
-
-
-def process_single_file(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output, metadata_writer):
-    # type: (STREAM_KWARGS, str, str, bool, bool, bool, bool, MetadataWriter) -> None
-    """Processes a single encrypt/decrypt operation on a source file.
-
-    :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
-    :param str source: Full file path to source file
-    :param str destination: Full file path to destination file
-    :param bool interactive: Should prompt before overwriting existing files
-    :param bool no_overwrite: Should never overwrite existing files
-    :param bool decode_input: Should input be base64 decoded before operation
-    :param bool encode_output: Should output be base64 encoded after operation
-    :param metadata_writer: File-like to which metadata should be written
-    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
-    """
-    if os.path.realpath(source) == os.path.realpath(destination):
-        # File source, directory destination, empty suffix:
-        _LOGGER.warning('Skipping because the source (%s) and destination (%s) are the same', source, destination)
-        return
-
-    _LOGGER.info('%sing file %s to %s', stream_args['mode'], source, destination)
-
-    _stream_args = copy.copy(stream_args)
-    # Because we can actually know size for files and Base64IO does not support seeking,
-    # set the source length manually for files. This allows enables data key caching when
-    # Base64-decoding a source file.
-    source_file_size = os.path.getsize(source)
-    if decode_input and not encode_output:
-        _stream_args['source_length'] = int(source_file_size * (3 / 4))
-    else:
-        _stream_args['source_length'] = source_file_size
-
-    with open(source, 'rb') as source_reader:
-        process_single_operation(
-            stream_args=_stream_args,
-            source=source_reader,
-            destination=destination,
-            interactive=interactive,
-            no_overwrite=no_overwrite,
-            decode_input=decode_input,
-            encode_output=encode_output,
-            metadata_writer=metadata_writer
-        )
-
-
 def output_filename(source_filename, destination_dir, mode, suffix):
     # type: (str, str, str, str) -> str
     """Duplicates the source filename in the destination directory, adding or stripping
@@ -287,43 +134,189 @@ def _output_dir(source_root, destination_root, source_dir):
     return os.path.join(destination_root, suffix)
 
 
-def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix, decode_input, encode_output, metadata_writer):
-    # type: (STREAM_KWARGS, str, str, bool, bool, str, bool, bool, MetadataWriter) -> None
-    """Processes encrypt/decrypt operations on all files in a directory tree.
+@attr.s(hash=False, init=False)
+class IOHandler(object):
+    """Common handler for all IO operations. Holds common configuration values used for all
+    operations.
 
-    :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
-    :param str source: Full file path to source directory root
-    :param str destination: Full file path to destination directory root
-    :param bool interactive: Should prompt before overwriting existing files
-    :param bool no_overwrite: Should never overwrite existing files
-    :param str suffix: Suffix to append to output filename
-    :param bool decode_input: Should input be base64 decoded before operation
-    :param bool encode_output: Should output be base64 encoded after operation
     :param metadata_writer: File-like to which metadata should be written
     :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
+    :param bool interactive: Should prompt before overwriting existing files
+    :param bool no_overwrite: Should never overwrite existing files
+    :param bool decode_input: Should input be base64 decoded before operation
+    :param bool encode_output: Should output be base64 encoded after operation
     """
-    _LOGGER.debug('%sing directory %s to %s', stream_args['mode'], source, destination)
-    for base_dir, _dirs, files in os.walk(source):
-        for filename in files:
-            source_filename = os.path.join(base_dir, filename)
-            destination_dir = _output_dir(
-                source_root=source,
-                destination_root=destination,
-                source_dir=base_dir
-            )
-            destination_filename = output_filename(
-                source_filename=source_filename,
-                destination_dir=destination_dir,
-                mode=str(stream_args['mode']),
-                suffix=suffix
-            )
-            process_single_file(
+
+    metadata_writer = attr.ib(validator=attr.validators.instance_of(MetadataWriter))
+    interactive = attr.ib(validator=attr.validators.instance_of(bool))
+    no_overwrite = attr.ib(validator=attr.validators.instance_of(bool))
+    decode_input = attr.ib(validator=attr.validators.instance_of(bool))
+    encode_output = attr.ib(validator=attr.validators.instance_of(bool))
+
+    def __init__(self, metadata_writer, interactive, no_overwrite, decode_input, encode_output):
+        # type: (MetadataWriter, bool, bool, bool, bool) -> None
+        """Workaround pending resolution of attrs/mypy interaction.
+        https://github.com/python/mypy/issues/2088
+        https://github.com/python-attrs/attrs/issues/215
+        """
+        self.metadata_writer = metadata_writer
+        self.interactive = interactive
+        self.no_overwrite = no_overwrite
+        self.decode_input = decode_input
+        self.encode_output = encode_output
+        attr.validate(self)
+
+    def _single_io_write(self, stream_args, source, destination_writer):
+        # type: (STREAM_KWARGS, IO, IO) -> None
+        """Performs the actual write operations for a single operation.
+
+        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param source: source to write
+        :type source: file-like object
+        :param destination_writer: destination object to which to write
+        :type destination_writer: file-like object
+        """
+        with _encoder(source, self.decode_input) as _source, _encoder(destination_writer, self.encode_output) as _destination:  # noqa pylint: disable=line-too-long
+            with aws_encryption_sdk.stream(source=_source, **stream_args) as handler, self.metadata_writer as metadata:
+                metadata_kwargs = dict(
+                    mode=stream_args['mode'],
+                    input=source.name,
+                    output=destination_writer.name,
+                    header=json_ready_header(handler.header)
+                )
+                try:
+                    header_auth = handler.header_auth
+                    metadata_kwargs['header_auth'] = json_ready_header_auth(header_auth)
+                except AttributeError:
+                    # EncryptStream doesn't expose the header auth at this time
+                    pass
+                metadata.write_metadata(**metadata_kwargs)
+                for chunk in handler:
+                    _destination.write(chunk)
+                    _destination.flush()
+
+    def process_single_operation(self, stream_args, source, destination):
+        # type: (STREAM_KWARGS, SOURCE, str) -> None
+        """Processes a single encrypt/decrypt operation given a pre-loaded source.
+
+        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param source: source to write
+        :type source: str or file-like object
+        :param str destination: destination identifier
+        """
+        if destination == '-':
+            destination_writer = _stdout()
+        else:
+            if not self._should_write_file(destination):
+                return
+            _ensure_dir_exists(destination)
+            destination_writer = open(destination, 'wb')
+
+        if source == '-':
+            source = _stdin()
+
+        try:
+            self._single_io_write(
                 stream_args=stream_args,
-                source=source_filename,
-                destination=destination_filename,
-                interactive=interactive,
-                no_overwrite=no_overwrite,
-                decode_input=decode_input,
-                encode_output=encode_output,
-                metadata_writer=metadata_writer
+                source=cast(IO, source),
+                destination_writer=destination_writer
             )
+        finally:
+            destination_writer.close()
+
+    def _should_write_file(self, filepath):
+        # type: (str) -> bool
+        """Determines whether a specific file should be written.
+
+        :param str filepath: Full file path to file in question
+        :rtype: bool
+        """
+        if not os.path.isfile(filepath):
+            # The file does not exist, nothing to overwrite
+            return True
+
+        if self.no_overwrite:
+            # The file exists and the caller specifically asked us not to overwrite anything
+            _LOGGER.warning('Skipping existing target file because of "no overwrite" option: %s', filepath)
+            return False
+
+        if self.interactive:
+            # The file exists and the caller asked us to be consulted on action before overwriting
+            decision = six.moves.input(  # type: ignore # six.moves confuses mypy
+                'Overwrite existing target file "{}" with new contents? [y/N]:'.format(filepath)
+            )
+            try:
+                if decision.lower()[0] == 'y':
+                    _LOGGER.warning('Overwriting existing target file based on interactive user decision: %s', filepath)
+                    return True
+                return False
+            except IndexError:
+                # No input is interpreted as 'do not overwrite'
+                _LOGGER.warning('Skipping existing target file based on interactive user decision: %s', filepath)
+                return False
+
+        # If we get to this point, the file exists and we should overwrite it
+        _LOGGER.warning('Overwriting existing target file because no action was specified otherwise: %s', filepath)
+        return True
+
+    def process_single_file(self, stream_args, source, destination):
+        # type: (STREAM_KWARGS, str, str) -> None
+        """Processes a single encrypt/decrypt operation on a source file.
+
+        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param str source: Full file path to source file
+        :param str destination: Full file path to destination file
+        """
+        if os.path.realpath(source) == os.path.realpath(destination):
+            # File source, directory destination, empty suffix:
+            _LOGGER.warning('Skipping because the source (%s) and destination (%s) are the same', source, destination)
+            return
+
+        _LOGGER.info('%sing file %s to %s', stream_args['mode'], source, destination)
+
+        _stream_args = copy.copy(stream_args)
+        # Because we can actually know size for files and Base64IO does not support seeking,
+        # set the source length manually for files. This allows enables data key caching when
+        # Base64-decoding a source file.
+        source_file_size = os.path.getsize(source)
+        if self.decode_input and not self.encode_output:
+            _stream_args['source_length'] = int(source_file_size * (3 / 4))
+        else:
+            _stream_args['source_length'] = source_file_size
+
+        with open(source, 'rb') as source_reader:
+            self.process_single_operation(
+                stream_args=_stream_args,
+                source=source_reader,
+                destination=destination
+            )
+
+    def process_dir(self, stream_args, source, destination, suffix):
+        # type: (STREAM_KWARGS, str, str, str) -> None
+        """Processes encrypt/decrypt operations on all files in a directory tree.
+
+        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param str source: Full file path to source directory root
+        :param str destination: Full file path to destination directory root
+        :param str suffix: Suffix to append to output filename
+        """
+        _LOGGER.debug('%sing directory %s to %s', stream_args['mode'], source, destination)
+        for base_dir, _dirs, files in os.walk(source):
+            for filename in files:
+                source_filename = os.path.join(base_dir, filename)
+                destination_dir = _output_dir(
+                    source_root=source,
+                    destination_root=destination,
+                    source_dir=base_dir
+                )
+                destination_filename = output_filename(
+                    source_filename=source_filename,
+                    destination_dir=destination_dir,
+                    mode=str(stream_args['mode']),
+                    suffix=suffix
+                )
+                self.process_single_file(
+                    stream_args=stream_args,
+                    source=source_filename,
+                    destination=destination_filename
+                )
