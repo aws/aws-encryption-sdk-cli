@@ -110,12 +110,12 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
     """Catches bad requests based on characteristics of source, destination, and metadata
     output target.
 
-    :raises BadUserArgumentError: if destination and metadata file are both stdout
-    :raises BadUserArgumentError: if metadata file is source
-    :raises BadUserArgumentError: if metadata file is destination
+    :raises BadUserArgumentError: if output file and metadata file are both ``stdout``
+    :raises BadUserArgumentError: if metadata file would overwrite input file
+    :raises BadUserArgumentError: if metadata file would overwrite output file
     :raises BadUserArgumentError: if metadata file is a directory
-    :raises BadUserArgumentError: if source is directory and metadata file is in source
-    :raises BadUserArgumentError: if destination is directory and metadata file is in destination
+    :raises BadUserArgumentError: if input is a directory and contains metadata file
+    :raises BadUserArgumentError: if output is a directory and contains metadata file
     """
     if metadata_output.suppress_output:
         return
