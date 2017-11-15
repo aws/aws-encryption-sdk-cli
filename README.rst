@@ -426,10 +426,12 @@ Execution
 =========
 
 .. code-block:: sh
-
-   usage: aws-crypto [-h] (--version | [-e | -d]
+   usage: aws-crypto [-h] [--version] [-e] [-d] [-S]
+                     [--write-metadata METADATA_OUTPUT]
+                     [--append-metadata METADATA_OUTPUT]
                      [-m MASTER_KEYS [MASTER_KEYS ...]]
                      [--caching CACHING [CACHING ...]] -i INPUT -o OUTPUT
+                     [--encode] [--decode]
                      [-c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]]
                      [--algorithm {
                         AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
@@ -443,16 +445,22 @@ Execution
                         AES_128_GCM_IV12_TAG16
                      }]
                      [--frame-length FRAME_LENGTH] [--max-length MAX_LENGTH]
-                     [--suffix SUFFIX] [--interactive] [--no-overwrite] [-r] [-v]
-                     [-q]
-
+                     [--suffix [SUFFIX]] [--interactive] [--no-overwrite] [-r]
+                     [-v] [-q]
+   
    Encrypt or decrypt data using the AWS Encryption SDK
-
+   
    optional arguments:
      -h, --help            show this help message and exit
      --version             show program's version number and exit
      -e, --encrypt         Encrypt data
      -d, --decrypt         Decrypt data
+     -S, --suppress-metadata
+                           Suppress metadata output.
+     --write-metadata METADATA_OUTPUT
+                           Overwrite contents of metadata file.
+     --append-metadata METADATA_OUTPUT
+                           Append to metadata file.
      -m MASTER_KEYS [MASTER_KEYS ...], --master-keys MASTER_KEYS [MASTER_KEYS ...]
                            Identifying information for a master key provider and
                            master keys. Each instance must include a master key
@@ -494,7 +502,7 @@ Execution
      --max-length MAX_LENGTH
                            Maximum frame length (for framed messages) or content
                            length (for non-framed messages) (decryption only)
-     --suffix SUFFIX       Custom suffix to use when target filename is not
+     --suffix [SUFFIX]     Custom suffix to use when target filename is not
                            specified
      --interactive         Force aws-crypto to prompt you for verification before
                            overwriting existing files
