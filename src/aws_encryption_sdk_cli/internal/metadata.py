@@ -32,7 +32,7 @@ class MetadataWriter(object):
     """Writes JSON-encoded metadata to output stream unless suppressed.
 
     :param bool suppress_output: Should output be suppressed
-    :param str output_mode: File mode to use when writing to ``output_file`` (optional)
+    :param str output_mode: File mode to use when writing to ``output_file`` (required if not suppressing output)
     :raises AttributeError: if suppress_output is False and output_stream was not provided
     :raises AttributeError: if suppress_output is False and output_stream does not have a "write" method
     """
