@@ -20,7 +20,7 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal import arg_parsing
+from aws_encryption_sdk_cli.internal import arg_parsing, metadata
 
 
 @pytest.yield_fixture
@@ -116,6 +116,7 @@ def test_unique_store_action_second_call():
 def build_expected_good_args():  # pylint: disable=too-many-locals
     encrypt = '-e'
     decrypt = '-d'
+    suppress_metadata = ' -S'
     short_input = ' -i -'
     long_input = ' --input -'
     short_output = ' -o -'
@@ -125,14 +126,14 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     mkp_1_parsed = {'provider': 'ex_provider_1', 'key': ['ex_mk_id_1']}
     mkp_2 = ' -m provider=ex_provider_2 key=ex_mk_id_2'
     mkp_2_parsed = {'provider': 'ex_provider_2', 'key': ['ex_mk_id_2']}
-    default_encrypt = encrypt + valid_io + mkp_1
+    default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
     good_args = []
 
     # encrypt/decrypt
     for encrypt_flag in (encrypt, '--encrypt'):
-        good_args.append((encrypt_flag + valid_io + mkp_1, 'action', 'encrypt'))
+        good_args.append((encrypt_flag + suppress_metadata + valid_io + mkp_1, 'action', 'encrypt'))
     for decrypt_flag in (decrypt, '--decrypt'):
-        good_args.append((decrypt_flag + valid_io + mkp_1, 'action', 'decrypt'))
+        good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1, 'action', 'decrypt'))
 
     # master key config
     good_args.append((default_encrypt, 'master_keys', [mkp_1_parsed]))
@@ -140,9 +141,9 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
 
     # input/output
     for input_flag in (short_input, long_input):
-        good_args.append((encrypt + input_flag + short_output + mkp_1, 'input', '-'))
+        good_args.append((encrypt + suppress_metadata + input_flag + short_output + mkp_1, 'input', '-'))
     for output_flag in (short_output, long_output):
-        good_args.append((encrypt + output_flag + short_input + mkp_1, 'output', '-'))
+        good_args.append((encrypt + suppress_metadata + output_flag + short_input + mkp_1, 'output', '-'))
 
     # encryption context
     good_args.append((default_encrypt, 'encryption_context', None))
@@ -192,6 +193,14 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     for count in (1, 2, 3, 4):
         good_args.append((default_encrypt + ' -' + 'v' * count, 'verbosity', count))
 
+    # metadata output
+    good_args.append((default_encrypt, 'metadata_output', metadata.MetadataWriter(suppress_output=True)()))
+    good_args.append((
+        encrypt + valid_io + mkp_1 + ' --metadata-output -',
+        'metadata_output',
+        metadata.MetadataWriter(suppress_output=False)(output_file='-')
+    ))
+
     return good_args
 
 
@@ -211,13 +220,13 @@ def test_parser_fromfile(tmpdir, argstring, attribute, value):
 
 def build_bad_io_arguments():
     return [
-        '-d -o - -m provider=ex_provider key=ex_mk_id',
-        '-d -i - -m provider=ex_provider key=ex_mk_id'
+        '-d -S -o - -m provider=ex_provider key=ex_mk_id',
+        '-d -S -i - -m provider=ex_provider key=ex_mk_id'
     ]
 
 
 def build_bad_multiple_arguments():
-    prefix = '-d -i - -o -'
+    prefix = '-d -S -i - -o -'
     protected_arguments = [
         ' --caching key=value',
         ' --input -',
@@ -238,12 +247,12 @@ def build_bad_dummy_arguments():
     parser = arg_parsing._build_parser()
     dummy_arguments = parser._CommentIgnoringArgumentParser__dummy_arguments
     bad_commands = []
-    safe_pattern = '-d -i - -o - {arg}'
+    safe_pattern = '-d -S -i - -o - {arg}'
     partial_patterns = {
-        '-decrypt': '{arg} -i - -o -',
-        '-encrypt': '{arg} -i - -o -',
-        '-input': '-d {arg} - -o -',
-        '-output': '-d -i - {arg} -',
+        '-decrypt': '{arg} -i - -o - -S',
+        '-encrypt': '{arg} -i - -o - -S',
+        '-input': '-d {arg} - -o - -S',
+        '-output': '-d -i - {arg} - -S',
     }
     for arg in dummy_arguments:
         pattern = partial_patterns.get(arg, safe_pattern)
@@ -267,8 +276,10 @@ def test_dummy_arguments_covered():
     build_bad_io_arguments() + build_bad_multiple_arguments() + build_bad_dummy_arguments()
 )
 def test_parse_args_fail(args):
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as excinfo:
         arg_parsing.parse_args(shlex.split(args))
+
+    assert excinfo.value.args == (2,)
 
 
 @pytest.mark.parametrize('source, expected', (

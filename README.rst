@@ -91,6 +91,32 @@ Parameters may be provided using `Parameter Values`_.
    --encryption-context key1=value1 key2=value2 "key 3=value with spaces"
 
 
+Output Metadata
+---------------
+In addition to the actual output of the operation, there is metadata about the operation
+that can be useful. This metadata includes some information about the operation as well as
+the complete header data from the ciphertext message.
+
+The metadata for each operation is written to the specified file as a single line containing
+formatted JSON, so if a single command performs multiple file operations, a separate line
+will be written for each operation. There are three operating modes:
+
+* ``--metadata-output FILE`` : Overwrites the specified file with a new file containing the
+  metadata (can be ``-`` for stdout as long as main output is not stdout). Default behavior
+  is to append the metadata entry to the end of ``FILE``.
+* ``--overwrite-metadata`` : Force overwriting the contents of ``FILE`` with the new metadata.
+* ``-S/--suppress-metadata`` : Output metadata is suppressed.
+
+Metadata Contents
+`````````````````
+The metadata JSON contains the following fields:
+
+* ``"mode"`` : ``"encrypt"``/``"decrypt"``
+* ``"input"`` : Full path to input file (or ``"<stdin>"`` if stdin)
+* ``"output"`` : Full path to output file (or ``"<stdout>"`` if stdout)
+* ``"header"`` : JSON representation of `message header data`_
+* ``"header_auth"`` : JSON representation of `message header authentication data`_ (only on decrypt)
+
 Master Key Provider
 -------------------
 Information for configuring a master key provider must be provided.
@@ -452,6 +478,8 @@ Execution
 
 
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
+.. _message header data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-structure
+.. _message header authentication data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-authentication
 .. _Read the Docs: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
 .. _GitHub: https://github.com/awslabs/aws-encryption-sdk-cli/
 .. _cryptography: https://cryptography.io/en/latest/

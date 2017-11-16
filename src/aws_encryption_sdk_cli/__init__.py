@@ -30,6 +30,7 @@ from aws_encryption_sdk_cli.internal.io_handling import (
 )
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
 from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
@@ -104,85 +105,115 @@ def _catch_bad_file_and_directory_requests(expanded_sources, destination):
                 )
 
 
-def process_cli_request(
-        stream_args,  # type: STREAM_KWARGS
-        source,  # type: str
-        destination,  # type: str
-        recursive,  # type: bool
-        interactive,  # type: bool
-        no_overwrite,  # type: bool
-        suffix=None,  # type: Optional[str]
-        decode_input=False,  # type: Optional[bool]
-        encode_output=False  # type: Optional[bool]
-):
-    # type: (...) -> None
+def _catch_bad_metadata_file_requests(metadata_output, source, destination):
+    # type: (MetadataWriter, str, str) -> None
+    """Catches bad requests based on characteristics of source, destination, and metadata
+    output target.
+
+    :raises BadUserArgumentError: if output file and metadata file are both ``stdout``
+    :raises BadUserArgumentError: if metadata file would overwrite input file
+    :raises BadUserArgumentError: if metadata file would overwrite output file
+    :raises BadUserArgumentError: if metadata file is a directory
+    :raises BadUserArgumentError: if input is a directory and contains metadata file
+    :raises BadUserArgumentError: if output is a directory and contains metadata file
+    """
+    if metadata_output.suppress_output:
+        return
+
+    if metadata_output.output_file == '-':
+        if destination == '-':
+            raise BadUserArgumentError('Metadata output cannot be stdout when output is stdout')
+        return
+
+    real_source = os.path.realpath(source)
+    real_destination = os.path.realpath(destination)
+    real_metadata = os.path.realpath(metadata_output.output_file)
+
+    if os.path.isdir(real_metadata):
+        raise BadUserArgumentError('Metadata output cannot be a directory')
+
+    if real_metadata == real_source or real_metadata == real_destination:
+        raise BadUserArgumentError('Metadata output file cannot be the input or output')
+
+    if os.path.isdir(real_destination) and real_metadata.startswith(real_destination):
+        raise BadUserArgumentError('Metadata output file cannot be in the output directory')
+
+    if os.path.isdir(real_source) and real_metadata.startswith(real_source):
+        raise BadUserArgumentError('Metadata output file cannot be in the input directory')
+
+
+def process_cli_request(stream_args, parsed_args):
+    # type: (STREAM_KWARGS, Namespace) -> None
     """Maps the operation request to the appropriate function based on the type of input and output provided.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
-    :param str source: Identifier for the source (filesystem path or ``-`` for stdin)
-    :param str destination: Identifier for the destination (filesystem path or ``-`` for stdout)
-    :param bool recursive: Should recurse over directories
-    :param bool interactive: Should prompt before overwriting existing files
-    :param bool no_overwrite: Should never overwrite existing files
-    :param str suffix: Suffix to append to output filename (optional)
-    :param bool decode_input: Should input be base64 decoded before operation (optional)
-    :param bool encode_output: Should output be base64 encoded after operation (optional)
+    :param args: Parsed arguments from argparse
+    :type args: argparse.Namespace
     """
-    _catch_bad_destination_requests(destination)
-    _catch_bad_stdin_stdout_requests(source, destination)
+    _catch_bad_destination_requests(parsed_args.output)
+    _catch_bad_metadata_file_requests(
+        metadata_output=parsed_args.metadata_output,
+        source=parsed_args.input,
+        destination=parsed_args.output
+    )
+    _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
-    if source == '-':
+    if parsed_args.input == '-':
         # read from stdin
         process_single_operation(
             stream_args=stream_args,
-            source=source,
-            destination=destination,
-            interactive=interactive,
-            no_overwrite=no_overwrite,
-            decode_input=decode_input,
-            encode_output=encode_output
+            source=parsed_args.input,
+            destination=parsed_args.output,
+            interactive=parsed_args.interactive,
+            no_overwrite=parsed_args.no_overwrite,
+            decode_input=parsed_args.decode,
+            encode_output=parsed_args.encode,
+            metadata_writer=parsed_args.metadata_output
         )
         return
 
-    expanded_sources = _expand_sources(source)
-    _catch_bad_file_and_directory_requests(expanded_sources, destination)
+    expanded_sources = _expand_sources(parsed_args.input)
+    _catch_bad_file_and_directory_requests(expanded_sources, parsed_args.output)
 
     for _source in expanded_sources:
-        _destination = copy.copy(destination)
+        _destination = copy.copy(parsed_args.output)
 
         if os.path.isdir(_source):
-            if not recursive:
+            if not parsed_args.recursive:
                 _LOGGER.warning('Skipping %s because it is a directory and -r/-R/--recursive is not set', _source)
                 continue
+
             process_dir(
                 stream_args=stream_args,
                 source=_source,
                 destination=_destination,
-                interactive=interactive,
-                no_overwrite=no_overwrite,
-                suffix=suffix,
-                decode_input=decode_input,
-                encode_output=encode_output
+                interactive=parsed_args.interactive,
+                no_overwrite=parsed_args.no_overwrite,
+                suffix=parsed_args.suffix,
+                decode_input=parsed_args.decode,
+                encode_output=parsed_args.encode,
+                metadata_writer=parsed_args.metadata_output
             )
 
         elif os.path.isfile(_source):
-            if os.path.isdir(destination):
+            if os.path.isdir(parsed_args.output):
                 # create new filename
                 _destination = output_filename(
                     source_filename=_source,
                     destination_dir=_destination,
                     mode=str(stream_args['mode']),
-                    suffix=suffix
+                    suffix=parsed_args.suffix
                 )
             # write to file
             process_single_file(
                 stream_args=stream_args,
                 source=_source,
                 destination=_destination,
-                interactive=interactive,
-                no_overwrite=no_overwrite,
-                decode_input=decode_input,
-                encode_output=encode_output
+                interactive=parsed_args.interactive,
+                no_overwrite=parsed_args.no_overwrite,
+                decode_input=parsed_args.decode,
+                encode_output=parsed_args.encode,
+                metadata_writer=parsed_args.metadata_output
             )
 
 
@@ -192,6 +223,7 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
     arguments and existing CryptoMaterialsManager.
 
     :param args: Parsed arguments from argparse
+    :type args: argparse.Namespace
     :param crypto_materials_manager: Existing CryptoMaterialsManager
     :type crypto_materials_manager: aws_encryption_sdk.materials_manager.base.CryptoMaterialsManager
     :returns: Translated kwargs object for aws_encryption_sdk.stream
@@ -239,17 +271,8 @@ def cli(raw_args=None):
 
         stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
 
-        process_cli_request(
-            stream_args=stream_args,
-            source=args.input,
-            destination=args.output,
-            recursive=args.recursive,
-            interactive=args.interactive,
-            no_overwrite=args.no_overwrite,
-            suffix=args.suffix,
-            decode_input=args.decode,
-            encode_output=args.encode
-        )
+        process_cli_request(stream_args, args)
+
         return None
     except AWSEncryptionSDKCLIError as error:
         return error.args[0]

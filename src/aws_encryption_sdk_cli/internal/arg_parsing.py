@@ -23,6 +23,7 @@ import aws_encryption_sdk
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
     ARGPARSE_TEXT, CACHING_CONFIG, COLLAPSED_CONFIG,
     MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
@@ -171,6 +172,33 @@ def _build_parser():
         help='Decrypt data'
     )
     parser.add_dummy_redirect_argument('--decrypt')
+
+    # For each argument added to this group, a dummy redirect argument must
+    # be added to the parent parser for each long form option string.
+    metadata_group = parser.add_mutually_exclusive_group(required=True)
+
+    metadata_group.add_argument(
+        '-S',
+        '--suppress-metadata',
+        action='store_const',
+        const=MetadataWriter(suppress_output=True)(),
+        dest='metadata_output',
+        help='Suppress metadata output.'
+    )
+    parser.add_dummy_redirect_argument('--suppress-metadata')
+
+    metadata_group.add_argument(
+        '--metadata-output',
+        type=MetadataWriter(),
+        help='File to which to write metadata records'
+    )
+    parser.add_dummy_redirect_argument('--metadata-output')
+
+    parser.add_argument(
+        '--overwrite-metadata',
+        action='store_true',
+        help='Force metadata output to overwrite contents of file rather than appending to file'
+    )
 
     parser.add_argument(
         '-m',
@@ -446,6 +474,9 @@ def parse_args(raw_args=None):
             raise ParameterParseError('Found invalid argument "{actual}". Did you mean "-{actual}"?'.format(
                 actual=parsed_args.dummy_redirect
             ))
+
+        if parsed_args.overwrite_metadata:
+            parsed_args.metadata_output.force_overwrite()
 
         parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
 

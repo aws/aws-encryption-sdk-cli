@@ -19,6 +19,7 @@ import pytest
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 
 
 def patch_reactive_side_effect(kwargs):
@@ -141,6 +142,92 @@ def test_catch_bad_file_and_directory_requests_contains_dir(tmpdir):
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
 
+def test_catch_bad_metadata_file_requests_metadata_and_output_are_stdout():
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file='-')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
+
+    excinfo.match(r'Metadata output cannot be stdout when output is stdout')
+
+
+def test_catch_bad_metadata_file_requests_metadata_metadata_is_stdout_but_output_is_not():
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file='-')
+
+    aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, 'not-std-in', 'not-std-out')
+
+
+def test_catch_bad_metadata_file_requests_metadata_is_dir(tmpdir):
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(tmpdir))
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
+
+    excinfo.match(r'Metadata output cannot be a directory')
+
+
+def test_catch_bad_metadata_file_requests_metadata_is_not_stdout_but_input_and_output_are_pipes(tmpdir):
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(tmpdir.join('metadata')))
+
+    aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
+
+
+def test_catch_bad_metadata_file_requests_metadata_all_are_unique_files(tmpdir):
+    source = tmpdir.join('source')
+    metadata_file = tmpdir.join('metadata')
+    destination = tmpdir.join('destination')
+
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(metadata_file))
+
+    aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
+
+
+@pytest.mark.parametrize('metadata_is_symlink, match_is_symlink, match', (
+    (False, False, 'source'),
+    (True, False, 'source'),
+    (False, True, 'source'),
+    (False, False, 'dest'),
+    (True, False, 'dest'),
+    (False, True, 'dest')
+))
+def test_catch_bad_metadata_file_requests_metadata_is_source_or_dest(
+        tmpdir,
+        metadata_is_symlink,
+        match_is_symlink,
+        match
+):
+    if match == 'source':
+        source, metadata_file = build_same_files_and_dirs(tmpdir, metadata_is_symlink, match_is_symlink, True)
+        destination = tmpdir.join('destination')
+    else:
+        source = tmpdir.join('source')
+        destination, metadata_file = build_same_files_and_dirs(tmpdir, metadata_is_symlink, match_is_symlink, True)
+
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(metadata_file))
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
+
+    excinfo.match(r'Metadata output file cannot be the input or output')
+
+
+@pytest.mark.parametrize('match', ('input', 'output'))
+def test_catch_bad_metadata_file_requests_metadata_in_source_or_dest_dir(tmpdir, match):
+    source = tmpdir.mkdir('source')
+    destination = tmpdir.mkdir('destination')
+    if match == 'input':
+        metadata_file = source.join('metadata')
+    else:
+        metadata_file = destination.join('metadata')
+
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(metadata_file))
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
+
+    excinfo.match(r'Metadata output file cannot be in the {} directory'.format(match))
+
+
 @pytest.mark.parametrize('source_is_symlink, dest_is_symlink, use_files', build_same_file_and_dir_test_cases())
 def test_process_cli_request_source_is_destination(tmpdir, source_is_symlink, dest_is_symlink, use_files):
     source, dest = build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_files)
@@ -148,11 +235,13 @@ def test_process_cli_request_source_is_destination(tmpdir, source_is_symlink, de
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source=source,
-            destination=dest,
-            recursive=True,
-            interactive=False,
-            no_overwrite=False
+            parsed_args=MagicMock(
+                input=source,
+                output=dest,
+                recursive=True,
+                interactive=False,
+                no_overwrite=False
+            )
         )
     excinfo.match(r'Destination and source cannot be the same')
 
@@ -162,11 +251,13 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_for_process_c
     destination = tmpdir.mkdir('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
-        source=str(source),
-        destination=str(destination),
-        recursive=False,
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
+        parsed_args=MagicMock(
+            input=str(source),
+            output=str(destination),
+            recursive=False,
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite
+        )
     )
 
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -179,11 +270,13 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source=str(source),
-            destination=str(tmpdir.join('destination')),
-            recursive=True,
-            interactive=False,
-            no_overwrite=False
+            parsed_args=MagicMock(
+                input=str(source),
+                output=str(tmpdir.join('destination')),
+                recursive=True,
+                interactive=False,
+                no_overwrite=False
+            )
         )
     excinfo.match(r'If operating on a source directory, destination must be an existing directory')
 
@@ -193,14 +286,17 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
     destination = tmpdir.mkdir('destination_dir')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args=sentinel.stream_args,
-        source=str(source),
-        destination=str(destination),
-        recursive=True,
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        parsed_args=MagicMock(
+            input=str(source),
+            output=str(destination),
+            recursive=True,
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite,
+            suffix=sentinel.suffix,
+            decode=sentinel.decode_input,
+            encode=sentinel.encode_output,
+            metadata_output=MetadataWriter(True)()
+        )
     )
 
     aws_encryption_sdk_cli.process_dir.assert_called_once_with(
@@ -211,7 +307,8 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_for_proces
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix,
         decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        encode_output=sentinel.encode_output,
+        metadata_writer=MetadataWriter(True)()
     )
     assert not aws_encryption_sdk_cli.process_single_file.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -221,26 +318,32 @@ def test_process_cli_request_source_stdin_destination_dir(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source='-',
-            destination=str(tmpdir),
-            recursive=False,
-            interactive=False,
-            no_overwrite=False
+            parsed_args=MagicMock(
+                input='-',
+                output=str(tmpdir),
+                recursive=False,
+                interactive=False,
+                no_overwrite=False
+            )
         )
     excinfo.match(r'Destination may not be a directory when source is stdin')
 
 
 def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request):
     destination = tmpdir.join('destination')
-    aws_encryption_sdk_cli.process_cli_request(
-        stream_args=sentinel.stream_args,
-        source='-',
-        destination=str(destination),
+    mock_parsed_args = MagicMock(
+        input='-',
+        output=str(destination),
         recursive=False,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        decode=sentinel.decode_input,
+        encode=sentinel.encode_output,
+        metadata_output=MetadataWriter(True)()
+    )
+    aws_encryption_sdk_cli.process_cli_request(
+        stream_args=sentinel.stream_args,
+        parsed_args=mock_parsed_args
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_file.called
@@ -251,7 +354,8 @@ def test_process_cli_request_source_stdin(tmpdir, patch_for_process_cli_request)
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        encode_output=sentinel.encode_output,
+        metadata_writer=MetadataWriter(True)()
     )
 
 
@@ -261,14 +365,17 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
     destination = tmpdir.mkdir('destination')
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': sentinel.mode},
-        source=str(source),
-        destination=str(destination),
-        recursive=False,
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        suffix='CUSTOM_SUFFIX',
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        parsed_args=MagicMock(
+            input=str(source),
+            output=str(destination),
+            recursive=False,
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite,
+            suffix='CUSTOM_SUFFIX',
+            decode=sentinel.decode_input,
+            encode=sentinel.encode_output,
+            metadata_output=MetadataWriter(True)()
+        )
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -279,7 +386,8 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_for_proce
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        encode_output=sentinel.encode_output,
+        metadata_writer=MetadataWriter(True)()
     )
 
 
@@ -290,13 +398,16 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
 
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': sentinel.mode},
-        source=str(source),
-        destination=str(destination),
-        recursive=False,
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        parsed_args=MagicMock(
+            input=str(source),
+            output=str(destination),
+            recursive=False,
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite,
+            decode=sentinel.decode_input,
+            encode=sentinel.encode_output,
+            metadata_output=MetadataWriter(True)()
+        )
     )
     assert not aws_encryption_sdk_cli.process_dir.called
     assert not aws_encryption_sdk_cli.process_single_operation.called
@@ -307,7 +418,8 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_for_proc
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
         decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        encode_output=sentinel.encode_output,
+        metadata_writer=MetadataWriter(True)()
     )
 
 
@@ -316,11 +428,13 @@ def test_process_cli_request_invalid_source(tmpdir):
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={},
-            source=target,
-            destination='a specific destination',
-            recursive=False,
-            interactive=False,
-            no_overwrite=False
+            parsed_args=MagicMock(
+                input=target,
+                output='a specific destination',
+                recursive=False,
+                interactive=False,
+                no_overwrite=False
+            )
         )
     excinfo.match(r'Invalid source.  Must be a valid pathname pattern or stdin \(-\)')
 
@@ -338,11 +452,13 @@ def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_p
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={'mode': 'encrypt'},
-            source=source,
-            destination=str(target_file),
-            recursive=False,
-            interactive=False,
-            no_overwrite=False
+            parsed_args=MagicMock(
+                input=source,
+                output=str(target_file),
+                recursive=False,
+                interactive=False,
+                no_overwrite=False
+            )
         )
 
     excinfo.match('If operating on multiple sources, destination must be an existing directory')
@@ -366,11 +482,16 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
 
     aws_encryption_sdk_cli.process_cli_request(
         stream_args={'mode': 'encrypt'},
-        source=source,
-        destination=str(ciphertext_dir),
-        recursive=False,
-        interactive=False,
-        no_overwrite=False
+        parsed_args=MagicMock(
+            input=source,
+            output=str(ciphertext_dir),
+            recursive=False,
+            interactive=False,
+            no_overwrite=False,
+            encode=False,
+            decode=False,
+            metadata_output=MetadataWriter(True)()
+        )
     )
 
     assert not patch_process_dir.called
@@ -383,7 +504,8 @@ def test_process_cli_request_source_contains_directory_nonrecursive(
                 interactive=False,
                 no_overwrite=False,
                 decode_input=False,
-                encode_output=False
+                encode_output=False,
+                metadata_writer=MetadataWriter(True)()
             )
             for source_file in (test_file_a, test_file_c)
         ],
@@ -554,15 +676,8 @@ def test_cli(patch_for_cli):
         sentinel.crypto_materials_manager
     )
     aws_encryption_sdk_cli.process_cli_request.assert_called_once_with(
-        stream_args=sentinel.stream_args,
-        source=sentinel.input,
-        destination=sentinel.output,
-        recursive=sentinel.recursive,
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        suffix=sentinel.suffix,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output
+        sentinel.stream_args,
+        aws_encryption_sdk_cli.parse_args.return_value
     )
     assert test is None
 

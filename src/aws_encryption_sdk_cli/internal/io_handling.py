@@ -25,6 +25,8 @@ import six
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
+from aws_encryption_sdk_cli.internal.metadata import json_ready_header, json_ready_header_auth
+from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
 from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
@@ -97,8 +99,8 @@ def _encoder(stream, should_base64):
     return stream
 
 
-def _single_io_write(stream_args, source, destination_writer, decode_input, encode_output):
-    # type: (STREAM_KWARGS, IO, IO, bool, bool) -> None
+def _single_io_write(stream_args, source, destination_writer, decode_input, encode_output, metadata_writer):
+    # type: (STREAM_KWARGS, IO, IO, bool, bool, MetadataWriter) -> None
     """Performs the actual write operations for a single operation.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -108,16 +110,31 @@ def _single_io_write(stream_args, source, destination_writer, decode_input, enco
     :type destination_writer: file-like object
     :param bool decode_input: Should input be base64 decoded before operation
     :param bool encode_output: Should output be base64 encoded after operation
+    :param metadata_writer: File-like to which metadata should be written
+    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
     """
     with _encoder(source, decode_input) as _source, _encoder(destination_writer, encode_output) as _destination:
-        with aws_encryption_sdk.stream(source=_source, **stream_args) as handler:
+        with aws_encryption_sdk.stream(source=_source, **stream_args) as handler, metadata_writer as metadata:
+            metadata_kwargs = dict(
+                mode=stream_args['mode'],
+                input=source.name,
+                output=destination_writer.name,
+                header=json_ready_header(handler.header)
+            )
+            try:
+                header_auth = handler.header_auth
+                metadata_kwargs['header_auth'] = json_ready_header_auth(header_auth)
+            except AttributeError:
+                # EncryptStream doesn't expose the header auth at this time
+                pass
+            metadata.write_metadata(**metadata_kwargs)
             for chunk in handler:
                 _destination.write(chunk)
                 _destination.flush()
 
 
-def process_single_operation(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output):
-    # type: (STREAM_KWARGS, SOURCE, str, bool, bool, bool, bool) -> None
+def process_single_operation(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output, metadata_writer):
+    # type: (STREAM_KWARGS, SOURCE, str, bool, bool, bool, bool, MetadataWriter) -> None
     """Processes a single encrypt/decrypt operation given a pre-loaded source.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -128,6 +145,8 @@ def process_single_operation(stream_args, source, destination, interactive, no_o
     :param bool no_overwrite: Should never overwrite existing files
     :param bool decode_input: Should input be base64 decoded before operation
     :param bool encode_output: Should output be base64 encoded after operation
+    :param metadata_writer: File-like to which metadata should be written
+    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
     """
     if destination == '-':
         destination_writer = _stdout()
@@ -148,7 +167,8 @@ def process_single_operation(stream_args, source, destination, interactive, no_o
             source=source_reader,
             destination_writer=destination_writer,
             decode_input=decode_input,
-            encode_output=encode_output
+            encode_output=encode_output,
+            metadata_writer=metadata_writer
         )
 
 
@@ -190,8 +210,8 @@ def _should_write_file(filepath, interactive, no_overwrite):
     return True
 
 
-def process_single_file(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output):
-    # type: (STREAM_KWARGS, str, str, bool, bool, bool, bool) -> None
+def process_single_file(stream_args, source, destination, interactive, no_overwrite, decode_input, encode_output, metadata_writer):
+    # type: (STREAM_KWARGS, str, str, bool, bool, bool, bool, MetadataWriter) -> None
     """Processes a single encrypt/decrypt operation on a source file.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -201,6 +221,8 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
     :param bool no_overwrite: Should never overwrite existing files
     :param bool decode_input: Should input be base64 decoded before operation
     :param bool encode_output: Should output be base64 encoded after operation
+    :param metadata_writer: File-like to which metadata should be written
+    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
     """
     if os.path.realpath(source) == os.path.realpath(destination):
         # File source, directory destination, empty suffix:
@@ -227,7 +249,8 @@ def process_single_file(stream_args, source, destination, interactive, no_overwr
             interactive=interactive,
             no_overwrite=no_overwrite,
             decode_input=decode_input,
-            encode_output=encode_output
+            encode_output=encode_output,
+            metadata_writer=metadata_writer
         )
 
 
@@ -264,8 +287,8 @@ def _output_dir(source_root, destination_root, source_dir):
     return os.path.join(destination_root, suffix)
 
 
-def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix, decode_input, encode_output):
-    # type: (STREAM_KWARGS, str, str, bool, bool, str, bool, bool) -> None
+def process_dir(stream_args, source, destination, interactive, no_overwrite, suffix, decode_input, encode_output, metadata_writer):
+    # type: (STREAM_KWARGS, str, str, bool, bool, str, bool, bool, MetadataWriter) -> None
     """Processes encrypt/decrypt operations on all files in a directory tree.
 
     :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -276,6 +299,8 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
     :param str suffix: Suffix to append to output filename
     :param bool decode_input: Should input be base64 decoded before operation
     :param bool encode_output: Should output be base64 encoded after operation
+    :param metadata_writer: File-like to which metadata should be written
+    :type metadata_writer: aws_encryption_sdk_cli.internal.metadata.MetadataWriter
     """
     _LOGGER.debug('%sing directory %s to %s', stream_args['mode'], source, destination)
     for base_dir, _dirs, files in os.walk(source):
@@ -299,5 +324,6 @@ def process_dir(stream_args, source, destination, interactive, no_overwrite, suf
                 interactive=interactive,
                 no_overwrite=no_overwrite,
                 decode_input=decode_input,
-                encode_output=encode_output
+                encode_output=encode_output,
+                metadata_writer=metadata_writer
             )
