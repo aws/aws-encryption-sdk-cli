@@ -196,19 +196,9 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     # metadata output
     good_args.append((default_encrypt, 'metadata_output', metadata.MetadataWriter(suppress_output=True)()))
     good_args.append((
-        encrypt + valid_io + mkp_1 + ' --write-metadata -',
+        encrypt + valid_io + mkp_1 + ' --metadata-output -',
         'metadata_output',
-        metadata.MetadataWriter(suppress_output=False, output_mode='w')(output_file='-')
-    ))
-    good_args.append((
-        encrypt + valid_io + mkp_1 + ' --write-metadata file',
-        'metadata_output',
-        metadata.MetadataWriter(suppress_output=False, output_mode='w')(output_file='file')
-    ))
-    good_args.append((
-        encrypt + valid_io + mkp_1 + ' --append-metadata file',
-        'metadata_output',
-        metadata.MetadataWriter(suppress_output=False, output_mode='a')(output_file='file')
+        metadata.MetadataWriter(suppress_output=False)(output_file='-')
     ))
 
     return good_args
@@ -231,8 +221,7 @@ def test_parser_fromfile(tmpdir, argstring, attribute, value):
 def build_bad_io_arguments():
     return [
         '-d -S -o - -m provider=ex_provider key=ex_mk_id',
-        '-d -S -i - -m provider=ex_provider key=ex_mk_id',
-        '-d -o - -i - -m provider=ex_provider key=ex_mk_id --append-metadata -'
+        '-d -S -i - -m provider=ex_provider key=ex_mk_id'
     ]
 
 

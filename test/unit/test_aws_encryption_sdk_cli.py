@@ -143,7 +143,7 @@ def test_catch_bad_file_and_directory_requests_contains_dir(tmpdir):
 
 
 def test_catch_bad_metadata_file_requests_metadata_and_output_are_stdout():
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file='-')
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file='-')
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
@@ -152,13 +152,13 @@ def test_catch_bad_metadata_file_requests_metadata_and_output_are_stdout():
 
 
 def test_catch_bad_metadata_file_requests_metadata_metadata_is_stdout_but_output_is_not():
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file='-')
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file='-')
 
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, 'not-std-in', 'not-std-out')
 
 
 def test_catch_bad_metadata_file_requests_metadata_is_dir(tmpdir):
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(tmpdir))
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(tmpdir))
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
@@ -167,7 +167,7 @@ def test_catch_bad_metadata_file_requests_metadata_is_dir(tmpdir):
 
 
 def test_catch_bad_metadata_file_requests_metadata_is_not_stdout_but_input_and_output_are_pipes(tmpdir):
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(tmpdir.join('metadata')))
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(tmpdir.join('metadata')))
 
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, '-', '-')
 
@@ -177,7 +177,7 @@ def test_catch_bad_metadata_file_requests_metadata_all_are_unique_files(tmpdir):
     metadata_file = tmpdir.join('metadata')
     destination = tmpdir.join('destination')
 
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(metadata_file))
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(metadata_file))
 
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
 
@@ -203,7 +203,7 @@ def test_catch_bad_metadata_file_requests_metadata_is_source_or_dest(
         source = tmpdir.join('source')
         destination, metadata_file = build_same_files_and_dirs(tmpdir, metadata_is_symlink, match_is_symlink, True)
 
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(metadata_file))
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(metadata_file))
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
@@ -220,7 +220,7 @@ def test_catch_bad_metadata_file_requests_metadata_in_source_or_dest_dir(tmpdir,
     else:
         metadata_file = destination.join('metadata')
 
-    metadata_writer = MetadataWriter(suppress_output=False, output_mode='w')(output_file=str(metadata_file))
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file=str(metadata_file))
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))

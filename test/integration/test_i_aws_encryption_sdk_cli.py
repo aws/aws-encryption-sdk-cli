@@ -58,7 +58,7 @@ def test_encrypt_with_metadata_output_write_to_file(tmpdir):
     encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
         source=str(plaintext),
         target=str(ciphertext),
-        metadata='--write-metadata ' + str(metadata)
+        metadata='--metadata-output ' + str(metadata)
     )
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
@@ -81,7 +81,7 @@ def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
         source=str(plaintext),
         target=str(ciphertext),
-        metadata='--write-metadata -'
+        metadata='--metadata-output -'
     )
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
@@ -106,12 +106,12 @@ def test_cycle_with_metadata_output_append(tmpdir):
     encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
         source=str(plaintext),
         target=str(ciphertext),
-        metadata='--append-metadata ' + str(metadata)
+        metadata='--metadata-output ' + str(metadata)
     )
     decrypt_args = DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
         source=str(ciphertext),
         target=str(decrypted),
-        metadata='--append-metadata ' + str(metadata)
+        metadata='--metadata-output ' + str(metadata)
     )
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))

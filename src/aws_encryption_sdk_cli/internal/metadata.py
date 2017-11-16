@@ -31,35 +31,24 @@ class MetadataWriter(object):
     # pylint: disable=too-few-public-methods
     """Writes JSON-encoded metadata to output stream unless suppressed.
 
-    :param bool suppress_output: Should output be suppressed
-    :param str output_mode: File mode to use when writing to ``output_file`` (required if not suppressing output)
-    :raises AttributeError: if suppress_output is False and output_stream was not provided
-    :raises AttributeError: if suppress_output is False and output_stream does not have a "write" method
+    :param bool suppress_output: Should output be suppressed (default: False)
     """
 
     suppress_output = attr.ib(validator=attr.validators.instance_of(bool))
-    output_mode = attr.ib(
-        validator=attr.validators.optional(attr.validators.in_(['w', 'a'])),
-        default=None
-    )
     output_file = attr.ib(
         validator=attr.validators.optional(attr.validators.instance_of(six.string_types)),
         default=None
     )
-    output_stream = None  # type: IO
+    _output_mode = None  # type: str
+    _output_stream = None  # type: IO
 
-    def __init__(self, suppress_output, output_mode=None):
-        # type: (bool, Optional[str]) -> None
+    def __init__(self, suppress_output=False):
+        # type: (Optional[bool]) -> None
         """Workaround pending resolution of attrs/mypy interaction.
         https://github.com/python/mypy/issues/2088
         https://github.com/python-attrs/attrs/issues/215
         """
         self.suppress_output = suppress_output
-        self.output_mode = output_mode
-
-        if not self.suppress_output:
-            if self.output_mode is None:
-                raise TypeError('output_mode cannot be None when suppress_output is False')
 
     def __call__(self, output_file=None):
         # type: (Optional[str]) -> MetadataWriter
@@ -71,25 +60,36 @@ class MetadataWriter(object):
         :param str output_file: Path to file to write to, or "-" for stdout (optional)
         """
         self.output_file = output_file
+
+        if self.suppress_output:
+            return self
+
+        if self.output_file is None:
+            raise TypeError('output_file cannot be None when suppress_output is False')
+
+        if self.output_file == '-':
+            self._output_mode = 'w'
+        else:
+            self._output_mode = 'a'
+            self.output_file = os.path.abspath(self.output_file)
+
         attr.validate(self)
 
-        if not self.suppress_output:
-            if self.output_file is None:
-                raise TypeError('output_file cannot be None when suppress_output is False')
-
-            if self.output_file == '-' and self.output_mode == 'a':
-                raise ValueError('output_mode must be "w" when output_file is stdout')
-
         return self
+
+    def force_overwrite(self):
+        # type: () -> None
+        """Force the output to overwrite the target metadata file."""
+        self._output_mode = 'w'
 
     def open(self):
         # type: () -> None
         """Create and open the output stream."""
         if not self.suppress_output:
             if self.output_file == '-':
-                self.output_stream = sys.stdout
+                self._output_stream = sys.stdout
             else:
-                self.output_stream = open(self.output_file, self.output_mode)
+                self._output_stream = open(self.output_file, self._output_mode)
 
     def __enter__(self):
         # type: () -> MetadataWriter
@@ -100,10 +100,15 @@ class MetadataWriter(object):
     def close(self):
         # type: () -> None
         """Flush and close the output stream."""
-        if self.output_stream is not None:
-            self.output_stream.flush()
-            if self.output_stream is not sys.stdout:
-                self.output_stream.close()
+        if self._output_stream is not None:
+            self._output_stream.flush()
+            if self._output_stream is not sys.stdout:
+                self._output_stream.close()
+
+        # Since we re-use each instance of this in a single call, we only want to overwrite
+        # the first time if we are overwriting.
+        if self.output_file != '-':
+            self._output_mode = 'a'
 
     def __exit__(self, exc_type, exc_value, traceback):
         # type: (type, BaseException, TracebackType) -> None
@@ -120,7 +125,7 @@ class MetadataWriter(object):
             return 0  # wrote 0 bytes
 
         metadata_line = json.dumps(metadata, sort_keys=True)
-        return self.output_stream.write(metadata_line + os.linesep)
+        return self._output_stream.write(metadata_line + os.linesep)
 
 
 def unicode_b64_encode(value):

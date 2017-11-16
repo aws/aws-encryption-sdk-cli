@@ -29,9 +29,8 @@ GOOD_INIT_KWARGS = dict(
 
 @pytest.mark.parametrize('init_kwargs, call_kwargs', (
     (dict(suppress_output=True), dict()),
-    (dict(suppress_output=False, output_mode='w'), dict(output_file='-')),
-    (dict(suppress_output=False, output_mode='w'), dict(output_file='asdf')),
-    (dict(suppress_output=False, output_mode='a'), dict(output_file='asdf'))
+    (dict(suppress_output=False), dict(output_file='-')),
+    (dict(suppress_output=False), dict(output_file='asdf'))
 ))
 def test_attrs_good(init_kwargs, call_kwargs):
     metadata.MetadataWriter(**init_kwargs)(**call_kwargs)
@@ -39,7 +38,6 @@ def test_attrs_good(init_kwargs, call_kwargs):
 
 @pytest.mark.parametrize('init_kwargs_patch, error_type', (
     (dict(suppress_output='not a bool'), TypeError),
-    (dict(output_mode='u3982u'), ValueError)
 ))
 def test_attrs_fail(init_kwargs_patch, error_type):
     """Verifying that validators are applied because we overwrite attrs init."""
@@ -55,20 +53,8 @@ def test_attrs_fail(init_kwargs_patch, error_type):
         dict(suppress_output=False),
         dict(),
         TypeError,
-        r'output_mode cannot be None when suppress_output is False'
-    ),
-    (
-        dict(suppress_output=False, output_mode='w'),
-        dict(),
-        TypeError,
         r'output_file cannot be None when suppress_output is False'
     ),
-    (
-        dict(suppress_output=False, output_mode='a'),
-        dict(output_file='-'),
-        ValueError,
-        r'output_mode must be "w" when output_file is stdout'
-    )
 ))
 def test_custom_fail(init_kwargs, call_kwargs, error_type, error_message):
     with pytest.raises(error_type) as excinfo:
@@ -77,13 +63,27 @@ def test_custom_fail(init_kwargs, call_kwargs, error_type, error_message):
     excinfo.match(error_message)
 
 
+@pytest.mark.parametrize('filename, force_overwrite, expected_mode', (
+    ('a_file', False, 'a'),
+    ('-', False, 'w'),
+    ('a_file', True, 'w'),
+    ('-', True, 'w')
+))
+def test_write_metadata_default_output_modes(filename, force_overwrite, expected_mode):
+    test = metadata.MetadataWriter(suppress_output=False)(filename)
+    if force_overwrite:
+        test.force_overwrite()
+
+    assert test._output_mode == expected_mode
+
+
 @pytest.mark.parametrize('suppress', (True, False))
 def test_write_or_suppress_metadata_stdout(capsys, suppress):
     my_metadata = {
         'some': 'data',
         'for': 'this metadata'
     }
-    writer_factory = metadata.MetadataWriter(suppress_output=suppress, output_mode='w')
+    writer_factory = metadata.MetadataWriter(suppress_output=suppress)
     writer = writer_factory('-')
 
     with writer:
@@ -103,7 +103,7 @@ def test_write_or_suppress_metadata_file(tmpdir, suppress):
         'for': 'this metadata'
     }
     output_file = tmpdir.join('metadata')
-    writer_factory = metadata.MetadataWriter(suppress_output=suppress, output_mode='w')
+    writer_factory = metadata.MetadataWriter(suppress_output=suppress)
     writer = writer_factory(str(output_file))
 
     with writer:
@@ -121,7 +121,7 @@ def test_write_or_suppress_metadata_file_open_close(tmpdir):
         'for': 'this metadata'
     }
     output_file = tmpdir.join('metadata')
-    writer_factory = metadata.MetadataWriter(suppress_output=False, output_mode='w')
+    writer_factory = metadata.MetadataWriter(suppress_output=False)
     writer = writer_factory(str(output_file))
 
     writer.open()
@@ -142,16 +142,61 @@ def test_append_metadata_file(tmpdir):
     output_file = tmpdir.join('metadata')
     output_file.write(initial_data + os.linesep)
 
-    writer_factory = metadata.MetadataWriter(suppress_output=False, output_mode='a')
-    writer = writer_factory(str(output_file))
-
-    with writer:
+    with metadata.MetadataWriter(suppress_output=False)(str(output_file)) as writer:
         writer.write_metadata(**my_metadata)
 
     lines = output_file.readlines()
     assert len(lines) == 2
     assert lines[0].strip() == initial_data
     assert json.loads(lines[1].strip()) == my_metadata
+
+
+def test_overwrite_metdata_file(tmpdir):
+    initial_data = 'some data'
+    my_metadata = {
+        'some': 'data',
+        'for': 'this metadata'
+    }
+    output_file = tmpdir.join('metadata')
+    output_file.write(initial_data + os.linesep)
+
+    overwrite_writer = metadata.MetadataWriter(suppress_output=False)(str(output_file))
+    overwrite_writer.force_overwrite()
+
+    with overwrite_writer as writer:
+        writer.write_metadata(**my_metadata)
+
+    lines = output_file.readlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0].strip()) == my_metadata
+
+
+def test_overwrite_metdata_file_multiuse(tmpdir):
+    initial_data = 'some data'
+    my_metadata = {
+        'some': 'data',
+        'for': 'this metadata'
+    }
+    output_file = tmpdir.join('metadata')
+    output_file.write(initial_data + os.linesep)
+
+    long_lived_writer = metadata.MetadataWriter(suppress_output=False)(str(output_file))
+    long_lived_writer.force_overwrite()
+
+    assert long_lived_writer._output_mode == 'w'
+
+    with long_lived_writer as writer:
+        writer.write_metadata(**my_metadata)
+
+    assert long_lived_writer._output_mode == 'a'
+
+    with long_lived_writer as writer:
+        writer.write_metadata(**my_metadata)
+
+    lines = output_file.readlines()
+    assert len(lines) == 2
+    assert json.loads(lines[0].strip()) == my_metadata
+    assert lines[0] == lines[1]
 
 
 def test_json_ready_message_header():

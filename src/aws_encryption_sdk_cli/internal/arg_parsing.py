@@ -173,6 +173,8 @@ def _build_parser():
     )
     parser.add_dummy_redirect_argument('--decrypt')
 
+    # For each argument added to this group, a dummy redirect argument must
+    # be added to the parent parser for each long form option string.
     metadata_group = parser.add_mutually_exclusive_group(required=True)
 
     metadata_group.add_argument(
@@ -183,26 +185,20 @@ def _build_parser():
         dest='metadata_output',
         help='Suppress metadata output.'
     )
-    # We want this to be caught at the top level parser, not in the group
     parser.add_dummy_redirect_argument('--suppress-metadata')
 
     metadata_group.add_argument(
-        '--write-metadata',
-        type=MetadataWriter(suppress_output=False, output_mode='w'),
-        dest='metadata_output',
-        help='Overwrite contents of metadata file.'
+        '--metadata-output',
+        type=MetadataWriter(),
+        help='File to which to write metadata records'
     )
-    # We want this to be caught at the top level parser, not in the group
-    parser.add_dummy_redirect_argument('--write-metadata')
+    parser.add_dummy_redirect_argument('--metadata-output')
 
-    metadata_group.add_argument(
-        '--append-metadata',
-        type=MetadataWriter(suppress_output=False, output_mode='a'),
-        dest='metadata_output',
-        help='Append to metadata file.'
+    parser.add_argument(
+        '--overwrite-metadata',
+        action='store_true',
+        help='Force metadata output to overwrite contents of file rather than appending to file'
     )
-    # We want this to be caught at the top level parser, not in the group
-    parser.add_dummy_redirect_argument('--append-metadata')
 
     parser.add_argument(
         '-m',
@@ -478,6 +474,9 @@ def parse_args(raw_args=None):
             raise ParameterParseError('Found invalid argument "{actual}". Did you mean "-{actual}"?'.format(
                 actual=parsed_args.dummy_redirect
             ))
+
+        if parsed_args.overwrite_metadata:
+            parsed_args.metadata_output.force_overwrite()
 
         parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
 

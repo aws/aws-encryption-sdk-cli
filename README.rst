@@ -101,11 +101,11 @@ The metadata for each operation is written to the specified file as a single lin
 formatted JSON, so if a single command performs multiple file operations, a separate line
 will be written for each operation. There are three operating modes:
 
-* ``--write-metadata FILE`` : Overwrites the specified file with a new file containing the
-  metadata
-* ``--append-metadata FILE`` : Appends the metadata to the end of the specified file, creating
-  a new file if it does not exist
-* ``-S/--suppress-metadata`` : Output metadata is suppressed
+* ``--metadata-output FILE`` : Overwrites the specified file with a new file containing the
+  metadata (can be ``-`` for stdout as long as main output is not stdout). Default behavior
+  is to append the metadata entry to the end of ``FILE``.
+* ``--overwrite-metadata`` : Force overwriting the contents of ``FILE`` with the new metadata.
+* ``-S/--suppress-metadata`` : Output metadata is suppressed.
 
 Metadata Contents
 `````````````````
