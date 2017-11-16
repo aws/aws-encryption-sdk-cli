@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pyl
 import aws_encryption_sdk
 
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES
+from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
@@ -472,7 +472,7 @@ def _process_master_key_provider_configs(raw_keys, action):
             _LOGGER.debug(
                 'No master key provider config provided on decrypt request. Using aws-kms with no master keys.'
             )
-            return [{'provider': 'aws-kms', 'key': []}]
+            return [{'provider': DEFAULT_MASTER_KEY_PROVIDER, 'key': []}]
         raise ParameterParseError('No master key provider configuration found.')
 
     processed_configs = []  # type: List[MASTER_KEY_PROVIDER_CONFIG]
@@ -480,7 +480,7 @@ def _process_master_key_provider_configs(raw_keys, action):
         parsed_args = {}  # type: Dict[str, Union[str, List[str]]]
         parsed_args.update(_parse_kwargs(raw_config))
 
-        provider = parsed_args.get('provider', ['aws-kms'])  # If no provider is defined, use aws-kms
+        provider = parsed_args.get('provider', [DEFAULT_MASTER_KEY_PROVIDER])  # If no provider is defined, use aws-kms
         if len(provider) != 1:
             raise ParameterParseError(
                 'Exactly one "provider" must be provided for each master key provider configuration. '
@@ -489,7 +489,7 @@ def _process_master_key_provider_configs(raw_keys, action):
         parsed_args['provider'] = provider[0]
 
         if 'key' not in parsed_args:
-            if action == 'decrypt' and parsed_args['provider'] == 'aws-kms':
+            if action == 'decrypt' and parsed_args['provider'] in ('aws-kms', DEFAULT_MASTER_KEY_PROVIDER):
                 # Special case: aws-kms does not require master key configuration for decrypt.
                 parsed_args['key'] = []
             else:

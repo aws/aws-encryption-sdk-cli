@@ -426,6 +426,7 @@ Execution
 =========
 
 .. code-block:: sh
+
    usage: aws-crypto [-h] [--version] [-e] [-d] [-S]
                      [--write-metadata METADATA_OUTPUT]
                      [--append-metadata METADATA_OUTPUT]
@@ -447,9 +448,9 @@ Execution
                      [--frame-length FRAME_LENGTH] [--max-length MAX_LENGTH]
                      [--suffix [SUFFIX]] [--interactive] [--no-overwrite] [-r]
                      [-v] [-q]
-   
+
    Encrypt or decrypt data using the AWS Encryption SDK
-   
+
    optional arguments:
      -h, --help            show this help message and exit
      --version             show program's version number and exit
