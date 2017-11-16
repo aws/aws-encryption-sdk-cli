@@ -30,6 +30,7 @@ ALGORITHM_NAMES = set([
 MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
 PLUGIN_NAMESPACE_DIVIDER = '::'
 USER_AGENT_SUFFIX = 'AwsEncryptionSdkCli/{}'.format(__version__)
+DEFAULT_MASTER_KEY_PROVIDER = 'aws-encryption-sdk-cli' + PLUGIN_NAMESPACE_DIVIDER + 'aws-kms'
 
 
 class OperationResult(Enum):

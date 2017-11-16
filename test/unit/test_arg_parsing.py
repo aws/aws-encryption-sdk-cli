@@ -20,7 +20,7 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal import arg_parsing, metadata
+from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
 
 
 @pytest.yield_fixture
@@ -395,9 +395,18 @@ ALL_CONFIG = (
     [i[-1][0] for i in KEY_PROVIDER_CONFIGS]
 )
 KEY_PROVIDER_CONFIGS.append(ALL_CONFIG)
-KEY_PROVIDER_CONFIGS.append((None, 'decrypt', [{'provider': 'aws-kms', 'key': []}]))
+KEY_PROVIDER_CONFIGS.append((None, 'decrypt', [{'provider': identifiers.DEFAULT_MASTER_KEY_PROVIDER, 'key': []}]))
 KEY_PROVIDER_CONFIGS.append(([['provider=aws-kms']], 'decrypt', [{'provider': 'aws-kms', 'key': []}]))
-KEY_PROVIDER_CONFIGS.append(([['key=ex_key_1']], 'encrypt', [{'provider': 'aws-kms', 'key': ['ex_key_1']}]))
+KEY_PROVIDER_CONFIGS.append((
+    [['provider=' + identifiers.DEFAULT_MASTER_KEY_PROVIDER]],
+    'decrypt',
+    [{'provider': identifiers.DEFAULT_MASTER_KEY_PROVIDER, 'key': []}]
+))
+KEY_PROVIDER_CONFIGS.append((
+    [['key=ex_key_1']],
+    'encrypt',
+    [{'provider': identifiers.DEFAULT_MASTER_KEY_PROVIDER, 'key': ['ex_key_1']}]
+))
 
 
 @pytest.mark.parametrize('source, action, expected', KEY_PROVIDER_CONFIGS)
