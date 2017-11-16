@@ -133,7 +133,17 @@ def test_cycle_with_metadata_output_append(tmpdir):
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
-def test_file_to_file_decrypt_required_encryption_context_success(tmpdir):
+@pytest.mark.parametrize('required_encryption_context', (
+    'a',
+    'c',
+    'a c',
+    'a=b',
+    'a=b c',
+    'c=d',
+    'a c=d',
+    'a=b c=d',
+))
+def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, required_encryption_context):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
     decrypted = tmpdir.join('decrypted')
@@ -147,7 +157,7 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir):
     decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
         source=str(ciphertext),
         target=str(decrypted)
-    ) + ' --encryption-context a=b c=d'
+    ) + ' --encryption-context ' + required_encryption_context
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
     aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
