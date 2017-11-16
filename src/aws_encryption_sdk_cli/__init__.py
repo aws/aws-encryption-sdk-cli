@@ -25,9 +25,7 @@ from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserA
 from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
 # convenience import separated from other imports from this module to avoid over-application of linting override
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
-from aws_encryption_sdk_cli.internal.io_handling import (
-    output_filename, process_dir, process_single_file, process_single_operation
-)
+from aws_encryption_sdk_cli.internal.io_handling import IOHandler, output_filename
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
 from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_materials_manager_from_args
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
@@ -158,17 +156,20 @@ def process_cli_request(stream_args, parsed_args):
     )
     _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
+    handler = IOHandler(
+        metadata_writer=parsed_args.metadata_output,
+        interactive=parsed_args.interactive,
+        no_overwrite=parsed_args.no_overwrite,
+        decode_input=parsed_args.decode,
+        encode_output=parsed_args.encode
+    )
+
     if parsed_args.input == '-':
         # read from stdin
-        process_single_operation(
+        handler.process_single_operation(
             stream_args=stream_args,
             source=parsed_args.input,
-            destination=parsed_args.output,
-            interactive=parsed_args.interactive,
-            no_overwrite=parsed_args.no_overwrite,
-            decode_input=parsed_args.decode,
-            encode_output=parsed_args.encode,
-            metadata_writer=parsed_args.metadata_output
+            destination=parsed_args.output
         )
         return
 
@@ -183,16 +184,11 @@ def process_cli_request(stream_args, parsed_args):
                 _LOGGER.warning('Skipping %s because it is a directory and -r/-R/--recursive is not set', _source)
                 continue
 
-            process_dir(
+            handler.process_dir(
                 stream_args=stream_args,
                 source=_source,
                 destination=_destination,
-                interactive=parsed_args.interactive,
-                no_overwrite=parsed_args.no_overwrite,
-                suffix=parsed_args.suffix,
-                decode_input=parsed_args.decode,
-                encode_output=parsed_args.encode,
-                metadata_writer=parsed_args.metadata_output
+                suffix=parsed_args.suffix
             )
 
         elif os.path.isfile(_source):
@@ -205,15 +201,10 @@ def process_cli_request(stream_args, parsed_args):
                     suffix=parsed_args.suffix
                 )
             # write to file
-            process_single_file(
+            handler.process_single_file(
                 stream_args=stream_args,
                 source=_source,
-                destination=_destination,
-                interactive=parsed_args.interactive,
-                no_overwrite=parsed_args.no_overwrite,
-                decode_input=parsed_args.decode,
-                encode_output=parsed_args.encode,
-                metadata_writer=parsed_args.metadata_output
+                destination=_destination
             )
 
 

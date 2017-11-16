@@ -43,7 +43,7 @@ def patch_aws_encryption_sdk_stream(mocker):
 
 @pytest.fixture
 def patch_for_process_single_operation(mocker):
-    mocker.patch.object(io_handling, '_single_io_write')
+    mocker.patch.object(io_handling.IOHandler, '_single_io_write')
     mocker.patch.object(io_handling, '_stdout')
     mocker.patch.object(io_handling, '_stdin')
     mocker.patch.object(io_handling, '_ensure_dir_exists')
@@ -57,15 +57,15 @@ def patch_input(mocker):
 
 @pytest.yield_fixture
 def patch_process_single_operation(mocker):
-    mocker.patch.object(io_handling, 'process_single_operation')
-    yield io_handling.process_single_operation
+    mocker.patch.object(io_handling.IOHandler, 'process_single_operation')
+    yield io_handling.IOHandler.process_single_operation
 
 
 @pytest.yield_fixture
 def patch_should_write_file(mocker):
-    mocker.patch.object(io_handling, '_should_write_file')
-    io_handling._should_write_file.return_value = True
-    yield io_handling._should_write_file
+    mocker.patch.object(io_handling.IOHandler, '_should_write_file')
+    io_handling.IOHandler._should_write_file.return_value = True
+    yield io_handling.IOHandler._should_write_file
 
 
 @pytest.fixture
@@ -78,6 +78,17 @@ def patch_json_ready_header(mocker):
 def patch_json_ready_header_auth(mocker):
     mocker.patch.object(io_handling, 'json_ready_header_auth')
     return io_handling.json_ready_header_auth
+
+
+@pytest.fixture
+def standard_handler():
+    return io_handling.IOHandler(
+        metadata_writer=metadata.MetadataWriter(suppress_output=True)(),
+        interactive=False,
+        no_overwrite=False,
+        decode_input=False,
+        encode_output=False
+    )
 
 
 def test_stdout():
@@ -141,29 +152,55 @@ def test_encoder(mocker, should_base64):
         assert test is sentinel.stream
 
 
+GOOD_IOHANDLER_KWARGS = dict(
+    metadata_writer=metadata.MetadataWriter(True)(),
+    interactive=False,
+    no_overwrite=False,
+    decode_input=False,
+    encode_output=False
+)
+
+
+def test_iohandler_attrs_good():
+    io_handling.IOHandler(**GOOD_IOHANDLER_KWARGS)
+
+
+@pytest.mark.parametrize('kwargs', (
+    dict(metadata_writer='not a MetadataWriter'),
+    dict(interactive='not a bool'),
+    dict(no_overwrite='not a bool'),
+    dict(decode_input='not a bool'),
+    dict(encode_output='not a bool')
+))
+def test_iohandler_attrs_fail(kwargs):
+    _kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    _kwargs.update(kwargs)
+
+    with pytest.raises(TypeError):
+        io_handling.IOHandler(**_kwargs)
+
+
 def test_single_io_write_stream_encrypt(
         tmpdir,
         patch_aws_encryption_sdk_stream,
         patch_json_ready_header,
-        patch_json_ready_header_auth
+        patch_json_ready_header_auth,
+        standard_handler
 ):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
     patch_aws_encryption_sdk_stream.return_value.header = MagicMock()
     target_file = tmpdir.join('target')
     mock_source = MagicMock()
-    mock_metadata_writer = MagicMock()
+    standard_handler.metadata_writer = MagicMock()
     with open(str(target_file), 'wb') as destination_writer:
-        io_handling._single_io_write(
+        standard_handler._single_io_write(
             stream_args={
                 'mode': 'encrypt',
                 'a': sentinel.a,
                 'b': sentinel.b
             },
             source=mock_source,
-            destination_writer=destination_writer,
-            decode_input=False,
-            encode_output=False,
-            metadata_writer=mock_metadata_writer
+            destination_writer=destination_writer
         )
 
     patch_aws_encryption_sdk_stream.assert_called_once_with(
@@ -174,7 +211,7 @@ def test_single_io_write_stream_encrypt(
     )
     patch_json_ready_header.assert_called_once_with(patch_aws_encryption_sdk_stream.return_value.header)
     assert not patch_json_ready_header_auth.called
-    mock_metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
+    standard_handler.metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
         mode='encrypt',
         input=mock_source.name,
         output=destination_writer.name,
@@ -187,29 +224,27 @@ def test_single_io_write_stream_decrypt(
         tmpdir,
         patch_aws_encryption_sdk_stream,
         patch_json_ready_header,
-        patch_json_ready_header_auth
+        patch_json_ready_header_auth,
+        standard_handler
 ):
     patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
     patch_aws_encryption_sdk_stream.return_value.header = MagicMock()
     patch_aws_encryption_sdk_stream.return_value.header_auth = MagicMock()
     target_file = tmpdir.join('target')
     mock_source = MagicMock()
-    mock_metadata_writer = MagicMock()
+    standard_handler.metadata_writer = MagicMock()
     with open(str(target_file), 'wb') as destination_writer:
-        io_handling._single_io_write(
+        standard_handler._single_io_write(
             stream_args={
                 'mode': 'decrypt',
                 'a': sentinel.a,
                 'b': sentinel.b
             },
             source=mock_source,
-            destination_writer=destination_writer,
-            decode_input=False,
-            encode_output=False,
-            metadata_writer=mock_metadata_writer
+            destination_writer=destination_writer
         )
     patch_json_ready_header_auth.assert_called_once_with(patch_aws_encryption_sdk_stream.return_value.header_auth)
-    mock_metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
+    standard_handler.metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
         mode='decrypt',
         input=mock_source.name,
         output=destination_writer.name,
@@ -228,107 +263,94 @@ def test_single_io_write_stream_encode_output(
     patch_aws_encryption_sdk_stream.return_value.header = MagicMock(encryption_context=sentinel.encryption_context)
     target_file = tmpdir.join('target')
     mock_source = MagicMock()
+    handler = io_handling.IOHandler(
+        metadata_writer=metadata.MetadataWriter(True)(),
+        interactive=False,
+        no_overwrite=False,
+        decode_input=False,
+        encode_output=True
+    )
     with open(str(target_file), 'wb') as destination_writer:
-        io_handling._single_io_write(
+        handler._single_io_write(
             stream_args={
                 'mode': 'encrypt',
                 'a': sentinel.a,
                 'b': sentinel.b
             },
             source=mock_source,
-            destination_writer=destination_writer,
-            decode_input=False,
-            encode_output=True,
-            metadata_writer=metadata.MetadataWriter(suppress_output=True)()
+            destination_writer=destination_writer
         )
 
     assert target_file.read('rb') == base64.b64encode(DATA)
 
 
-def test_process_single_operation_stdout(patch_for_process_single_operation, patch_should_write_file):
-    io_handling.process_single_operation(
+def test_process_single_operation_stdout(
+        patch_for_process_single_operation,
+        patch_should_write_file,
+        standard_handler
+):
+    standard_handler.process_single_operation(
         stream_args=sentinel.stream_args,
         source=sentinel.source,
-        destination='-',
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_writer
+        destination='-'
     )
-    io_handling._single_io_write.assert_called_once_with(
+    io_handling.IOHandler._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=sentinel.source,
-        destination_writer=io_handling._stdout.return_value,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_writer
+        destination_writer=io_handling._stdout.return_value
     )
     assert not patch_should_write_file.called
 
 
-def test_process_single_operation_stdin_stdout(patch_for_process_single_operation, patch_should_write_file):
-    io_handling.process_single_operation(
+def test_process_single_operation_stdin_stdout(
+        patch_for_process_single_operation,
+        patch_should_write_file,
+        standard_handler
+):
+    standard_handler.process_single_operation(
         stream_args=sentinel.stream_args,
         source='-',
-        destination='-',
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_writer
+        destination='-'
     )
-    io_handling._single_io_write.assert_called_once_with(
+    io_handling.IOHandler._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=io_handling._stdin.return_value,
-        destination_writer=io_handling._stdout.return_value,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_writer
+        destination_writer=io_handling._stdout.return_value
     )
 
 
-def test_process_single_operation_file(patch_for_process_single_operation, patch_should_write_file):
+def test_process_single_operation_file(
+        patch_for_process_single_operation,
+        patch_should_write_file,
+        standard_handler
+):
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
-        io_handling.process_single_operation(
+        standard_handler.process_single_operation(
             stream_args=sentinel.stream_args,
             source=sentinel.source,
-            destination=sentinel.destination_file,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite,
-            decode_input=sentinel.decode_input,
-            encode_output=sentinel.encode_output,
-            metadata_writer=sentinel.metadata_writer
+            destination=sentinel.destination_file
         )
     io_handling._ensure_dir_exists.assert_called_once_with(sentinel.destination_file)
-    patch_should_write_file.assert_called_once_with(
-        filepath=sentinel.destination_file,
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite
-    )
+    patch_should_write_file.assert_called_once_with(sentinel.destination_file)
     mock_open.assert_called_once_with(sentinel.destination_file, 'wb')
-    io_handling._single_io_write.assert_called_once_with(
+    io_handling.IOHandler._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=sentinel.source,
-        destination_writer=mock_open.return_value,
-        decode_input=sentinel.decode_input,
-        encode_output=sentinel.encode_output,
-        metadata_writer=sentinel.metadata_writer
+        destination_writer=mock_open.return_value
     )
 
 
-def test_process_single_operation_file_should_not_write(patch_for_process_single_operation, patch_should_write_file):
+def test_process_single_operation_file_should_not_write(
+        patch_for_process_single_operation,
+        patch_should_write_file,
+        standard_handler
+):
     patch_should_write_file.return_value = False
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
-        io_handling.process_single_operation(
+        standard_handler.process_single_operation(
             stream_args=sentinel.stream_args,
             source=sentinel.source,
-            destination=sentinel.destination_file,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite,
-            decode_input=sentinel.decode_input,
-            encode_output=sentinel.encode_output,
-            metadata_writer=sentinel.metadata_writer
+            destination=sentinel.destination_file
         )
     assert not io_handling._ensure_dir_exists.called
     assert not mock_open.called
@@ -345,11 +367,15 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     target = tmpdir.join('target')
     assert not os.path.exists(str(target))
     # Should always be true regardless of input if file does not exist
-    assert io_handling._should_write_file(
-        filepath=str(target),
+    handler = io_handling.IOHandler(
+        metadata_writer=metadata.MetadataWriter(suppress_output=True)(),
         interactive=interactive,
-        no_overwrite=no_overwrite
+        no_overwrite=no_overwrite,
+        decode_input=False,
+        encode_output=False
     )
+
+    assert handler._should_write_file(str(target))
 
 
 @pytest.mark.parametrize('interactive, no_overwrite, user_input, expected', (
@@ -365,12 +391,15 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
     target_file = tmpdir.join('target')
     target_file.write(b'')
     patch_input.return_value = user_input
-
-    should_write = io_handling._should_write_file(
-        filepath=str(target_file),
+    handler = io_handling.IOHandler(
+        metadata_writer=metadata.MetadataWriter(suppress_output=True)(),
         interactive=interactive,
-        no_overwrite=no_overwrite
+        no_overwrite=no_overwrite,
+        decode_input=False,
+        encode_output=False
     )
+
+    should_write = handler._should_write_file(str(target_file))
 
     if expected:
         assert should_write
@@ -396,8 +425,15 @@ def test_process_single_file(
         encode_output,
         expected_multiplier
 ):
-    source = tmpdir.join('source_file')
+    source = tmpdir.join('source')
     source.write('some data')
+    handler = io_handling.IOHandler(
+        metadata_writer=metadata.MetadataWriter(True)(),
+        interactive=False,
+        no_overwrite=False,
+        decode_input=decode_input,
+        encode_output=encode_output
+    )
     destination = tmpdir.join('destination')
     initial_kwargs = dict(
         mode=mode,
@@ -412,65 +448,49 @@ def test_process_single_file(
         source_length=expected_length
     )
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
-        io_handling.process_single_file(
+        handler.process_single_file(
             stream_args=initial_kwargs,
             source=str(source),
-            destination=str(destination),
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite,
-            decode_input=decode_input,
-            encode_output=encode_output,
-            metadata_writer=sentinel.metadata_writer
+            destination=str(destination)
         )
     mock_open.assert_called_once_with(str(source), 'rb')
     patch_process_single_operation.assert_called_once_with(
         stream_args=updated_kwargs,
         source=mock_open.return_value.__enter__.return_value,
-        destination=str(destination),
-        interactive=sentinel.interactive,
-        no_overwrite=sentinel.no_overwrite,
-        decode_input=decode_input,
-        encode_output=encode_output,
-        metadata_writer=sentinel.metadata_writer
+        destination=str(destination)
     )
 
 
-def test_process_single_file_source_is_destination(tmpdir, patch_process_single_operation):
+def test_process_single_file_source_is_destination(tmpdir, patch_process_single_operation, standard_handler):
     source = tmpdir.join('source')
     source.write('some data')
 
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
-        io_handling.process_single_file(
+        standard_handler.process_single_file(
             stream_args=sentinel.stream_args,
             source=str(source),
-            destination=str(source),
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite,
-            decode_input=sentinel.decode_input,
-            encode_output=sentinel.encode_output,
-            metadata_writer=sentinel.metadata_writer
+            destination=str(source)
         )
 
     assert not mock_open.called
     assert not patch_process_single_operation.called
 
 
-def test_process_single_file_destination_is_symlink_to_source(tmpdir, patch_process_single_operation):
+def test_process_single_file_destination_is_symlink_to_source(
+        tmpdir,
+        patch_process_single_operation,
+        standard_handler
+):
     source = tmpdir.join('source')
     source.write('some data')
     destination = str(tmpdir.join('destination'))
     os.symlink(str(source), destination)
 
     with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
-        io_handling.process_single_file(
+        standard_handler.process_single_file(
             stream_args=sentinel.stream_args,
             source=str(source),
-            destination=destination,
-            interactive=sentinel.interactive,
-            no_overwrite=sentinel.no_overwrite,
-            decode_input=sentinel.decode_input,
-            encode_output=sentinel.encode_output,
-            metadata_writer=sentinel.metadata_writer
+            destination=destination
         )
 
     assert not mock_open.called
@@ -557,7 +577,7 @@ def _mock_aws_encryption_sdk_stream_output(source, *args, **kwargs):
     return mock_stream
 
 
-def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header):
+def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, standard_handler):
     patch_aws_encryption_sdk_stream.side_effect = _mock_aws_encryption_sdk_stream_output
     source = tmpdir.mkdir('source')
     source.mkdir('a')
@@ -573,16 +593,11 @@ def test_process_dir(tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_h
     e_dir.join('target_e1').write(b'')
     target = tmpdir.mkdir('target')
 
-    io_handling.process_dir(
+    standard_handler.process_dir(
         stream_args={'mode': 'encrypt'},
         source=str(source),
         destination=str(target),
-        interactive=False,
-        no_overwrite=False,
-        suffix=None,
-        decode_input=False,
-        encode_output=False,
-        metadata_writer=metadata.MetadataWriter(suppress_output=True)()
+        suffix=None
     )
 
     for filename, suffix in (
