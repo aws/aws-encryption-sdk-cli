@@ -161,7 +161,9 @@ def process_cli_request(stream_args, parsed_args):
         interactive=parsed_args.interactive,
         no_overwrite=parsed_args.no_overwrite,
         decode_input=parsed_args.decode,
-        encode_output=parsed_args.encode
+        encode_output=parsed_args.encode,
+        required_encryption_context=parsed_args.encryption_context,
+        required_encryption_context_keys=parsed_args.required_encryption_context_keys
     )
 
     if parsed_args.input == '-':
@@ -226,8 +228,7 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
     }
     # Look for additional arguments only if encrypting
     if args.action == 'encrypt':
-        if args.encryption_context is not None:
-            stream_args['encryption_context'] = args.encryption_context
+        stream_args['encryption_context'] = args.encryption_context
         if args.algorithm is not None:
             stream_args['algorithm'] = getattr(aws_encryption_sdk.Algorithm, args.algorithm)
         if args.frame_length is not None:

@@ -21,7 +21,7 @@ import pytest
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import six
 
-from aws_encryption_sdk_cli.internal import io_handling, metadata
+from aws_encryption_sdk_cli.internal import identifiers, io_handling, metadata
 
 DATA = b'aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98'
 
@@ -42,8 +42,19 @@ def patch_aws_encryption_sdk_stream(mocker):
 
 
 @pytest.fixture
-def patch_for_process_single_operation(mocker):
+def patch_os_remove(mocker):
+    mocker.patch.object(io_handling.os, 'remove')
+    return io_handling.os.remove
+
+
+@pytest.fixture
+def patch_single_io_write(mocker):
     mocker.patch.object(io_handling.IOHandler, '_single_io_write')
+    return io_handling.IOHandler._single_io_write
+
+
+@pytest.fixture
+def patch_for_process_single_operation(mocker, patch_single_io_write):
     mocker.patch.object(io_handling, '_stdout')
     mocker.patch.object(io_handling, '_stdin')
     mocker.patch.object(io_handling, '_ensure_dir_exists')
@@ -80,15 +91,20 @@ def patch_json_ready_header_auth(mocker):
     return io_handling.json_ready_header_auth
 
 
+GOOD_IOHANDLER_KWARGS = dict(
+    metadata_writer=metadata.MetadataWriter(True)(),
+    interactive=False,
+    no_overwrite=False,
+    decode_input=False,
+    encode_output=False,
+    required_encryption_context={},
+    required_encryption_context_keys=[]
+)
+
+
 @pytest.fixture
 def standard_handler():
-    return io_handling.IOHandler(
-        metadata_writer=metadata.MetadataWriter(suppress_output=True)(),
-        interactive=False,
-        no_overwrite=False,
-        decode_input=False,
-        encode_output=False
-    )
+    return io_handling.IOHandler(**GOOD_IOHANDLER_KWARGS)
 
 
 def test_stdout():
@@ -152,15 +168,6 @@ def test_encoder(mocker, should_base64):
         assert test is sentinel.stream
 
 
-GOOD_IOHANDLER_KWARGS = dict(
-    metadata_writer=metadata.MetadataWriter(True)(),
-    interactive=False,
-    no_overwrite=False,
-    decode_input=False,
-    encode_output=False
-)
-
-
 def test_iohandler_attrs_good():
     io_handling.IOHandler(**GOOD_IOHANDLER_KWARGS)
 
@@ -170,7 +177,9 @@ def test_iohandler_attrs_good():
     dict(interactive='not a bool'),
     dict(no_overwrite='not a bool'),
     dict(decode_input='not a bool'),
-    dict(encode_output='not a bool')
+    dict(encode_output='not a bool'),
+    dict(encryption_context='not a dict'),
+    dict(required_encryption_context_keys='not a list')
 ))
 def test_iohandler_attrs_fail(kwargs):
     _kwargs = GOOD_IOHANDLER_KWARGS.copy()
@@ -263,13 +272,9 @@ def test_single_io_write_stream_encode_output(
     patch_aws_encryption_sdk_stream.return_value.header = MagicMock(encryption_context=sentinel.encryption_context)
     target_file = tmpdir.join('target')
     mock_source = MagicMock()
-    handler = io_handling.IOHandler(
-        metadata_writer=metadata.MetadataWriter(True)(),
-        interactive=False,
-        no_overwrite=False,
-        decode_input=False,
-        encode_output=True
-    )
+    kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    kwargs['encode_output'] = True
+    handler = io_handling.IOHandler(**kwargs)
     with open(str(target_file), 'wb') as destination_writer:
         handler._single_io_write(
             stream_args={
@@ -367,13 +372,12 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     target = tmpdir.join('target')
     assert not os.path.exists(str(target))
     # Should always be true regardless of input if file does not exist
-    handler = io_handling.IOHandler(
-        metadata_writer=metadata.MetadataWriter(suppress_output=True)(),
+    kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    kwargs.update(dict(
         interactive=interactive,
-        no_overwrite=no_overwrite,
-        decode_input=False,
-        encode_output=False
-    )
+        no_overwrite=no_overwrite
+    ))
+    handler = io_handling.IOHandler(**kwargs)
 
     assert handler._should_write_file(str(target))
 
@@ -391,13 +395,12 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
     target_file = tmpdir.join('target')
     target_file.write(b'')
     patch_input.return_value = user_input
-    handler = io_handling.IOHandler(
-        metadata_writer=metadata.MetadataWriter(suppress_output=True)(),
+    kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    kwargs.update(dict(
         interactive=interactive,
-        no_overwrite=no_overwrite,
-        decode_input=False,
-        encode_output=False
-    )
+        no_overwrite=no_overwrite
+    ))
+    handler = io_handling.IOHandler(**kwargs)
 
     should_write = handler._should_write_file(str(target_file))
 
@@ -425,15 +428,15 @@ def test_process_single_file(
         encode_output,
         expected_multiplier
 ):
+    patch_process_single_operation.return_value = identifiers.OperationResult.SUCCESS
     source = tmpdir.join('source')
     source.write('some data')
-    handler = io_handling.IOHandler(
-        metadata_writer=metadata.MetadataWriter(True)(),
-        interactive=False,
-        no_overwrite=False,
+    kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    kwargs.update(dict(
         decode_input=decode_input,
         encode_output=encode_output
-    )
+    ))
+    handler = io_handling.IOHandler(**kwargs)
     destination = tmpdir.join('destination')
     initial_kwargs = dict(
         mode=mode,
@@ -459,6 +462,23 @@ def test_process_single_file(
         source=mock_open.return_value.__enter__.return_value,
         destination=str(destination)
     )
+
+
+def test_process_single_file_unknown_error(tmpdir, patch_single_io_write, standard_handler):
+    patch_single_io_write.side_effect = Exception('This is an unknown exception!')
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = tmpdir.join('destination')
+
+    with pytest.raises(Exception) as excinfo:
+        standard_handler.process_single_file(
+            stream_args={'mode': 'encrypt'},
+            source=str(source),
+            destination=str(destination)
+        )
+
+    excinfo.match(r'This is an unknown exception!')
+    assert not destination.isfile()
 
 
 def test_process_single_file_source_is_destination(tmpdir, patch_process_single_operation, standard_handler):
@@ -495,6 +515,26 @@ def test_process_single_file_destination_is_symlink_to_source(
 
     assert not mock_open.called
     assert not patch_process_single_operation.called
+
+
+def test_process_single_file_failed_and_destination_does_not_exist(
+        tmpdir,
+        patch_process_single_operation,
+        patch_os_remove,
+        standard_handler
+):
+    patch_process_single_operation.return_value = identifiers.OperationResult.FAILED
+    patch_os_remove.side_effect = OSError
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = tmpdir.join('destination')
+
+    # Verify that nothing is raised when os.remove raises an OSError
+    standard_handler.process_single_file(
+        stream_args={'mode': 'encrypt'},
+        source=str(source),
+        destination=str(destination)
+    )
 
 
 @pytest.mark.parametrize('source, destination, mode, suffix, output', (

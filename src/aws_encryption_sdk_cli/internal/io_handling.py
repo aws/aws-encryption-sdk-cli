@@ -17,14 +17,14 @@ import copy
 import logging
 import os
 import sys
-from typing import cast, IO, Type, Union  # noqa pylint: disable=unused-import
+from typing import cast, Dict, IO, List, Type, Union  # noqa pylint: disable=unused-import
 
 import attr
 import aws_encryption_sdk
 import six
 
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
-from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX
+from aws_encryption_sdk_cli.internal.identifiers import OperationResult, OUTPUT_SUFFIX
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import json_ready_header, json_ready_header_auth
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
@@ -145,6 +145,8 @@ class IOHandler(object):
     :param bool no_overwrite: Should never overwrite existing files
     :param bool decode_input: Should input be base64 decoded before operation
     :param bool encode_output: Should output be base64 encoded after operation
+    :param dict required_encryption_context: Encryption context key-value pairs to require
+    :param list required_encryption_context_keys: Encryption context keys to require
     """
 
     metadata_writer = attr.ib(validator=attr.validators.instance_of(MetadataWriter))
@@ -152,9 +154,20 @@ class IOHandler(object):
     no_overwrite = attr.ib(validator=attr.validators.instance_of(bool))
     decode_input = attr.ib(validator=attr.validators.instance_of(bool))
     encode_output = attr.ib(validator=attr.validators.instance_of(bool))
+    required_encryption_context = attr.ib(validator=attr.validators.instance_of(dict))
+    required_encryption_context_keys = attr.ib(validator=attr.validators.instance_of(list))  # noqa pylint: disable=invalid-name
 
-    def __init__(self, metadata_writer, interactive, no_overwrite, decode_input, encode_output):
-        # type: (MetadataWriter, bool, bool, bool, bool) -> None
+    def __init__(
+            self,
+            metadata_writer,  # type: MetadataWriter
+            interactive,  # type: bool
+            no_overwrite,  # type: bool
+            decode_input,  # type: bool
+            encode_output,  # type: bool
+            required_encryption_context,  # type: Dict[str, str]
+            required_encryption_context_keys  # type: List[str]
+    ):
+        # type: (...) -> None
         """Workaround pending resolution of attrs/mypy interaction.
         https://github.com/python/mypy/issues/2088
         https://github.com/python-attrs/attrs/issues/215
@@ -164,10 +177,12 @@ class IOHandler(object):
         self.no_overwrite = no_overwrite
         self.decode_input = decode_input
         self.encode_output = encode_output
+        self.required_encryption_context = required_encryption_context
+        self.required_encryption_context_keys = required_encryption_context_keys  # pylint: disable=invalid-name
         attr.validate(self)
 
     def _single_io_write(self, stream_args, source, destination_writer):
-        # type: (STREAM_KWARGS, IO, IO) -> None
+        # type: (STREAM_KWARGS, IO, IO) -> OperationResult
         """Performs the actual write operations for a single operation.
 
         :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
@@ -175,6 +190,8 @@ class IOHandler(object):
         :type source: file-like object
         :param destination_writer: destination object to which to write
         :type destination_writer: file-like object
+        :returns: OperationResult stating whether the file was written
+        :rtype: aws_encryption_sdk_cli.internal.identifiers.OperationResult
         """
         with _encoder(source, self.decode_input) as _source, _encoder(destination_writer, self.encode_output) as _destination:  # noqa pylint: disable=line-too-long
             with aws_encryption_sdk.stream(source=_source, **stream_args) as handler, self.metadata_writer as metadata:
@@ -186,29 +203,51 @@ class IOHandler(object):
                 )
                 try:
                     header_auth = handler.header_auth
-                    metadata_kwargs['header_auth'] = json_ready_header_auth(header_auth)
                 except AttributeError:
                     # EncryptStream doesn't expose the header auth at this time
                     pass
+                else:
+                    metadata_kwargs['header_auth'] = json_ready_header_auth(header_auth)
+
+                if stream_args['mode'] == 'decrypt':
+                    discovered_ec = handler.header.encryption_context
+                    missing_keys = set(self.required_encryption_context_keys).difference(set(discovered_ec.keys()))
+                    missing_pairs = set(self.required_encryption_context.items()).difference(set(discovered_ec.items()))
+                    if missing_keys or missing_pairs:
+                        _LOGGER.warning(
+                            'Skipping decrypt because discovered encryption context did not match required elements.'
+                        )
+                        metadata_kwargs.update(dict(
+                            skipped=True,
+                            reason='Missing encryption context key or value',
+                            missing_encryption_context_keys=list(missing_keys),
+                            missing_encryption_context_pairs=list(missing_pairs)
+                        ))
+                        metadata.write_metadata(**metadata_kwargs)
+                        return OperationResult.FAILED_VALIDATION
+
                 metadata.write_metadata(**metadata_kwargs)
                 for chunk in handler:
                     _destination.write(chunk)
                     _destination.flush()
+        return OperationResult.SUCCESS
 
     def process_single_operation(self, stream_args, source, destination):
-        # type: (STREAM_KWARGS, SOURCE, str) -> None
+        # type: (STREAM_KWARGS, SOURCE, str) -> OperationResult
         """Processes a single encrypt/decrypt operation given a pre-loaded source.
 
         :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
         :param source: source to write
         :type source: str or file-like object
         :param str destination: destination identifier
+        :returns: OperationResult stating whether the file was written
+        :rtype: aws_encryption_sdk_cli.internal.identifiers.OperationResult
         """
         if destination == '-':
             destination_writer = _stdout()
         else:
             if not self._should_write_file(destination):
-                return
+                return OperationResult.SKIPPED
             _ensure_dir_exists(destination)
             destination_writer = open(destination, 'wb')
 
@@ -216,7 +255,7 @@ class IOHandler(object):
             source = _stdin()
 
         try:
-            self._single_io_write(
+            return self._single_io_write(
                 stream_args=stream_args,
                 source=cast(IO, source),
                 destination_writer=destination_writer
@@ -284,12 +323,23 @@ class IOHandler(object):
         else:
             _stream_args['source_length'] = source_file_size
 
-        with open(source, 'rb') as source_reader:
-            self.process_single_operation(
-                stream_args=_stream_args,
-                source=source_reader,
-                destination=destination
-            )
+        try:
+            with open(source, 'rb') as source_reader:
+                operation_result = self.process_single_operation(
+                    stream_args=_stream_args,
+                    source=source_reader,
+                    destination=destination
+                )
+        except Exception:  # pylint: disable=broad-except
+            operation_result = OperationResult.FAILED
+            raise
+        finally:
+            if operation_result.needs_cleanup and destination != '-':
+                try:
+                    os.remove(destination)
+                except OSError:
+                    # if the file doesn't exist that's ok too
+                    pass
 
     def process_dir(self, stream_args, source, destination, suffix):
         # type: (STREAM_KWARGS, str, str, str) -> None

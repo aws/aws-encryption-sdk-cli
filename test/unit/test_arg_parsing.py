@@ -42,6 +42,13 @@ def patch_parse_and_collapse_config(mocker):
 
 
 @pytest.yield_fixture
+def patch_process_encryption_context(mocker):
+    mocker.patch.object(arg_parsing, '_process_encryption_context')
+    arg_parsing._process_encryption_context.return_value = sentinel.encryption_context, sentinel.required_keys
+    yield arg_parsing._process_encryption_context
+
+
+@pytest.yield_fixture
 def patch_process_caching_config(mocker):
     mocker.patch.object(arg_parsing, '_process_caching_config')
     yield arg_parsing._process_caching_config
@@ -127,6 +134,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     mkp_2 = ' -m provider=ex_provider_2 key=ex_mk_id_2'
     mkp_2_parsed = {'provider': 'ex_provider_2', 'key': ['ex_mk_id_2']}
     default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
+    default_decrypt = decrypt + suppress_metadata + valid_io
     good_args = []
 
     # encrypt/decrypt
@@ -146,7 +154,7 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
         good_args.append((encrypt + suppress_metadata + output_flag + short_input + mkp_1, 'output', '-'))
 
     # encryption context
-    good_args.append((default_encrypt, 'encryption_context', None))
+    good_args.append((default_encrypt, 'encryption_context', {}))
     good_args.append((
         default_encrypt + ' -c some=data not=secret',
         'encryption_context',
@@ -156,6 +164,14 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
         default_encrypt + ' -c "key with a space=value with a space"',
         'encryption_context',
         {'key with a space': 'value with a space'}
+    ))
+
+    # required encryption context keys
+    good_args.append((default_decrypt, 'required_encryption_context_keys', []))
+    good_args.append((
+        default_decrypt + ' --required-encryption-context-keys key_1 key_2 key_3',
+        'required_encryption_context_keys',
+        ['key_1', 'key_2', 'key_3']
     ))
 
     # algorithm
@@ -420,12 +436,13 @@ def test_process_master_key_provider_configs_no_keys():
 def test_parse_args(
         patch_build_parser,
         patch_process_master_key_provider_configs,
-        patch_parse_and_collapse_config,
+        patch_process_encryption_context,
         patch_process_caching_config
 ):
     mock_parsed_args = MagicMock(
         master_keys=sentinel.raw_keys,
         encryption_context=sentinel.raw_encryption_context,
+        required_encryption_context_keys=sentinel.raw_required_keys,
         caching=sentinel.raw_caching,
         action=sentinel.action,
         version=False,
@@ -438,8 +455,13 @@ def test_parse_args(
     patch_build_parser.return_value.parse_args.assert_called_once_with(args=sentinel.raw_args)
     patch_process_master_key_provider_configs.assert_called_once_with(sentinel.raw_keys, sentinel.action)
     assert test.master_keys is patch_process_master_key_provider_configs.return_value
-    patch_parse_and_collapse_config.assert_called_once_with(sentinel.raw_encryption_context)
-    assert test.encryption_context is patch_parse_and_collapse_config.return_value
+    patch_process_encryption_context.assert_called_once_with(
+        action=sentinel.action,
+        raw_encryption_context=sentinel.raw_encryption_context,
+        raw_required_encryption_context_keys=sentinel.raw_required_keys
+    )
+    assert test.encryption_context is sentinel.encryption_context
+    assert test.required_encryption_context_keys is sentinel.required_keys
     patch_process_caching_config.assert_called_once_with(sentinel.raw_caching)
     assert test.caching is patch_process_caching_config.return_value
     assert test is mock_parsed_args
@@ -448,7 +470,7 @@ def test_parse_args(
 def test_parse_args_dummy_redirect(
         patch_build_parser,
         patch_process_master_key_provider_configs,
-        patch_parse_and_collapse_config,
+        patch_process_encryption_context,
         patch_process_caching_config
 ):
     mock_parsed_args = MagicMock(
@@ -483,7 +505,7 @@ def test_parse_args_no_encryption_context(
 def test_parse_args_no_caching_config(
         patch_build_parser,
         patch_process_master_key_provider_configs,
-        patch_parse_and_collapse_config,
+        patch_process_encryption_context,
         patch_process_caching_config
 ):
     patch_build_parser.return_value.parse_args.return_value = MagicMock(caching=None)
@@ -496,7 +518,7 @@ def test_parse_args_no_caching_config(
 def test_parse_args_error_raised_in_post_processing(
         patch_build_parser,
         patch_process_master_key_provider_configs,
-        patch_parse_and_collapse_config,
+        patch_process_encryption_context,
         patch_process_caching_config
 ):
     patch_build_parser.return_value.parse_args.return_value = MagicMock(version=False, dummy_redirect=None)
@@ -505,3 +527,59 @@ def test_parse_args_error_raised_in_post_processing(
     arg_parsing.parse_args()
 
     patch_build_parser.return_value.error.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    'action, raw_encryption_context, raw_required_keys, expected_encryption_context, expected_required_keys',
+    (
+        ('encrypt', None, None, {}, []),
+        ('decrypt', None, None, {}, []),
+        ('encrypt', ['encryption=context', 'with=values'], None, {'encryption': 'context', 'with': 'values'}, []),
+        ('decrypt', ['encryption=context', 'with=values'], None, {'encryption': 'context', 'with': 'values'}, []),
+        (
+            'encrypt',
+            ['encryption=context', 'with=values'],
+            ['key_1', 'key_2'],
+            {'encryption': 'context', 'with': 'values'},
+            ['key_1', 'key_2']
+        ),
+        (
+            'decrypt',
+            ['encryption=context', 'with=values'],
+            ['key_1', 'key_2'],
+            {'encryption': 'context', 'with': 'values'},
+            ['key_1', 'key_2']
+        ),
+        (
+            'decrypt',
+            ['encryption=context', 'with=values', 'key_3'],
+            ['key_1', 'key_2'],
+            {'encryption': 'context', 'with': 'values'},
+            ['key_1', 'key_2', 'key_3']
+        ),
+    )
+)
+def test_process_encryption_context(
+        action,
+        raw_encryption_context,
+        raw_required_keys,
+        expected_encryption_context,
+        expected_required_keys
+):
+    test_encryption_context, test_required_keys = arg_parsing._process_encryption_context(
+        action,
+        raw_encryption_context,
+        raw_required_keys
+    )
+
+    assert test_encryption_context == expected_encryption_context
+    assert test_required_keys == expected_required_keys
+
+
+def test_process_encryption_context_encrypt_required_key_fail():
+    with pytest.raises(ParameterParseError):
+        arg_parsing._process_encryption_context(
+            action='encrypt',
+            raw_encryption_context=['encryption=context', 'with=values', 'key_3'],
+            raw_required_encryption_context_keys=['key_1', 'key_2']
+        )
