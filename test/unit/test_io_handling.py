@@ -42,6 +42,12 @@ def patch_aws_encryption_sdk_stream(mocker):
 
 
 @pytest.fixture
+def patch_os_remove(mocker):
+    mocker.patch.object(io_handling.os, 'remove')
+    return io_handling.os.remove
+
+
+@pytest.fixture
 def patch_single_io_write(mocker):
     mocker.patch.object(io_handling.IOHandler, '_single_io_write')
     return io_handling.IOHandler._single_io_write
@@ -509,6 +515,26 @@ def test_process_single_file_destination_is_symlink_to_source(
 
     assert not mock_open.called
     assert not patch_process_single_operation.called
+
+
+def test_process_single_file_failed_and_destination_does_not_exist(
+        tmpdir,
+        patch_process_single_operation,
+        patch_os_remove,
+        standard_handler
+):
+    patch_process_single_operation.return_value = identifiers.OperationResult.FAILED
+    patch_os_remove.side_effect = OSError
+    source = tmpdir.join('source')
+    source.write('some data')
+    destination = tmpdir.join('destination')
+
+    # Verify that nothing is raised when os.remove raises an OSError
+    standard_handler.process_single_file(
+        stream_args={'mode': 'encrypt'},
+        source=str(source),
+        destination=str(destination)
+    )
 
 
 @pytest.mark.parametrize('source, destination, mode, suffix, output', (

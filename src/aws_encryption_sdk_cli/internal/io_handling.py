@@ -334,8 +334,12 @@ class IOHandler(object):
             operation_result = OperationResult.FAILED
             raise
         finally:
-            if operation_result.needs_cleanup:
-                os.remove(destination)
+            if operation_result.needs_cleanup and destination != '-':
+                try:
+                    os.remove(destination)
+                except OSError:
+                    # if the file doesn't exist that's ok too
+                    pass
 
     def process_dir(self, stream_args, source, destination, suffix):
         # type: (STREAM_KWARGS, str, str, str) -> None

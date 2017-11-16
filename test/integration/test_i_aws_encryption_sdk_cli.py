@@ -159,11 +159,10 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir):
 @pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
 def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
     plaintext = tmpdir.join('source_plaintext')
+    plaintext.write_binary(os.urandom(1024))
     ciphertext = tmpdir.join('ciphertext')
     metadata_file = tmpdir.join('metadata')
     decrypted = tmpdir.join('decrypted')
-    with open(str(plaintext), 'wb') as f:
-        f.write(os.urandom(1024))
 
     encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
         source=str(plaintext),
@@ -172,7 +171,7 @@ def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_
     decrypt_args = DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
         source=str(ciphertext),
         target=str(decrypted),
-        metadata=' --write-metadata ' + str(metadata_file)
+        metadata=' --metadata-output ' + str(metadata_file)
     ) + ' --encryption-context ' + required_encryption_context
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
@@ -432,6 +431,42 @@ def test_stdin_stdout_stdin_stdout_cycle():
     decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
 
     assert decrypted_stdout == plaintext
+
+
+@pytest.mark.skipif(not _aws_crypto_is_findable(), reason='aws-crypto executable could not be found.')
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
+def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
+    plaintext = tmpdir.join('source_plaintext')
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join('ciphertext')
+    metadata_file = tmpdir.join('metadata')
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+        source=str(plaintext),
+        target=str(ciphertext)
+    )
+    decrypt_args = 'aws-crypto ' + DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source=str(ciphertext),
+        target='-',
+        metadata=' --metadata-output ' + str(metadata_file)
+    ) + ' --encryption-context ' + required_encryption_context
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    decrypted_output, stderr = proc.communicate()
+
+    # Verify that no output was written
+    assert decrypted_output == b''
+    # Verify the no exception was raised trying to delete verifiable non-existant "-" file,
+    # to verify that we did not attempt to do that
+    assert b'OSError' not in stderr  # Python 2
+    assert b'FileNotFoundError' not in stderr  # Python 3
+    raw_metadata = metadata_file.read()
+    parsed_metadata = json.loads(raw_metadata)
+    assert parsed_metadata['output'] == '<stdout>'
+    assert parsed_metadata['skipped']
+    assert parsed_metadata['reason'] == 'Missing encryption context key or value'
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
