@@ -173,7 +173,7 @@ Required parameters:
 
     * See `Advanced Configuration`_ for more information on using other master key providers.
 
-* **key** *(at leastt one required, many allowed)* : Identifier for a master key to be used.
+* **key** *(at least one required, many allowed)* : Identifier for a master key to be used.
   Must be an identifier understood by the specified master key provider.
 
     * If using ``aws-kms`` to decrypt, you must *not* specify a key.
@@ -349,7 +349,7 @@ expanded as if you had included them in line. Configuration files can have any n
 .. note::
 
    In PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
-   rather than interpretted by PowerShell.
+   rather than interpreted by PowerShell.
 
 For example, if I wanted to use a common master key configuration for all of my calls, I could
 create a file ``master-key.conf`` with contents detailing my master key configuration.
