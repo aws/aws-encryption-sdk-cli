@@ -335,7 +335,7 @@ class IOHandler(object):
             raise
         finally:
             if operation_result.needs_cleanup and destination != '-':
-                _LOGGER.warning('Operation failed: deleting output file')
+                _LOGGER.warning('Operation failed: deleting output file: %s', destination)
                 try:
                     os.remove(destination)
                 except OSError:
