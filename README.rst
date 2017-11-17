@@ -178,6 +178,9 @@ If multiple master key providers are defined, the first one is treated as the pr
 If multiple master keys are defined in the primary master key provider, the first one is treated
 as the primary. This master key is used to generate the data key.
 
+The below logic is used to construct all master key providers. We use ``KMSMasterKeyProvider``
+as an example.
+
 .. code-block:: python
 
    # With parameters:
