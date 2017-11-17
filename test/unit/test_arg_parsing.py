@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.arg_parsing``."""
+import os
 import shlex
 
 import aws_encryption_sdk
@@ -21,6 +22,12 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
+
+
+@pytest.fixture
+def patch_os(mocker):
+    mocker.patch.object(arg_parsing, 'os')
+    return arg_parsing.os
 
 
 @pytest.yield_fixture
@@ -87,6 +94,43 @@ def test_comment_ignoring_argument_parser_convert_arg_line_to_args(arg_line, lin
     assert line_args == parsed_line
 
 
+POSIX_FILEPATH = ('-i test/file/path', ['-i', 'test/file/path'])
+NON_POSIX_FILEPATH = ('-i test\\file\\path', ['-i', 'test\\file\\path'])
+CHECK_FILEPATHS = {
+    'posix': POSIX_FILEPATH,
+    'nt': NON_POSIX_FILEPATH,
+    'java': NON_POSIX_FILEPATH
+}
+
+
+# Note for reference: These are the three valid names for os.name: we should only treat posix as posix.
+@pytest.mark.parametrize('os_name', ('posix', 'nt', 'java'))
+def test_comment_ignoring_argument_parser_convert_filename(patch_os, os_name):
+    patch_os.name = os_name
+    parser = arg_parsing.CommentIgnoringArgumentParser()
+
+    if os_name == 'posix':
+        assert parser._CommentIgnoringArgumentParser__is_posix
+    else:
+        assert not parser._CommentIgnoringArgumentParser__is_posix
+
+    parsed_line = [arg for arg in parser.convert_arg_line_to_args(CHECK_FILEPATHS[os_name][0])]
+    assert CHECK_FILEPATHS[os_name][1] == parsed_line
+
+
+def test_f_comment_ignoring_argument_parser_convert_filename():
+    # Actually checks against the current local system
+    parser = arg_parsing.CommentIgnoringArgumentParser()
+
+    if os.name == 'posix':
+        assert parser._CommentIgnoringArgumentParser__is_posix
+    else:
+        assert not parser._CommentIgnoringArgumentParser__is_posix
+
+    parsed_line = [arg for arg in parser.convert_arg_line_to_args(CHECK_FILEPATHS[os.name][0])]
+    assert CHECK_FILEPATHS[os.name][1] == parsed_line
+
+
 def test_unique_store_action_first_call():
     mock_parser = MagicMock()
     mock_namespace = MagicMock(special_attribute=None)
@@ -134,7 +178,6 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     mkp_2 = ' -m provider=ex_provider_2 key=ex_mk_id_2'
     mkp_2_parsed = {'provider': 'ex_provider_2', 'key': ['ex_mk_id_2']}
     default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
-    default_decrypt = decrypt + suppress_metadata + valid_io
     good_args = []
 
     # encrypt/decrypt

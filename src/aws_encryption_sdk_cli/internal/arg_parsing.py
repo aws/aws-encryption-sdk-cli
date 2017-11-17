@@ -15,6 +15,7 @@ import argparse
 from collections import defaultdict, OrderedDict
 import copy
 import logging
+import os
 import shlex
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pylint: disable=unused-import
 
@@ -41,6 +42,7 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         # I would rather not duplicate the typeshed's effort keeping it up to date.
         # https://github.com/python/typeshed/blob/master/stdlib/2and3/argparse.pyi#L27-L39
         self.__dummy_arguments = []
+        self.__is_posix = os.name == 'posix'
         super(CommentIgnoringArgumentParser, self).__init__(*args, **kwargs)
 
     def add_dummy_redirect_argument(self, expected_name):
@@ -82,7 +84,7 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         drops both full-line and in-line comments.
         """
         converted_line = []
-        for arg in shlex.split(str(arg_line)):
+        for arg in shlex.split(str(arg_line), posix=self.__is_posix):
             arg = arg.strip()
             if arg.startswith('#'):
                 break
