@@ -166,14 +166,6 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
         {'key with a space': 'value with a space'}
     ))
 
-    # required encryption context keys
-    good_args.append((default_decrypt, 'required_encryption_context_keys', []))
-    good_args.append((
-        default_decrypt + ' --required-encryption-context-keys key_1 key_2 key_3',
-        'required_encryption_context_keys',
-        ['key_1', 'key_2', 'key_3']
-    ))
-
     # algorithm
     algorithm_name = 'AES_128_GCM_IV12_TAG16'
     good_args.append((default_encrypt, 'algorithm', None))
@@ -237,7 +229,8 @@ def test_parser_fromfile(tmpdir, argstring, attribute, value):
 def build_bad_io_arguments():
     return [
         '-d -S -o - -m provider=ex_provider key=ex_mk_id',
-        '-d -S -i - -m provider=ex_provider key=ex_mk_id'
+        '-d -S -i - -m provider=ex_provider key=ex_mk_id',
+        '-d -S -i - -o - --required-encryption-context-keys asd asdfa'
     ]
 
 
@@ -442,7 +435,7 @@ def test_parse_args(
     mock_parsed_args = MagicMock(
         master_keys=sentinel.raw_keys,
         encryption_context=sentinel.raw_encryption_context,
-        required_encryption_context_keys=sentinel.raw_required_keys,
+        required_encryption_context_keys=None,
         caching=sentinel.raw_caching,
         action=sentinel.action,
         version=False,
@@ -458,7 +451,7 @@ def test_parse_args(
     patch_process_encryption_context.assert_called_once_with(
         action=sentinel.action,
         raw_encryption_context=sentinel.raw_encryption_context,
-        raw_required_encryption_context_keys=sentinel.raw_required_keys
+        raw_required_encryption_context_keys=None
     )
     assert test.encryption_context is sentinel.encryption_context
     assert test.required_encryption_context_keys is sentinel.required_keys
@@ -521,7 +514,11 @@ def test_parse_args_error_raised_in_post_processing(
         patch_process_encryption_context,
         patch_process_caching_config
 ):
-    patch_build_parser.return_value.parse_args.return_value = MagicMock(version=False, dummy_redirect=None)
+    patch_build_parser.return_value.parse_args.return_value = MagicMock(
+        version=False,
+        dummy_redirect=None,
+        required_encryption_context_keys=None
+    )
     patch_process_caching_config.side_effect = ParameterParseError
 
     arg_parsing.parse_args()

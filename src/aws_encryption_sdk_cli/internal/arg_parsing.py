@@ -517,6 +517,9 @@ def parse_args(raw_args=None):
                 actual=parsed_args.dummy_redirect
             ))
 
+        if parsed_args.required_encryption_context_keys is not None:
+            raise ParameterParseError('--required-encryption-context-keys cannot be manually provided.')
+
         if parsed_args.overwrite_metadata:
             parsed_args.metadata_output.force_overwrite()
 
