@@ -708,7 +708,8 @@ def test_cli_unknown_error_capture_stacktrace(patch_process_cli_request, tmpdir,
     ))
 
     all_logs = log_stream.getvalue()
-    assert test.startswith('Encountered unexpected ')
+    assert test.startswith('Encountered unexpected error: increase verbosity to see details.')
+    assert message in test
     if log_level <= logging.DEBUG:
         assert 'Traceback' in all_logs
         assert message in all_logs

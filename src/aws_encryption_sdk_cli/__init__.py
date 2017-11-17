@@ -270,7 +270,13 @@ def cli(raw_args=None):
     except AWSEncryptionSDKCLIError as error:
         return error.args[0]
     except Exception as error:  # pylint: disable=broad-except
-        message = 'Encountered unexpected {}: increase verbosity to see details'.format(error.__class__.__name__)
+        message = os.linesep.join([
+            'Encountered unexpected error: increase verbosity to see details.',
+            '{cls}({args})'.format(
+                cls=error.__class__.__name__,
+                args=', '.join(['"{}"'.format(arg) for arg in error.args])
+            )
+        ])
         _LOGGER.debug(message)
         # copy.deepcopy can't handle raw exc_info objects, so format it first
         formatted_traceback = traceback.format_exc()
