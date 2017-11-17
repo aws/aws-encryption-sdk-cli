@@ -303,7 +303,7 @@ def _build_parser():
         nargs='?',
         const='',
         action=UniqueStoreAction,
-        help='Custom suffix to use when target filename is not specified'
+        help='Custom suffix to use when target filename is not specified (empty if specified but no value provided)'
     )
 
     parser.add_argument(
