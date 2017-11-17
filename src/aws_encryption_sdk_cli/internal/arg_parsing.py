@@ -488,14 +488,18 @@ def _process_master_key_provider_configs(raw_keys, action):
             )
         parsed_args['provider'] = provider[0]
 
-        if 'key' not in parsed_args:
-            if action == 'decrypt' and parsed_args['provider'] in ('aws-kms', DEFAULT_MASTER_KEY_PROVIDER):
-                # Special case: aws-kms does not require master key configuration for decrypt.
-                parsed_args['key'] = []
-            else:
+        aws_kms_on_decrypt = parsed_args['provider'] in ('aws-kms', DEFAULT_MASTER_KEY_PROVIDER) and action == 'decrypt'
+
+        if aws_kms_on_decrypt:
+            if 'key' in parsed_args:
                 raise ParameterParseError(
-                    'At least one "key" must be provided for each master key provider configuration'
+                    'Exact master keys cannot be specified for aws-kms master key provider on decrypt.'
                 )
+            parsed_args['key'] = []
+        elif 'key' not in parsed_args:
+            raise ParameterParseError(
+                'At least one "key" must be provided for each master key provider configuration'
+            )
         processed_configs.append(parsed_args)
     return processed_configs
 

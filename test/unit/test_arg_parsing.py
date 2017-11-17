@@ -426,6 +426,16 @@ def test_process_master_key_provider_configs_not_exactly_one_provider():
     excinfo.match(r'Exactly one "provider" must be provided for each master key provider configuration. 2 provided')
 
 
+@pytest.mark.parametrize('provider', ('aws-kms', identifiers.DEFAULT_MASTER_KEY_PROVIDER))
+def test_master_key_specified_on_decrypt_for_kms(provider):
+    source = [['provider=' + provider, 'key=example']]
+
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_master_key_provider_configs(source, 'decrypt')
+
+    excinfo.match(r'Exact master keys cannot be specified for aws-kms master key provider on decrypt.')
+
+
 def test_process_master_key_provider_configs_no_keys():
     source = [['provider=ex_provider', 'aaa=sadfa']]
 
@@ -489,19 +499,6 @@ def test_parse_args_dummy_redirect(
     patch_build_parser.return_value.error.assert_called_once_with(
         'Found invalid argument "-invalid-argument". Did you mean "--invalid-argument"?'
     )
-
-
-def test_parse_args_no_encryption_context(
-        patch_build_parser,
-        patch_process_master_key_provider_configs,
-        patch_parse_and_collapse_config,
-        patch_process_caching_config
-):
-    patch_build_parser.return_value.parse_args.return_value = MagicMock(encryption_context=None)
-    test = arg_parsing.parse_args()
-
-    assert not patch_parse_and_collapse_config.called
-    assert test.encryption_context is None
 
 
 def test_parse_args_no_caching_config(
