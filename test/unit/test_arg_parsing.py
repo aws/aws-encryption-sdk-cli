@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.arg_parsing``."""
+import platform
 import shlex
 
 import aws_encryption_sdk
@@ -21,6 +22,12 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
+
+
+@pytest.fixture
+def patch_platform_win32_ver(mocker):
+    mocker.patch.object(arg_parsing.platform, 'win32_ver')
+    return arg_parsing.platform.win32_ver
 
 
 @pytest.yield_fixture
@@ -87,6 +94,42 @@ def test_comment_ignoring_argument_parser_convert_arg_line_to_args(arg_line, lin
     assert line_args == parsed_line
 
 
+POSIX_FILEPATH = ('-i test/file/path', ['-i', 'test/file/path'])
+NON_POSIX_FILEPATH = ('-i test\\file\\path', ['-i', 'test\\file\\path'])
+
+
+@pytest.mark.parametrize('win32_version, expected_transform', (
+    (('', '', ''), POSIX_FILEPATH),
+    (('10', '10.0.0', 'SP0', 'Multiprocessor Free'), NON_POSIX_FILEPATH)
+))
+def test_comment_ignoring_argument_parser_convert_filename(patch_platform_win32_ver, win32_version, expected_transform):
+    patch_platform_win32_ver.return_value = win32_version
+    parser = arg_parsing.CommentIgnoringArgumentParser()
+
+    if any(win32_version):
+        assert not parser._CommentIgnoringArgumentParser__is_posix
+    else:
+        assert parser._CommentIgnoringArgumentParser__is_posix
+
+    parsed_line = [arg for arg in parser.convert_arg_line_to_args(expected_transform[0])]
+    assert expected_transform[1] == parsed_line
+
+
+def test_f_comment_ignoring_argument_parser_convert_filename():
+    # Actually checks against the current local system
+    parser = arg_parsing.CommentIgnoringArgumentParser()
+
+    if any(platform.win32_ver()):
+        assert not parser._CommentIgnoringArgumentParser__is_posix
+        expected_transform = NON_POSIX_FILEPATH
+    else:
+        assert parser._CommentIgnoringArgumentParser__is_posix
+        expected_transform = POSIX_FILEPATH
+
+    parsed_line = [arg for arg in parser.convert_arg_line_to_args(expected_transform[0])]
+    assert expected_transform[1] == parsed_line
+
+
 def test_unique_store_action_first_call():
     mock_parser = MagicMock()
     mock_namespace = MagicMock(special_attribute=None)
@@ -134,7 +177,6 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
     mkp_2 = ' -m provider=ex_provider_2 key=ex_mk_id_2'
     mkp_2_parsed = {'provider': 'ex_provider_2', 'key': ['ex_mk_id_2']}
     default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
-    default_decrypt = decrypt + suppress_metadata + valid_io
     good_args = []
 
     # encrypt/decrypt
