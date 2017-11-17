@@ -19,6 +19,7 @@ from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication
 from aws_encryption_sdk.structures import EncryptedDataKey, MasterKeyInfo, MessageHeader
 import pytest
 
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import metadata
 
 GOOD_INIT_KWARGS = dict(
@@ -197,6 +198,15 @@ def test_overwrite_metdata_file_multiuse(tmpdir):
     assert len(lines) == 2
     assert json.loads(lines[0].strip()) == my_metadata
     assert lines[0] == lines[1]
+
+
+def test_metadata_output_file_parent_dir_does_not_exist(tmpdir):
+    metadata_file = os.path.join(str(tmpdir), 'missing_dir', 'metadata')
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        metadata.MetadataWriter(suppress_output=False)(metadata_file)
+
+    excinfo.match(r'Parent directory for requested metdata file does not exist.')
 
 
 def test_json_ready_message_header():

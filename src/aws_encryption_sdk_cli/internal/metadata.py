@@ -25,6 +25,8 @@ from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=
 from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication  # noqa pylint: disable=unused-import
 import six
 
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
+
 __all__ = ('MetadataWriter', 'unicode_b64_encode', 'json_ready_header', 'json_ready_header_auth')
 
 
@@ -71,9 +73,13 @@ class MetadataWriter(object):
 
         if self.output_file == '-':
             self._output_mode = 'w'
-        else:
-            self._output_mode = 'a'
-            self.output_file = os.path.abspath(self.output_file)
+            return self
+
+        if not os.path.isdir(os.path.dirname(os.path.realpath(self.output_file))):
+            raise BadUserArgumentError('Parent directory for requested metdata file does not exist.')
+
+        self._output_mode = 'a'
+        self.output_file = os.path.abspath(self.output_file)
 
         attr.validate(self)
 
