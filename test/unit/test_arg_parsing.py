@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.arg_parsing``."""
+import os
 import platform
 import shlex
 
@@ -86,9 +87,19 @@ def test_version_report():
     (
         '# whole-line comment',
         []
+    ),
+    (
+        '-f ' + os.path.join('~', 'my', 'special', 'file'),
+        ['-f', os.path.join(os.path.expanduser('~'), 'my', 'special', 'file')]
+    ),
+    (
+        '-f $ANOTHER_VAR ${MY_SPECIAL_VAR}PlusSome',
+        ['-f', 'someOtherData', 'aVerySpecialPrefixPlusSome']
     )
 ))
-def test_comment_ignoring_argument_parser_convert_arg_line_to_args(arg_line, line_args):
+def test_comment_ignoring_argument_parser_convert_arg_line_to_args(monkeypatch, arg_line, line_args):
+    monkeypatch.setenv('MY_SPECIAL_VAR', 'aVerySpecialPrefix')
+    monkeypatch.setenv('ANOTHER_VAR', 'someOtherData')
     parser = arg_parsing.CommentIgnoringArgumentParser()
     parsed_line = [arg for arg in parser.convert_arg_line_to_args(arg_line)]
     assert line_args == parsed_line

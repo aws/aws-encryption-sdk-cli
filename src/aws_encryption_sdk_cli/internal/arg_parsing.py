@@ -15,6 +15,7 @@ import argparse
 from collections import defaultdict, OrderedDict
 import copy
 import logging
+import os
 import platform
 import shlex
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pylint: disable=unused-import
@@ -88,7 +89,9 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
             arg = arg.strip()
             if arg.startswith('#'):
                 break
-            converted_line.append(arg)
+            user_arg = os.path.expanduser(arg)
+            environ_arg = os.path.expandvars(user_arg)
+            converted_line.append(environ_arg)
         return converted_line
 
 
