@@ -356,15 +356,18 @@ def _parse_kwargs(args):
     :rtype: dict
     :raises ParameterParseError: if a badly formed parameter if found
     """
+    value_error_message = 'Argument parameter must follow the format "key=value"'
     kwargs = defaultdict(list)  # type: Dict[str, List[str]]
     for arg in args:
         _LOGGER.debug('Attempting to parse argument: %s', arg)
         try:
             key, value = arg.split('=', 1)
+            if not (key and value):
+                raise ParameterParseError(value_error_message)
             kwargs[key].append(value)
         except ValueError:
             _LOGGER.debug('Failed to parse argument')
-            raise ParameterParseError('Argument parameter must follow the format "key=value"')
+            raise ParameterParseError(value_error_message)
     return dict(kwargs)
 
 

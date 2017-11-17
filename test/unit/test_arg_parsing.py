@@ -360,9 +360,14 @@ def test_parse_kwargs_good(source, expected):
     assert test == expected
 
 
-def test_parse_kwargs_fail():
+@pytest.mark.parametrize('bad_arg', (
+    'key_without_value',
+    'key_with_empty_value=',
+    '=value_with_empty_key'
+))
+def test_parse_kwargs_fail(bad_arg):
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._parse_kwargs(['asdfsadf'])
+        arg_parsing._parse_kwargs([bad_arg])
 
     excinfo.match(r'Argument parameter must follow the format "key=value"')
 
