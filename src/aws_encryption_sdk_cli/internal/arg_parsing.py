@@ -315,7 +315,7 @@ def _build_parser():
     parser.add_argument(
         '--interactive',
         action='store_true',
-        help='Force aws-crypto to prompt you for verification before overwriting existing files'
+        help='Force aws-encryption-cli to prompt you for verification before overwriting existing files'
     )
 
     parser.add_argument(

@@ -40,10 +40,10 @@ def _should_run_tests():
     return os.environ.get(ENABLE_TESTS_FLAG, None) == 'RUN'
 
 
-def _aws_crypto_is_findable():
-    path = find_executable('aws-crypto')
+def _aws_encryption_cli_is_findable():
+    path = find_executable('aws-encryption-cli')
     if path is None:
-        UserWarning('aws-crypto executable could not be found')
+        UserWarning('aws-encryption-cli executable could not be found')
         return False
     return True
 
@@ -398,17 +398,17 @@ def test_file_to_dir_cycle(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(not _aws_crypto_is_findable(), reason='aws-crypto executable could not be found.')
+@pytest.mark.skipif(not _aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_stdin_to_file_to_stdout_cycle(tmpdir):
     ciphertext_file = tmpdir.join('ciphertext')
     plaintext = os.urandom(1024)
 
-    encrypt_args = 'aws-crypto ' + ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = 'aws-encryption-cli ' + ENCRYPT_ARGS_TEMPLATE.format(
         source='-',
         target=str(ciphertext_file)
     )
-    decrypt_args = 'aws-crypto ' + DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = 'aws-encryption-cli ' + DECRYPT_ARGS_TEMPLATE.format(
         source=str(ciphertext_file),
         target='-'
     )
@@ -422,16 +422,16 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
     assert decrypted_stdout == plaintext
 
 
-@pytest.mark.skipif(not _aws_crypto_is_findable(), reason='aws-crypto executable could not be found.')
+@pytest.mark.skipif(not _aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_stdin_stdout_stdin_stdout_cycle():
     plaintext = os.urandom(1024)
 
-    encrypt_args = 'aws-crypto ' + ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = 'aws-encryption-cli ' + ENCRYPT_ARGS_TEMPLATE.format(
         source='-',
         target='-'
     )
-    decrypt_args = 'aws-crypto ' + DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = 'aws-encryption-cli ' + DECRYPT_ARGS_TEMPLATE.format(
         source='-',
         target='-'
     )
@@ -443,7 +443,7 @@ def test_stdin_stdout_stdin_stdout_cycle():
     assert decrypted_stdout == plaintext
 
 
-@pytest.mark.skipif(not _aws_crypto_is_findable(), reason='aws-crypto executable could not be found.')
+@pytest.mark.skipif(not _aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 @pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
 def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
@@ -456,7 +456,7 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
         source=str(plaintext),
         target=str(ciphertext)
     )
-    decrypt_args = 'aws-crypto ' + DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    decrypt_args = 'aws-encryption-cli ' + DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
         source=str(ciphertext),
         target='-',
         metadata=' --metadata-output ' + str(metadata_file)
