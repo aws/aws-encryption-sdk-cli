@@ -58,7 +58,7 @@ def _stdin():
 
 def _file_exists_error():
     # type: () -> Type[Exception]
-    """Returns the appropriate error that ``os.makedirs`` returns if the target directory
+    """Returns the appropriate error that ``os.makedirs`` returns if the output directory
     already exists.
     """
     if six.PY3:
@@ -116,7 +116,7 @@ def output_filename(source_filename, destination_dir, mode, suffix):
     if suffix is None:
         suffix = OUTPUT_SUFFIX[mode]
     else:
-        _LOGGER.debug('Using custom suffix "%s" to create target file', suffix)
+        _LOGGER.debug('Using custom suffix "%s" to create output file', suffix)
     filename = source_filename.rsplit(os.sep, 1)[-1]
     _LOGGER.debug('Duplicating filename %s into %s', filename, destination_dir)
     return os.path.join(destination_dir, filename) + suffix
@@ -124,7 +124,7 @@ def output_filename(source_filename, destination_dir, mode, suffix):
 
 def _output_dir(source_root, destination_root, source_dir):
     # type: (str, str, str) -> str
-    """Duplicates the source child directory structure into the target directory root.
+    """Duplicates the source child directory structure into the output directory root.
 
     :param str source_root: Root of source directory
     :param str destination_root: Root of destination directory
@@ -276,26 +276,26 @@ class IOHandler(object):
 
         if self.no_overwrite:
             # The file exists and the caller specifically asked us not to overwrite anything
-            _LOGGER.warning('Skipping existing target file because of "no overwrite" option: %s', filepath)
+            _LOGGER.warning('Skipping existing output file because of "no overwrite" option: %s', filepath)
             return False
 
         if self.interactive:
             # The file exists and the caller asked us to be consulted on action before overwriting
             decision = six.moves.input(  # type: ignore # six.moves confuses mypy
-                'Overwrite existing target file "{}" with new contents? [y/N]:'.format(filepath)
+                'Overwrite existing output file "{}" with new contents? [y/N]:'.format(filepath)
             )
             try:
                 if decision.lower()[0] == 'y':
-                    _LOGGER.warning('Overwriting existing target file based on interactive user decision: %s', filepath)
+                    _LOGGER.warning('Overwriting existing output file based on interactive user decision: %s', filepath)
                     return True
                 return False
             except IndexError:
                 # No input is interpreted as 'do not overwrite'
-                _LOGGER.warning('Skipping existing target file based on interactive user decision: %s', filepath)
+                _LOGGER.warning('Skipping existing output file based on interactive user decision: %s', filepath)
                 return False
 
         # If we get to this point, the file exists and we should overwrite it
-        _LOGGER.warning('Overwriting existing target file because no action was specified otherwise: %s', filepath)
+        _LOGGER.warning('Overwriting existing output file because no action was specified otherwise: %s', filepath)
         return True
 
     def process_single_file(self, stream_args, source, destination):
@@ -335,6 +335,7 @@ class IOHandler(object):
             raise
         finally:
             if operation_result.needs_cleanup and destination != '-':
+                _LOGGER.warning('Operation failed: deleting output file: %s', destination)
                 try:
                     os.remove(destination)
                 except OSError:
