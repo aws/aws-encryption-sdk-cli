@@ -30,7 +30,7 @@ CONFIG_FILE_NAME = os.path.join(HERE, 'integration_tests.conf')
 ENCRYPT_ARGS_TEMPLATE_BASE = '-e -i {source} -o {target} --encryption-context a=b c=d @' + CONFIG_FILE_NAME
 ENCRYPT_ARGS_TEMPLATE = ENCRYPT_ARGS_TEMPLATE_BASE + ' -S'
 ENCRYPT_ARGS_TEMPLATE_WITH_METADATA = ENCRYPT_ARGS_TEMPLATE_BASE + ' {metadata}'
-DECRYPT_ARGS_TEMPLATE_BASE = '-d -i {source} -o {target} @' + CONFIG_FILE_NAME
+DECRYPT_ARGS_TEMPLATE_BASE = '-d -i {source} -o {target}'
 DECRYPT_ARGS_TEMPLATE = DECRYPT_ARGS_TEMPLATE_BASE + ' -S'
 DECRYPT_ARGS_TEMPLATE_WITH_METADATA = DECRYPT_ARGS_TEMPLATE_BASE + ' {metadata}'
 CACHING_CONFIG = ' --caching capacity=10 max_age=60.0'
