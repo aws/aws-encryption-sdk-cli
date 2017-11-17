@@ -68,7 +68,7 @@ tree of the source directory is replicated in the target directory.
 Parameter Values
 ----------------
 Some arguments accept additional parameter values.  These values must be provided in the
-form of ``parameter=value`` as demonstrated below.
+form of ``key=value`` as demonstrated below.
 
 .. code-block:: sh
 
@@ -118,7 +118,7 @@ regardless of the values. ``key`` and ``key=value`` elements can be mixed.
 
    If encryption context requirements are not satisfied by the ciphertext message, the
    message will not be decrypted. One side effect of this is that if you chose to write
-   the plaintext output to a file and that file already existed, it will be deleted when
+   the plaintext output to a file and that file already exists, it will be deleted when
    we stop the decryption.
 
 Output Metadata
@@ -131,9 +131,9 @@ The metadata for each operation is written to the specified file as a single lin
 formatted JSON, so if a single command performs multiple file operations, a separate line
 will be written for each operation. There are three operating modes:
 
-* ``--metadata-output FILE`` : Overwrites the specified file with a new file containing the
-  metadata (can be ``-`` for stdout as long as main output is not stdout). Default behavior
-  is to append the metadata entry to the end of ``FILE``.
+* ``--metadata-output FILE`` : Writes the metadata output to ``FILE`` (can be ``-`` for stdout
+  as long as main output is not stdout). Default behavior is to append the metadata entry to
+  the end of ``FILE``.
 * ``--overwrite-metadata`` : Force overwriting the contents of ``FILE`` with the new metadata.
 * ``-S/--suppress-metadata`` : Output metadata is suppressed.
 
@@ -147,6 +147,19 @@ The metadata JSON contains the following fields:
 * ``"header"`` : JSON representation of `message header data`_
 * ``"header_auth"`` : JSON representation of `message header authentication data`_ (only on decrypt)
 
+Skipped Files
+~~~~~~~~~~~~~
+If encryption context checks fail when attempting to decrypt a file, the metadata contains
+additional fields:
+
+* ``skipped`` : ``true``
+* ``reason`` : ``"Missing encryption context key or value"``
+* ``missing_encryption_context_keys`` : List of required encryption context keys that were
+  missing from the message.
+* ``missing_encryption_context_pairs`` : List of required encryption context key-value pairs
+  missing from the message.
+
+
 Master Key Provider
 -------------------
 Information for configuring a master key provider must be provided.
@@ -155,19 +168,19 @@ Parameters may be provided using `Parameter Values`_.
 
 Required parameters:
 
-* **provider** *(default: aws-kms)* : Indicator of the master key provider to use.
+* **provider** *(default: aws-encryption-sdk-cli::aws-kms)* : Indicator of the master key
+  provider to use.
 
     * See `Advanced Configuration`_ for more information on using other master key providers.
 
-* **key** *(one required, many allowed)* : Identifier for a master key to be used. Must be an
-  identifier understood by the specified master key provider.
+* **key** *(at least one required, many allowed)* : Identifier for a master key to be used.
+  Must be an identifier understood by the specified master key provider.
 
-    * If using ``aws-kms`` to decrypt, it is not necessary to supply any key identifier.
+    * If using ``aws-kms`` to decrypt, `you must not specify a key`_.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
-may provide an arguments post-processing function to modify these values before passing
-them to the master key provider. See `Advanced Configuration`_ for more information.
+must accept all arguments as prepared. See `Advanced Configuration`_ for more information.
 
 Multiple master keys can be defined using multiple instances of the ``key`` argument.
 
@@ -176,18 +189,20 @@ Multiple master key providers can be defined using multiple ``--master-keys`` gr
 If multiple master key providers are defined, the first one is treated as the primary.
 
 If multiple master keys are defined in the primary master key provider, the first one is treated
-as the primary. This master key is used to generate the data key.
+as the primary. The primary master key is used to generate the data key.
+
+The below logic is used to construct all master key providers. We use ``KMSMasterKeyProvider``
+as an example.
 
 .. code-block:: python
 
    # With parameters:
-   --master-keys provider=aws-kms key=$KEY_ARN_1 key=$KEY_ARN_2
+   --master-keys provider=aws-kms key=$KEY_1 key=$KEY_2
 
    # KMSMasterKeyProvider is called as:
    key_provider = KMSMasterKeyProvider()
-   key_provider.add_master_key($KEY_ARN_1)
-   key_provider.add_master_key($KEY_ARN_2)
-
+   key_provider.add_master_key($KEY_1)
+   key_provider.add_master_key($KEY_2)
 
 .. code-block:: sh
 
@@ -225,7 +240,7 @@ The logic for determining which region to use is shown in the pseudocode below:
       if region is specified:
          use region
       else if profile is specified and profile has a defined region:
-         use profile's region
+         use region defined in profile
       else:
          use system default region
 
@@ -271,8 +286,8 @@ accept the parameters prepared by the CLI as described in `Master Key Provider`_
 These entry points must be registered in the ``aws_encryption_sdk_cli.master_key_providers``
 group.
 
-If desired the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``,
-the CLI will present the raised error message to the user to indicate bad user input.
+If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``, the
+CLI will present the raised error message to the user to indicate bad user input.
 
 Data Key Caching
 ----------------
@@ -330,8 +345,11 @@ Configuration files are supported using Python's native `argparse file support`_
 you to write configuration files exactly as you would enter arguments in the shell. Configuration
 file references passed to ``aws-crypto`` are identified by the ``@`` prefix and the contents are
 expanded as if you had included them in line. Configuration files can have any name you desire.
-NOTE: in PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
-rather than interpretted by PowerShell.
+
+.. note::
+
+   In PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
+   rather than interpreted by PowerShell.
 
 For example, if I wanted to use a common master key configuration for all of my calls, I could
 create a file ``master-key.conf`` with contents detailing my master key configuration.
@@ -340,7 +358,7 @@ create a file ``master-key.conf`` with contents detailing my master key configur
 
 .. code-block:: sh
 
-   --master-key key=SOME_KEY_ARN key=ANOTHER_KEY_ARN
+   --master-key key=A_KEY key=ANOTHER_KEY
 
 Then, when calling ``aws-crypto``, I can specify the rest of my arguments and reference my new
 configuration file, and ``aws-crypto`` will use the composite configuration.
@@ -528,3 +546,4 @@ Execution
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+.. _you must not specify a key: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
