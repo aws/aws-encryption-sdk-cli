@@ -428,8 +428,7 @@ Execution
 .. code-block:: sh
 
    usage: aws-crypto [-h] [--version] [-e] [-d] [-S]
-                     [--write-metadata METADATA_OUTPUT]
-                     [--append-metadata METADATA_OUTPUT]
+                     [--metadata-output METADATA_OUTPUT] [--overwrite-metadata]
                      [-m MASTER_KEYS [MASTER_KEYS ...]]
                      [--caching CACHING [CACHING ...]] -i INPUT -o OUTPUT
                      [--encode] [--decode]
@@ -458,10 +457,10 @@ Execution
      -d, --decrypt         Decrypt data
      -S, --suppress-metadata
                            Suppress metadata output.
-     --write-metadata METADATA_OUTPUT
-                           Overwrite contents of metadata file.
-     --append-metadata METADATA_OUTPUT
-                           Append to metadata file.
+     --metadata-output METADATA_OUTPUT
+                           File to which to write metadata records
+     --overwrite-metadata  Force metadata output to overwrite contents of file
+                           rather than appending to file
      -m MASTER_KEYS [MASTER_KEYS ...], --master-keys MASTER_KEYS [MASTER_KEYS ...]
                            Identifying information for a master key provider and
                            master keys. Each instance must include a master key
@@ -504,7 +503,7 @@ Execution
                            Maximum frame length (for framed messages) or content
                            length (for non-framed messages) (decryption only)
      --suffix [SUFFIX]     Custom suffix to use when target filename is not
-                           specified
+                           specified (empty if specified but no value provided)
      --interactive         Force aws-crypto to prompt you for verification before
                            overwriting existing files
      --no-overwrite        Never overwrite existing files

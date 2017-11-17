@@ -303,7 +303,7 @@ def _build_parser():
         nargs='?',
         const='',
         action=UniqueStoreAction,
-        help='Custom suffix to use when target filename is not specified'
+        help='Custom suffix to use when target filename is not specified (empty if specified but no value provided)'
     )
 
     parser.add_argument(
@@ -516,6 +516,9 @@ def parse_args(raw_args=None):
             raise ParameterParseError('Found invalid argument "{actual}". Did you mean "-{actual}"?'.format(
                 actual=parsed_args.dummy_redirect
             ))
+
+        if parsed_args.required_encryption_context_keys is not None:
+            raise ParameterParseError('--required-encryption-context-keys cannot be manually provided.')
 
         if parsed_args.overwrite_metadata:
             parsed_args.metadata_output.force_overwrite()
