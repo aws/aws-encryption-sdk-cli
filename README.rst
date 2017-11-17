@@ -176,7 +176,7 @@ Required parameters:
 * **key** *(at least one required, many allowed)* : Identifier for a master key to be used.
   Must be an identifier understood by the specified master key provider.
 
-    * If using ``aws-kms`` to decrypt, you must *not* specify a key.
+    * If using ``aws-kms`` to decrypt, `you must not specify a key`_.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
@@ -546,3 +546,4 @@ Execution
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+.. _you must not specify a key: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
