@@ -147,6 +147,19 @@ The metadata JSON contains the following fields:
 * ``"header"`` : JSON representation of `message header data`_
 * ``"header_auth"`` : JSON representation of `message header authentication data`_ (only on decrypt)
 
+Skipped Files
+^^^^^^^^^^^^^
+If encryption context checks fail when attempting to decrypt a file, the metadata contains
+additional fields:
+
+* ``skipped`` : ``true``
+* ``reason`` : ``"Missing encryption context key or value"``
+* ``missing_encryption_context_keys`` : List of required encryption context keys that were
+  missing from the message.
+* ``missing_encryption_context_pairs`` : List of required encryption context key/value pairs
+  missing from the message.
+
+
 Master Key Provider
 -------------------
 Information for configuring a master key provider must be provided.
