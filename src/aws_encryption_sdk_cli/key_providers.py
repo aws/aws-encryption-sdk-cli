@@ -20,6 +20,8 @@ import botocore.session
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 
+__all__ = ('aws_kms_master_key_provider',)
+
 
 def aws_kms_master_key_provider(**kwargs):
     # type: (**List[Union[Text, str]]) -> KMSMasterKeyProvider

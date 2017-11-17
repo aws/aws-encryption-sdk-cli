@@ -16,6 +16,15 @@ from typing import Dict, Set  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 
+__all__ = (
+    'OUTPUT_SUFFIX',
+    'ALGORITHM_NAMES',
+    'MASTER_KEY_PROVIDERS_ENTRY_POINT',
+    'PLUGIN_NAMESPACE_DIVIDER',
+    'USER_AGENT_SUFFIX',
+    'DEFAULT_MASTER_KEY_PROVIDER',
+    'OperationResult'
+)
 __version__ = '1.0.2'  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.

@@ -24,8 +24,8 @@ import six
 
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
-_LOGGER = logging.getLogger(LOGGER_NAME)
 __all__ = ('Base64IO',)
+_LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 class Base64IO(io.IOBase):
