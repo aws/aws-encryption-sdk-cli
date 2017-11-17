@@ -11,15 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli``."""
+import logging
 import os
+import shlex
 
 import aws_encryption_sdk
 from mock import ANY, call, MagicMock, sentinel
 import pytest
+import six
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
+from aws_encryption_sdk_cli.internal.logging_utils import _KMSKeyRedactingFormatter, FORMAT_STRING
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
+
+
+@pytest.fixture
+def patch_process_cli_request(mocker):
+    mocker.patch.object(aws_encryption_sdk_cli, 'process_cli_request')
+    return aws_encryption_sdk_cli.process_cli_request
 
 
 @pytest.fixture
@@ -668,3 +678,40 @@ def test_cli_unknown_error(patch_for_cli):
     test = aws_encryption_sdk_cli.cli()
 
     assert test.startswith('Encountered unexpected ')
+
+
+def kms_redacting_logger_stream(log_level):
+    output_stream = six.StringIO()
+    formatter = _KMSKeyRedactingFormatter(FORMAT_STRING)
+    handler = logging.StreamHandler(stream=output_stream)
+    handler.setFormatter(formatter)
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+    logger.addHandler(handler)
+    return output_stream
+
+
+@pytest.mark.parametrize('log_level, requested_log_level', (
+    (logging.WARNING, ''),
+    (logging.INFO, '-v'),
+    (logging.DEBUG, '-vv')
+))
+def test_cli_unknown_error_capture_stacktrace(patch_process_cli_request, tmpdir, log_level, requested_log_level):
+    log_stream = kms_redacting_logger_stream(log_level)
+    plaintext = tmpdir.join('plaintext')
+    plaintext.write('some data')
+    message = 'THIS IS A REASONABLY UNIQUE ERROR MESSAGE #&*Y(HJFIWE'
+    patch_process_cli_request.side_effect = Exception(message)
+
+    test = aws_encryption_sdk_cli.cli(shlex.split(
+        '-Sd -i ' + str(plaintext) + ' -o ' + str(tmpdir.join('ciphertext')) + ' ' + requested_log_level
+    ))
+
+    all_logs = log_stream.getvalue()
+    assert test.startswith('Encountered unexpected ')
+    if log_level <= logging.DEBUG:
+        assert 'Traceback' in all_logs
+        assert message in all_logs
+    else:
+        assert 'Traceback' not in all_logs
+        assert message not in all_logs
