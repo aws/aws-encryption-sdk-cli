@@ -16,6 +16,7 @@ import copy
 import glob
 import logging
 import os
+import traceback
 from typing import List, Optional, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
@@ -270,5 +271,8 @@ def cli(raw_args=None):
         return error.args[0]
     except Exception as error:  # pylint: disable=broad-except
         message = 'Encountered unexpected {}: increase verbosity to see details'.format(error.__class__.__name__)
-        _LOGGER.exception(message)
+        _LOGGER.debug(message)
+        # copy.deepcopy can't handle raw exc_info objects, so format it first
+        formatted_traceback = traceback.format_exc()
+        _LOGGER.debug(formatted_traceback)
         return message
