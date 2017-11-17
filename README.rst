@@ -168,19 +168,19 @@ Parameters may be provided using `Parameter Values`_.
 
 Required parameters:
 
-* **provider** *(default: aws-kms)* : Indicator of the master key provider to use.
+* **provider** *(default: aws-encryption-sdk-cli::aws-kms)* : Indicator of the master key
+  provider to use.
 
     * See `Advanced Configuration`_ for more information on using other master key providers.
 
-* **key** *(one required, many allowed)* : Identifier for a master key to be used. Must be an
-  identifier understood by the specified master key provider.
+* **key** *(at leastt one required, many allowed)* : Identifier for a master key to be used.
+  Must be an identifier understood by the specified master key provider.
 
-    * If using ``aws-kms`` to decrypt, it is not necessary to supply any key identifier.
+    * If using ``aws-kms`` to decrypt, you must *not* specify a key.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
-may provide an arguments post-processing function to modify these values before passing
-them to the master key provider. See `Advanced Configuration`_ for more information.
+must accept all arguments as prepared. See `Advanced Configuration`_ for more information.
 
 Multiple master keys can be defined using multiple instances of the ``key`` argument.
 
@@ -189,7 +189,7 @@ Multiple master key providers can be defined using multiple ``--master-keys`` gr
 If multiple master key providers are defined, the first one is treated as the primary.
 
 If multiple master keys are defined in the primary master key provider, the first one is treated
-as the primary. This master key is used to generate the data key.
+as the primary. The primary master key is used to generate the data key.
 
 The below logic is used to construct all master key providers. We use ``KMSMasterKeyProvider``
 as an example.
@@ -240,7 +240,7 @@ The logic for determining which region to use is shown in the pseudocode below:
       if region is specified:
          use region
       else if profile is specified and profile has a defined region:
-         use profile's region
+         use region defined in profile
       else:
          use system default region
 
@@ -286,8 +286,8 @@ accept the parameters prepared by the CLI as described in `Master Key Provider`_
 These entry points must be registered in the ``aws_encryption_sdk_cli.master_key_providers``
 group.
 
-If desired the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``,
-the CLI will present the raised error message to the user to indicate bad user input.
+If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``, the
+CLI will present the raised error message to the user to indicate bad user input.
 
 Data Key Caching
 ----------------
@@ -345,8 +345,11 @@ Configuration files are supported using Python's native `argparse file support`_
 you to write configuration files exactly as you would enter arguments in the shell. Configuration
 file references passed to ``aws-crypto`` are identified by the ``@`` prefix and the contents are
 expanded as if you had included them in line. Configuration files can have any name you desire.
-NOTE: in PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
-rather than interpretted by PowerShell.
+
+.. note::
+
+   In PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
+   rather than interpretted by PowerShell.
 
 For example, if I wanted to use a common master key configuration for all of my calls, I could
 create a file ``master-key.conf`` with contents detailing my master key configuration.
@@ -481,7 +484,7 @@ Execution
                            master keys. Each instance must include a master key
                            provider identifier and identifiers for one or more
                            master key supplied by that provider. ex: --master-
-                           keys provider=aws-kms key=$AWS_KMS_KEY_IDENTIFIER
+                           keys provider=aws-kms key=$AWS_KMS_KEY_ARN
      --caching CACHING [CACHING ...]
                            Configuration options for a caching cryptographic
                            materials manager and local cryptographic materials
