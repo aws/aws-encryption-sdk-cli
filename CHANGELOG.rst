@@ -30,7 +30,7 @@ New Features
   `#100 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/100>`_
 * Catch single-dash dummy argument catchers for long-form arguments
   `#5 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/5>`_
-* Optionally output ooperation metadata
+* Optionally output operation metadata
   `#65 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/65>`_
 * Optionally encryption context enforcement on decrypt
   `#69 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/69>`_
