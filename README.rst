@@ -37,8 +37,8 @@ Usage
 Input and Output
 ================
 
-For the most part, the behavior of ``aws-crypto`` in handling files is based on that of
-GNU CLIs such as ``cp``.  A qualifier to this is that when encrypting a file, if a
+For the most part, the behavior of ``aws-encryption-cli`` in handling files is based on that
+of GNU CLIs such as ``cp``.  A qualifier to this is that when encrypting a file, if a
 directory is provided as the destination, rather than creating the source filename
 in the destination directory, a suffix is appended to the destination filename. By
 default the suffix is ``.encrypted`` when encrypting and ``.decrypted`` when decrypting,
@@ -250,8 +250,8 @@ If you want to use a different master key provider, that provider must register 
 `setuptools entry point`_. You can find an example of registering this entry point in the
 ``setup.py`` for this package.
 
-When a provider name is specifed in a call to ``aws-crypto``, the appropriate entry point
-for that name is used.
+When a provider name is specifed in a call to ``aws-encryption-cli``, the appropriate entry
+point for that name is used.
 
 Handling Multiple Entry Points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -310,30 +310,30 @@ Logging and Verbosity
 The ``-v`` argument allows you to tune the verbosity of the built-in logging to your desired level.
 In short, the more ``-v`` arguments you supply, the more verbose the output gets.
 
-* unset : ``aws-crypto`` logs all warnings, all dependencies only log critical messages
-* ``-v`` :  ``aws-crypto`` performs moderate logging, all dependencies only log critical messages
-* ``-vv`` :  ``aws-crypto`` performs detailed logging, all dependencies only log critical messages
-* ``-vvv`` :  ``aws-crypto`` performs detailed logging, all dependencies perform moderate logging
-* ``-vvvv`` :  ``aws-crypto`` performs detailed logging, all dependencies perform detailed logging
+* unset : ``aws-encryption-cli`` logs all warnings, all dependencies only log critical messages
+* ``-v`` :  ``aws-encryption-cli`` performs moderate logging, all dependencies only log critical messages
+* ``-vv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies only log critical messages
+* ``-vvv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies perform moderate logging
+* ``-vvvv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies perform detailed logging
 
 .. table::
 
-   +---------------------------------------+
-   |       python logging levels           |
-   +===========+============+==============+
-   | verbosity | aws-crypto | dependencies |
-   | flag      |            |              |
-   +-----------+------------+--------------+
-   | unset     | WARNING    | CRITICAL     |
-   +-----------+------------+--------------+
-   | -v        | INFO       | CRITICAL     |
-   +-----------+------------+--------------+
-   | -vv       | DEBUG      | CRITICAL     |
-   +-----------+------------+--------------+
-   | -vvv      | DEBUG      | INFO         |
-   +-----------+------------+--------------+
-   | -vvvv     | DEBUG      | DEBUG        |
-   +-----------+------------+--------------+
+   +-----------------------------------------------+
+   |           python logging levels               |
+   +===========+====================+==============+
+   | verbosity | aws-encryption-cli | dependencies |
+   | flag      |                    |              |
+   +-----------+--------------------+--------------+
+   | unset     | WARNING            | CRITICAL     |
+   +-----------+--------------------+--------------+
+   | -v        | INFO               | CRITICAL     |
+   +-----------+--------------------+--------------+
+   | -vv       | DEBUG              | CRITICAL     |
+   +-----------+--------------------+--------------+
+   | -vvv      | DEBUG              | INFO         |
+   +-----------+--------------------+--------------+
+   | -vvvv     | DEBUG              | DEBUG        |
+   +-----------+--------------------+--------------+
 
 
 Configuration Files
@@ -343,12 +343,13 @@ file to define some or all of your desired behavior.
 
 Configuration files are supported using Python's native `argparse file support`_, which allows
 you to write configuration files exactly as you would enter arguments in the shell. Configuration
-file references passed to ``aws-crypto`` are identified by the ``@`` prefix and the contents are
-expanded as if you had included them in line. Configuration files can have any name you desire.
+file references passed to ``aws-encryption-cli`` are identified by the ``@`` prefix and the
+contents are expanded as if you had included them in line. Configuration files can have any
+name you desire.
 
 .. note::
 
-   In PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-crypto``
+   In PowerShell, you will need to escape the ``@`` symbol so that it is sent to ``aws-encryption-cli``
    rather than interpreted by PowerShell.
 
 For example, if I wanted to use a common master key configuration for all of my calls, I could
@@ -360,12 +361,12 @@ create a file ``master-key.conf`` with contents detailing my master key configur
 
    --master-key key=A_KEY key=ANOTHER_KEY
 
-Then, when calling ``aws-crypto``, I can specify the rest of my arguments and reference my new
-configuration file, and ``aws-crypto`` will use the composite configuration.
+Then, when calling ``aws-encryption-cli``, I can specify the rest of my arguments and reference
+my new configuration file, and ``aws-encryption-cli`` will use the composite configuration.
 
 .. code-block:: sh
 
-   aws-crypto -e -i $INPUT_FILE -o $OUTPUT_FILE @master-key.conf
+   aws-encryption-cli -e -i $INPUT_FILE -o $OUTPUT_FILE @master-key.conf
 
 
 To extend the example, if I wanted a common caching configuration for all of my calls, I could
@@ -380,13 +381,13 @@ and include both files in my call.
 
 .. code-block:: sh
 
-   aws-crypto -e -i $INPUT_FILE -o $OUTPUT_FILE @master-key.conf @caching.conf
+   aws-encryption-cli -e -i $INPUT_FILE -o $OUTPUT_FILE @master-key.conf @caching.conf
 
-Configuration files can be referenced anywhere in ``aws-crypto`` parameters.
+Configuration files can be referenced anywhere in ``aws-encryption-cli`` parameters.
 
 .. code-block:: sh
 
-   aws-crypto -e -i $INPUT_DIR -o $OUTPUT_DIR @master-key.conf @caching.conf --recursive
+   aws-encryption-cli -e -i $INPUT_DIR -o $OUTPUT_DIR @master-key.conf @caching.conf --recursive
 
 Configuration files can have many lines, include comments using ``#``, and include
 references to other configuration files.
@@ -404,12 +405,12 @@ references to other configuration files.
 
 .. code-block:: sh
 
-   aws-crypto @my-encrypt -i $INPUT -o $OUTPUT
+   aws-encryption-cli @my-encrypt -i $INPUT -o $OUTPUT
 
 
 Encoding
 --------
-By default, ``aws-crypto`` will always output raw binary data and expect raw binary data
+By default, ``aws-encryption-cli`` will always output raw binary data and expect raw binary data
 as input. However, there are some cases where you might not want this to be the case.
 
 Sometimes this might be for convenience:
@@ -445,7 +446,7 @@ Execution
 
 .. code-block:: sh
 
-   usage: aws-crypto [-h] [--version] [-e] [-d] [-S]
+   usage: aws-encryption-cli [-h] [--version] [-e] [-d] [-S]
                      [--metadata-output METADATA_OUTPUT] [--overwrite-metadata]
                      [-m MASTER_KEYS [MASTER_KEYS ...]]
                      [--caching CACHING [CACHING ...]] -i INPUT -o OUTPUT
@@ -522,7 +523,7 @@ Execution
                            length (for non-framed messages) (decryption only)
      --suffix [SUFFIX]     Custom suffix to use when target filename is not
                            specified (empty if specified but no value provided)
-     --interactive         Force aws-crypto to prompt you for verification before
+     --interactive         Force aws-encryption-cli to prompt you for verification before
                            overwriting existing files
      --no-overwrite        Never overwrite existing files
      -r, -R, --recursive   Allow operation on directories as input

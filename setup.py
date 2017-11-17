@@ -64,7 +64,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'aws-crypto=aws_encryption_sdk_cli:cli'
+            'aws-encryption-cli=aws_encryption_sdk_cli:cli'
         ],
         'aws_encryption_sdk_cli.master_key_providers':
             'aws-kms=aws_encryption_sdk_cli.key_providers:aws_kms_master_key_provider'
