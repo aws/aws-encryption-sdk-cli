@@ -30,6 +30,7 @@ from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable
     MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
 )
 
+__all__ = ('parse_args',)
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 

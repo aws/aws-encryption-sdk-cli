@@ -27,6 +27,7 @@ from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable
     CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
 )
 
+__all__ = ('build_crypto_materials_manager_from_args',)
 _LOGGER = logging.getLogger(LOGGER_NAME)
 _ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
 

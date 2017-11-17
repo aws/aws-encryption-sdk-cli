@@ -32,8 +32,8 @@ from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_mate
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
 from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 
-_LOGGER = logging.getLogger(LOGGER_NAME)
 __all__ = ('cli', 'process_cli_request', 'stream_kwargs_from_args')
+_LOGGER = logging.getLogger(LOGGER_NAME)
 
 
 def _expand_sources(source):
