@@ -8,7 +8,7 @@ Public release
 
 Bugfixes
 --------
-* Handle qouting in config files
+* Handle quoting in config files
   `#35 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/35>`_
 * Allow empty custom suffix
   `#33 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/33>`_
