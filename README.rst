@@ -68,7 +68,7 @@ tree of the source directory is replicated in the target directory.
 Parameter Values
 ----------------
 Some arguments accept additional parameter values.  These values must be provided in the
-form of ``parameter=value`` as demonstrated below.
+form of ``key=value`` as demonstrated below.
 
 .. code-block:: sh
 
@@ -118,7 +118,7 @@ regardless of the values. ``key`` and ``key=value`` elements can be mixed.
 
    If encryption context requirements are not satisfied by the ciphertext message, the
    message will not be decrypted. One side effect of this is that if you chose to write
-   the plaintext output to a file and that file already existed, it will be deleted when
+   the plaintext output to a file and that file already exists, it will be deleted when
    we stop the decryption.
 
 Output Metadata
@@ -148,7 +148,7 @@ The metadata JSON contains the following fields:
 * ``"header_auth"`` : JSON representation of `message header authentication data`_ (only on decrypt)
 
 Skipped Files
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 If encryption context checks fail when attempting to decrypt a file, the metadata contains
 additional fields:
 
@@ -156,7 +156,7 @@ additional fields:
 * ``reason`` : ``"Missing encryption context key or value"``
 * ``missing_encryption_context_keys`` : List of required encryption context keys that were
   missing from the message.
-* ``missing_encryption_context_pairs`` : List of required encryption context key/value pairs
+* ``missing_encryption_context_pairs`` : List of required encryption context key-value pairs
   missing from the message.
 
 
