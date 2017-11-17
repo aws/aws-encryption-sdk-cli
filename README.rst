@@ -181,13 +181,12 @@ as the primary. This master key is used to generate the data key.
 .. code-block:: python
 
    # With parameters:
-   --master-keys provider=aws-kms key=$KEY_ARN_1 key=$KEY_ARN_2
+   --master-keys provider=aws-kms key=$KEY_1 key=$KEY_2
 
    # KMSMasterKeyProvider is called as:
    key_provider = KMSMasterKeyProvider()
-   key_provider.add_master_key($KEY_ARN_1)
-   key_provider.add_master_key($KEY_ARN_2)
-
+   key_provider.add_master_key($KEY_1)
+   key_provider.add_master_key($KEY_2)
 
 .. code-block:: sh
 
@@ -340,7 +339,7 @@ create a file ``master-key.conf`` with contents detailing my master key configur
 
 .. code-block:: sh
 
-   --master-key key=SOME_KEY_ARN key=ANOTHER_KEY_ARN
+   --master-key key=A_KEY key=ANOTHER_KEY
 
 Then, when calling ``aws-crypto``, I can specify the rest of my arguments and reference my new
 configuration file, and ``aws-crypto`` will use the composite configuration.
@@ -466,7 +465,7 @@ Execution
                            master keys. Each instance must include a master key
                            provider identifier and identifiers for one or more
                            master key supplied by that provider. ex: --master-
-                           keys provider=aws-kms key=$AWS_KMS_KEY_ARN
+                           keys provider=aws-kms key=$AWS_KMS_KEY_IDENTIFIER
      --caching CACHING [CACHING ...]
                            Configuration options for a caching cryptographic
                            materials manager and local cryptographic materials
