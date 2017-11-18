@@ -657,4 +657,4 @@ def test_line_contains_problematic_characters(arg_line):
     with pytest.raises(BadUserArgumentError) as excinfo:
         parser.convert_arg_line_to_args(arg_line)
 
-    excinfo.match(r'Config files containing character *')
+    excinfo.match(r'Config files containing characters *')

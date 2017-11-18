@@ -89,8 +89,8 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         problematic_characters = ['\'', '"']
         if not self.__is_posix and any([val in arg_line for val in problematic_characters]):
             raise BadUserArgumentError(
-                'Config files containing character "{}" are not currently supported:'
-                ' https://github.com/awslabs/aws-encryption-sdk-cli/issues/110'
+                'Config files containing characters {} are not currently supported:'
+                ' https://github.com/awslabs/aws-encryption-sdk-cli/issues/110'.format(repr(problematic_characters))
             )
         for arg in shlex.split(str(arg_line), posix=self.__is_posix):
             arg = arg.strip()
