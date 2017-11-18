@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pyl
 
 import aws_encryption_sdk
 
-from aws_encryption_sdk_cli.exceptions import ParameterParseError
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
 from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
@@ -86,6 +86,12 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         drops both full-line and in-line comments.
         """
         converted_line = []
+        problematic_characters = ['\'', '"']
+        if not self.__is_posix and any([val in arg_line for val in problematic_characters]):
+            raise BadUserArgumentError(
+                'Config files containing characters {} are not currently supported:'
+                ' https://github.com/awslabs/aws-encryption-sdk-cli/issues/110'.format(repr(problematic_characters))
+            )
         for arg in shlex.split(str(arg_line), posix=self.__is_posix):
             arg = arg.strip()
             if arg.startswith('#'):

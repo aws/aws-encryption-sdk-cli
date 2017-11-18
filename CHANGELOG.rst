@@ -6,6 +6,12 @@ Changelog
 =====
 Public release
 
+Known Issues
+------------
+* Single and double quote characters break config file parsing on Windows platforms
+  `#110 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/110>`_
+  `#111 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/111>`_
+
 Bugfixes
 --------
 * Handle quoting in config files

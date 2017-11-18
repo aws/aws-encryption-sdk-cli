@@ -21,7 +21,7 @@ import pytest
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk_cli
-from aws_encryption_sdk_cli.exceptions import ParameterParseError
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
 
 
@@ -644,3 +644,17 @@ def test_process_encryption_context_encrypt_required_key_fail():
             raw_encryption_context=['encryption=context', 'with=values', 'key_3'],
             raw_required_encryption_context_keys=['key_1', 'key_2']
         )
+
+
+@pytest.mark.parametrize('arg_line', (
+    'single-quote \' line',
+    'double-quote " line'
+))
+def test_line_contains_problematic_characters(arg_line):
+    parser = arg_parsing.CommentIgnoringArgumentParser()
+    parser._CommentIgnoringArgumentParser__is_posix = False
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        parser.convert_arg_line_to_args(arg_line)
+
+    excinfo.match(r'Config files containing characters *')
