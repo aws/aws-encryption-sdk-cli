@@ -15,7 +15,12 @@ import codecs
 import copy
 import json
 import logging
-from typing import cast, Dict, Sequence, Text, Union  # noqa pylint: disable=unused-import
+
+try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+    from typing import cast, Dict, Sequence, Text, Union  # noqa pylint: disable=unused-import
+except ImportError:
+    # We only actually need these imports when running the mypy checks
+    pass
 
 __all__ = ('setup_logger', 'LOGGER_NAME')
 LOGGING_LEVELS = {

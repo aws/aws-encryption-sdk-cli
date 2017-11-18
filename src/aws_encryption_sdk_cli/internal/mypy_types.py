@@ -11,36 +11,39 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Complex type constructions for use with mypy annotations."""
-import sys
-from typing import Dict, IO, List, Text, Union
+try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
+    import sys
+    from typing import Dict, IO, List, Text, Union
 
-from aws_encryption_sdk import Algorithm
-from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager
+    from aws_encryption_sdk import Algorithm
+    from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager
 
-__all__ = (
-    'STREAM_KWARGS',
-    'CACHING_CONFIG',
-    'RAW_MASTER_KEY_PROVIDER_CONFIG',
-    'MASTER_KEY_PROVIDER_CONFIG',
-    'RAW_CONFIG',
-    'PARSED_CONFIG',
-    'COLLAPSED_CONFIG',
-    'SOURCE',
-    'ARGPARSE_TEXT'
-)
+    __all__ = (
+        'STREAM_KWARGS',
+        'CACHING_CONFIG',
+        'RAW_MASTER_KEY_PROVIDER_CONFIG',
+        'MASTER_KEY_PROVIDER_CONFIG',
+        'RAW_CONFIG',
+        'PARSED_CONFIG',
+        'COLLAPSED_CONFIG',
+        'SOURCE',
+        'ARGPARSE_TEXT'
+    )
 
+    STREAM_KWARGS = Dict[str, Union[CryptoMaterialsManager, str, Dict[str, str], Algorithm, int]]
+    CACHING_CONFIG = Dict[str, Union[str, int, float]]
+    RAW_MASTER_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str], Union[str, List[str]]]]
+    MASTER_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str]]]
+    RAW_CONFIG = List[str]
+    PARSED_CONFIG = Dict[str, List[str]]
+    COLLAPSED_CONFIG = Dict[str, str]
+    SOURCE = Union[Text, str, bytes, IO]
 
-STREAM_KWARGS = Dict[str, Union[CryptoMaterialsManager, str, Dict[str, str], Algorithm, int]]
-CACHING_CONFIG = Dict[str, Union[str, int, float]]
-RAW_MASTER_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str], Union[str, List[str]]]]
-MASTER_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str]]]
-RAW_CONFIG = List[str]
-PARSED_CONFIG = Dict[str, List[str]]
-COLLAPSED_CONFIG = Dict[str, str]
-SOURCE = Union[Text, str, bytes, IO]
-
-# typeshed processing required to comply with argparse types
-if sys.version_info >= (3,):
-    ARGPARSE_TEXT = str  # pylint: disable=invalid-name
-else:
-    ARGPARSE_TEXT = Union[str, unicode]  # noqa: F821 # pylint: disable=undefined-variable
+    # typeshed processing required to comply with argparse types
+    if sys.version_info >= (3,):
+        ARGPARSE_TEXT = str  # pylint: disable=invalid-name
+    else:
+        ARGPARSE_TEXT = Union[str, unicode]  # noqa: F821 # pylint: disable=undefined-variable
+except ImportError:
+    # We only actually need these when running the mypy checks
+    pass

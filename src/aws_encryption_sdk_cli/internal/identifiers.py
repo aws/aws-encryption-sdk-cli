@@ -12,7 +12,12 @@
 # language governing permissions and limitations under the License.
 """Static identifier values for the AWS Encryption SDK CLI."""
 from enum import Enum
-from typing import Dict, Set  # noqa pylint: disable=unused-import
+
+try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+    from typing import Dict, Set  # noqa pylint: disable=unused-import
+except ImportError:
+    # We only actually need these imports when running the mypy checks
+    pass
 
 import aws_encryption_sdk
 
