@@ -341,6 +341,12 @@ Configuration Files
 As with any CLI where the configuration can get rather complex, you might want to use a configuration
 file to define some or all of your desired behavior.
 
+.. warning::
+
+   There is a `known issue with config file parsing in Windows`_. Including single or double quote
+   characters in a config file on Windows will fail until we fix this issue. Please let us know
+   if this impacts you in the linked GitHub issue.
+
 Configuration files are supported using Python's native `argparse file support`_, which allows
 you to write configuration files exactly as you would enter arguments in the shell. Configuration
 file references passed to ``aws-encryption-cli`` are identified by the ``@`` prefix and the
@@ -548,3 +554,4 @@ Execution
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 .. _you must not specify a key: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
+.. _known issue with config file parsing in Windows: https://github.com/awslabs/aws-encryption-sdk-cli/issues/110
