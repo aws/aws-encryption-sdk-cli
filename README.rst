@@ -18,11 +18,6 @@ Required Prerequisites
 * Python 2.7+ or 3.4+
 * aws-encryption-sdk >= 1.3.2
 
-.. warning::
-
-   Due to a `known issue with Python 3.5 prior to 3.5.2`_, imports will fail on Python 3.5.0
-   and 3.5.1. We are prioritizing fixing this problem.
-
 Installation
 ============
 
@@ -560,4 +555,3 @@ Execution
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 .. _you must not specify a key: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
 .. _known issue with config file parsing in Windows: https://github.com/awslabs/aws-encryption-sdk-cli/issues/110
-.. _known issue with Python 3.5 prior to 3.5.2: https://github.com/awslabs/aws-encryption-sdk-cli/issues/114
