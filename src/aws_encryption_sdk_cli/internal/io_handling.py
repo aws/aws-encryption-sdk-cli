@@ -17,7 +17,6 @@ import copy
 import logging
 import os
 import sys
-from typing import cast, Dict, IO, List, Type, Union  # noqa pylint: disable=unused-import
 
 import attr
 import aws_encryption_sdk
@@ -28,7 +27,13 @@ from aws_encryption_sdk_cli.internal.identifiers import OperationResult, OUTPUT_
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import json_ready_header, json_ready_header_auth
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
-from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
+
+try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+    from typing import cast, Dict, IO, List, Type, Union  # noqa pylint: disable=unused-import
+    from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
+except ImportError:
+    # We only actually need these imports when running the mypy checks
+    pass
 
 __all__ = ('IOHandler', 'output_filename')
 _LOGGER = logging.getLogger(LOGGER_NAME)

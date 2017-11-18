@@ -18,7 +18,6 @@ import logging
 import os
 import platform
 import shlex
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 
@@ -26,10 +25,16 @@ from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterPar
 from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
-from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
-    ARGPARSE_TEXT, CACHING_CONFIG, COLLAPSED_CONFIG,
-    MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
-)
+
+try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+    from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pylint: disable=unused-import
+    from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
+        ARGPARSE_TEXT, CACHING_CONFIG, COLLAPSED_CONFIG,
+        MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
+    )
+except ImportError:
+    # We only actually need these imports when running the mypy checks
+    pass
 
 __all__ = ('parse_args',)
 _LOGGER = logging.getLogger(LOGGER_NAME)

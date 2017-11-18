@@ -14,7 +14,6 @@
 from collections import defaultdict
 import copy
 import logging
-from typing import Callable, DefaultDict, Dict, List, Union  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
@@ -23,9 +22,15 @@ import pkg_resources
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import MASTER_KEY_PROVIDERS_ENTRY_POINT, PLUGIN_NAMESPACE_DIVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
-from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
-    CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
-)
+
+try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+    from typing import Callable, DefaultDict, Dict, List, Union  # noqa pylint: disable=unused-import
+    from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
+        CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
+    )
+except ImportError:
+    # We only actually need these imports when running the mypy checks
+    pass
 
 __all__ = ('build_crypto_materials_manager_from_args',)
 _LOGGER = logging.getLogger(LOGGER_NAME)
