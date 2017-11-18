@@ -11,6 +11,9 @@ Known Issues
 * Single and double quote characters break config file parsing on Windows platforms
   `#110 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/110>`_
   `#111 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/111>`_
+* typing imports fail on Python 3.5.0 and 3.5.1
+  `#114 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/114>`_
+  `#115 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/115>`_
 
 Bugfixes
 --------
