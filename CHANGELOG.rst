@@ -2,6 +2,14 @@
 Changelog
 *********
 
+1.1.1
+=====
+
+Bugfixes
+--------
+* Fixed import issue with Python 3.5.0 and 3.5.1
+  `#114 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/114>`_
+
 1.1.0
 =====
 Public release
