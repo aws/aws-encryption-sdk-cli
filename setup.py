@@ -35,6 +35,7 @@ setup(
     author='Amazon Web Services',
     author_email='aws-cryptools@amazon.com',
     maintainer='Amazon Web Services',
+    description='This command line tool can be used to encrypt and decrypt files and directories using the AWS Encryption SDK.',
     long_description=read('README.rst'),
     keywords='aws-encryption-sdk aws kms encryption cli command line',
     data_files=[
