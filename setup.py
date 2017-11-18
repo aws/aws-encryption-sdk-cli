@@ -40,7 +40,6 @@ setup(
     data_files=[
         'README.rst',
         'CHANGELOG.rst',
-        'CONTRIBUTING.rst',
         'LICENSE',
         'requirements.txt'
     ],
