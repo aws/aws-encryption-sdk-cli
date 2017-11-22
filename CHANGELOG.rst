@@ -2,6 +2,14 @@
 Changelog
 *********
 
+1.1.2
+=====
+
+Bugfixes
+--------
+* Fixed permissions issue from installing metadata files
+  `#122 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/122>`_
+
 1.1.1
 =====
 

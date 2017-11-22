@@ -40,12 +40,6 @@ setup(
     ),
     long_description=read('README.rst'),
     keywords='aws-encryption-sdk aws kms encryption cli command line',
-    data_files=[
-        'README.rst',
-        'CHANGELOG.rst',
-        'LICENSE',
-        'requirements.txt'
-    ],
     license='Apache License 2.0',
     install_requires=get_requirements(),
     classifiers=[
