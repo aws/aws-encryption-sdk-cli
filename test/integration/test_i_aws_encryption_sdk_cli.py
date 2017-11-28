@@ -73,6 +73,28 @@ def test_encrypt_with_metadata_output_write_to_file(tmpdir):
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+def test_encrypt_with_metdata_full_file_path(tmpdir):
+    plaintext = tmpdir.join('source_plaintext')
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join('ciphertext')
+    metadata = tmpdir.join('metadata')
+
+    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+        source='source_plaintext',
+        target='ciphertext',
+        metadata='--metadata-output ' + str(metadata)
+    )
+
+    with tmpdir.as_cwd():
+        aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+
+    raw_metadata = metadata.read()
+    output_metadata = json.loads(raw_metadata)
+    assert output_metadata['input'] == str(plaintext)
+    assert output_metadata['output'] == str(ciphertext)
+
+
+@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))

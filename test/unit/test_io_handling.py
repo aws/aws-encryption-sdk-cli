@@ -325,19 +325,22 @@ def test_process_single_operation_stdin_stdout(
 
 
 def test_process_single_operation_file(
+        tmpdir,
         patch_for_process_single_operation,
         patch_should_write_file,
         standard_handler
 ):
-    with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
-        standard_handler.process_single_operation(
-            stream_args=sentinel.stream_args,
-            source=sentinel.source,
-            destination=sentinel.destination_file
-        )
-    io_handling._ensure_dir_exists.assert_called_once_with(sentinel.destination_file)
-    patch_should_write_file.assert_called_once_with(sentinel.destination_file)
-    mock_open.assert_called_once_with(sentinel.destination_file, 'wb')
+    destination = tmpdir.join('destination')
+    with tmpdir.as_cwd():
+        with patch('aws_encryption_sdk_cli.internal.io_handling.open', create=True) as mock_open:
+            standard_handler.process_single_operation(
+                stream_args=sentinel.stream_args,
+                source=sentinel.source,
+                destination='destination'
+            )
+    io_handling._ensure_dir_exists.assert_called_once_with('destination')
+    patch_should_write_file.assert_called_once_with('destination')
+    mock_open.assert_called_once_with(str(destination), 'wb')
     io_handling.IOHandler._single_io_write.assert_called_once_with(
         stream_args=sentinel.stream_args,
         source=sentinel.source,

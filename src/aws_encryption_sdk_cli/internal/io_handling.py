@@ -254,7 +254,7 @@ class IOHandler(object):
             if not self._should_write_file(destination):
                 return OperationResult.SKIPPED
             _ensure_dir_exists(destination)
-            destination_writer = open(destination, 'wb')
+            destination_writer = open(os.path.abspath(destination), 'wb')
 
         if source == '-':
             source = _stdin()
@@ -329,7 +329,7 @@ class IOHandler(object):
             _stream_args['source_length'] = source_file_size
 
         try:
-            with open(source, 'rb') as source_reader:
+            with open(os.path.abspath(source), 'rb') as source_reader:
                 operation_result = self.process_single_operation(
                     stream_args=_stream_args,
                     source=source_reader,
