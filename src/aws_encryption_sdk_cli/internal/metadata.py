@@ -24,7 +24,7 @@ from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=
 from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication  # noqa pylint: disable=unused-import
 import six
 
-try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Any, Dict, IO, Optional, Text  # noqa pylint: disable=unused-import
 except ImportError:
     # We only actually need these imports when running the mypy checks

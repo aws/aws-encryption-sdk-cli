@@ -13,7 +13,7 @@
 """Static identifier values for the AWS Encryption SDK CLI."""
 from enum import Enum
 
-try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Dict, Set  # noqa pylint: disable=unused-import
 except ImportError:
     # We only actually need these imports when running the mypy checks

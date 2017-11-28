@@ -31,7 +31,7 @@ from aws_encryption_sdk_cli.internal.master_key_parsing import build_crypto_mate
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pylint: disable=unused-import
 
 
-try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import List, Optional, Union  # noqa pylint: disable=unused-import
     from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 except ImportError:

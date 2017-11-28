@@ -19,7 +19,7 @@ import botocore.session
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 
-try: # Python 3.5.0 and 3.5.1 have incompatible typing modules
+try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Dict, List, Text, Union  # noqa pylint: disable=unused-import
 except ImportError:
     # We only actually need these imports when running the mypy checks
