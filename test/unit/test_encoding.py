@@ -266,6 +266,18 @@ def test_base64io_decode_with_whitespace(plaintext_source, b64_plaintext_with_wh
     assert test == plaintext_source[:read_bytes]
 
 
+@pytest.mark.parametrize('plaintext_source, b64_plaintext_with_whitespace, read_bytes', (
+    (b'\x00\x00\x00', b'AAAA', 3),
+))
+def test_base64io_decode_parametrized_null_bytes(plaintext_source, b64_plaintext_with_whitespace, read_bytes):
+    # Verifies that pytest is handling null bytes correctly (broken in 3.3.0)
+    # https://github.com/pytest-dev/pytest/issues/2957
+    with Base64IO(io.BytesIO(b64_plaintext_with_whitespace)) as decoder:
+        test = decoder.read(read_bytes)
+
+    assert test == plaintext_source[:read_bytes]
+
+
 def test_base64io_decode_read_only_from_buffer():
     plaintext_source = b'12345'
     plaintext_b64 = io.BytesIO(base64.b64encode(plaintext_source))
