@@ -14,6 +14,7 @@
 import base64
 import io
 import os
+import platform
 import sys
 
 from mock import MagicMock, patch, sentinel
@@ -24,6 +25,10 @@ import six
 from aws_encryption_sdk_cli.internal import identifiers, io_handling, metadata
 
 DATA = b'aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98'
+
+
+def _is_windows():
+    return any(platform.win32_ver())
 
 
 @pytest.yield_fixture
@@ -499,6 +504,7 @@ def test_process_single_file_source_is_destination(tmpdir, patch_process_single_
     assert not patch_process_single_operation.called
 
 
+@pytest.mark.skipif(_is_windows(), reason='Skipping symlink test on Windows')
 def test_process_single_file_destination_is_symlink_to_source(
         tmpdir,
         patch_process_single_operation,

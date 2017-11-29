@@ -13,6 +13,7 @@
 """Unit test suite for ``aws_encryption_sdk_cli``."""
 import logging
 import os
+import platform
 import shlex
 
 import aws_encryption_sdk
@@ -24,6 +25,10 @@ import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.logging_utils import _KMSKeyRedactingFormatter, FORMAT_STRING
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
+
+
+def _is_windows():
+    return any(platform.win32_ver())
 
 
 @pytest.fixture
@@ -71,16 +76,25 @@ def build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_fi
     else:
         real = tmpdir.mkdir('real')
     link = tmpdir.join('link')
+
+    if not (source_is_symlink or dest_is_symlink):
+        return str(real), str(real)
+
     os.symlink(str(real), str(link))
 
     if source_is_symlink:
         return str(link), str(real)
     elif dest_is_symlink:
         return str(real), str(link)
-    return str(real), str(real)
 
 
 def build_same_file_and_dir_test_cases():
+    if _is_windows():
+        return [
+            (False, False, True),
+            (False, False, False)
+        ]
+
     test_cases = []
     for use_files in (True, False):
         test_cases.extend([
@@ -169,14 +183,22 @@ def test_catch_bad_metadata_file_requests_metadata_all_are_unique_files(tmpdir):
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
 
 
-@pytest.mark.parametrize('metadata_is_symlink, match_is_symlink, match', (
-    (False, False, 'source'),
-    (True, False, 'source'),
-    (False, True, 'source'),
-    (False, False, 'dest'),
-    (True, False, 'dest'),
-    (False, True, 'dest')
-))
+def build_bad_metadata_file_requests():
+    bad_requests = [
+        (False, False, 'source'),
+        (False, False, 'dest')
+    ]
+    if not _is_windows():
+        bad_requests.extend([
+            (True, False, 'source'),
+            (False, True, 'source'),
+            (True, False, 'dest'),
+            (False, True, 'dest')
+        ])
+    return bad_requests
+
+
+@pytest.mark.parametrize('metadata_is_symlink, match_is_symlink, match', build_bad_metadata_file_requests())
 def test_catch_bad_metadata_file_requests_metadata_is_source_or_dest(
         tmpdir,
         metadata_is_symlink,

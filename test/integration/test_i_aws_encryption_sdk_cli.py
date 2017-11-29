@@ -16,6 +16,7 @@ from distutils.spawn import find_executable  # distutils confuses pylint: disabl
 import filecmp
 import json
 import os
+import platform
 import shlex
 import shutil
 from subprocess import PIPE, Popen
@@ -46,6 +47,10 @@ def _aws_encryption_cli_is_findable():
         UserWarning('aws-encryption-cli executable could not be found')
         return False
     return True
+
+
+def _is_windows():
+    return any(platform.win32_ver())
 
 
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
@@ -243,6 +248,7 @@ def test_file_to_file_cycle(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
+@pytest.mark.skipif(_is_windows(), reason='Skipping symlink test on Windows')
 @pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_file_to_file_cycle_target_through_symlink(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
