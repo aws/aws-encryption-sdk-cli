@@ -23,8 +23,7 @@ from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import metadata
 
 GOOD_INIT_KWARGS = dict(
-    suppress_output=False,
-    output_mode='w'
+    suppress_output=False
 )
 
 
@@ -38,7 +37,7 @@ def test_attrs_good(init_kwargs, call_kwargs):
 
 
 @pytest.mark.parametrize('init_kwargs_patch, error_type', (
-    (dict(suppress_output='not a bool'), TypeError),
+    (dict(suppress_output=None), TypeError),
 ))
 def test_attrs_fail(init_kwargs_patch, error_type):
     """Verifying that validators are applied because we overwrite attrs init."""
@@ -65,10 +64,10 @@ def test_custom_fail(init_kwargs, call_kwargs, error_type, error_message):
 
 
 @pytest.mark.parametrize('filename, force_overwrite, expected_mode', (
-    ('a_file', False, 'a'),
+    ('a_file', False, 'ab'),
     ('-', False, 'w'),
-    ('a_file', True, 'w'),
-    ('-', True, 'w')
+    ('a_file', True, 'wb'),
+    ('-', True, 'wb')
 ))
 def test_write_metadata_default_output_modes(filename, force_overwrite, expected_mode):
     test = metadata.MetadataWriter(suppress_output=False)(filename)
@@ -141,7 +140,7 @@ def test_append_metadata_file(tmpdir):
         'for': 'this metadata'
     }
     output_file = tmpdir.join('metadata')
-    output_file.write(initial_data + os.linesep)
+    output_file.write_binary((initial_data + os.linesep).encode('utf-8'))
 
     with metadata.MetadataWriter(suppress_output=False)(str(output_file)) as writer:
         writer.write_metadata(**my_metadata)
@@ -184,12 +183,12 @@ def test_overwrite_metdata_file_multiuse(tmpdir):
     long_lived_writer = metadata.MetadataWriter(suppress_output=False)(str(output_file))
     long_lived_writer.force_overwrite()
 
-    assert long_lived_writer._output_mode == 'w'
+    assert long_lived_writer._output_mode == 'wb'
 
     with long_lived_writer as writer:
         writer.write_metadata(**my_metadata)
 
-    assert long_lived_writer._output_mode == 'a'
+    assert long_lived_writer._output_mode == 'ab'
 
     with long_lived_writer as writer:
         writer.write_metadata(**my_metadata)
