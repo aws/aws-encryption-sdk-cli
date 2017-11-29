@@ -83,7 +83,7 @@ class MetadataWriter(object):
         if not os.path.isdir(os.path.dirname(os.path.realpath(self.output_file))):
             raise BadUserArgumentError('Parent directory for requested metdata file does not exist.')
 
-        self._output_mode = 'a'
+        self._output_mode = 'ab'
         self.output_file = os.path.abspath(self.output_file)
 
         attr.validate(self)
@@ -93,7 +93,7 @@ class MetadataWriter(object):
     def force_overwrite(self):
         # type: () -> None
         """Force the output to overwrite the target metadata file."""
-        self._output_mode = 'w'
+        self._output_mode = 'wb'
 
     def open(self):
         # type: () -> None
@@ -121,7 +121,7 @@ class MetadataWriter(object):
         # Since we re-use each instance of this in a single call, we only want to overwrite
         # the first time if we are overwriting.
         if self.output_file != '-':
-            self._output_mode = 'a'
+            self._output_mode = 'ab'
 
     def __exit__(self, exc_type, exc_value, traceback):
         # type: (type, BaseException, TracebackType) -> None
@@ -137,8 +137,10 @@ class MetadataWriter(object):
         if self.suppress_output:
             return 0  # wrote 0 bytes
 
-        metadata_line = json.dumps(metadata, sort_keys=True)
-        return self._output_stream.write(metadata_line + os.linesep)
+        metadata_line = json.dumps(metadata, sort_keys=True) + os.linesep
+        if 'b' in self._output_mode:
+            metadata_line = metadata_line.encode('utf-8')
+        return self._output_stream.write(metadata_line)
 
 
 def unicode_b64_encode(value):
