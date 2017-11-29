@@ -25,7 +25,7 @@ from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication  
 import six
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
-    from typing import Any, Dict, IO, Optional, Text  # noqa pylint: disable=unused-import
+    from typing import Any, Dict, IO, Optional, Text, Union  # noqa pylint: disable=unused-import
 except ImportError:
     # We only actually need these imports when running the mypy checks
     pass
@@ -138,9 +138,12 @@ class MetadataWriter(object):
             return 0  # wrote 0 bytes
 
         metadata_line = json.dumps(metadata, sort_keys=True) + os.linesep
+        metadata_output = ''  # type: Union[str, bytes]
         if 'b' in self._output_mode:
-            metadata_line = metadata_line.encode('utf-8')
-        return self._output_stream.write(metadata_line)
+            metadata_output = metadata_line.encode('utf-8')
+        else:
+            metadata_output = metadata_line
+        return self._output_stream.write(metadata_output)
 
 
 def unicode_b64_encode(value):
