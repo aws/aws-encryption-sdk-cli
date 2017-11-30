@@ -44,6 +44,6 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
         ARGPARSE_TEXT = str  # pylint: disable=invalid-name
     else:
         ARGPARSE_TEXT = Union[str, unicode]  # noqa: F821 # pylint: disable=undefined-variable
-except ImportError:
+except ImportError:  # pragma: no cover
     # We only actually need these when running the mypy checks
     pass

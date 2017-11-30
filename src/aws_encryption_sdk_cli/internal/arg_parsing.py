@@ -32,7 +32,7 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
         ARGPARSE_TEXT, CACHING_CONFIG, COLLAPSED_CONFIG,
         MASTER_KEY_PROVIDER_CONFIG, PARSED_CONFIG, RAW_CONFIG
     )
-except ImportError:
+except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
