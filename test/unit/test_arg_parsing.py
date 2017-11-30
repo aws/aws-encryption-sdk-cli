@@ -24,6 +24,8 @@ import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
+
 
 @pytest.fixture
 def patch_platform_win32_ver(mocker):
@@ -126,6 +128,7 @@ def test_comment_ignoring_argument_parser_convert_filename(patch_platform_win32_
     assert expected_transform[1] == parsed_line
 
 
+@pytest.mark.functional
 def test_f_comment_ignoring_argument_parser_convert_filename():
     # Actually checks against the current local system
     parser = arg_parsing.CommentIgnoringArgumentParser()

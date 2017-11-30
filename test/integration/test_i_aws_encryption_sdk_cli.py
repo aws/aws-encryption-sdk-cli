@@ -24,12 +24,12 @@ import pytest
 import aws_encryption_sdk_cli
 from .integration_test_utils import (
     aws_encryption_cli_is_findable, decrypt_args_template,
-    encrypt_args_template, is_windows, SKIP_MESSAGE, skip_tests,
-    WINDOWS_SKIP_MESSAGE
+    encrypt_args_template, is_windows, WINDOWS_SKIP_MESSAGE
 )
 
+pytestmark = pytest.mark.integ
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
+
 def test_encrypt_with_metadata_output_write_to_file(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
@@ -53,7 +53,6 @@ def test_encrypt_with_metadata_output_write_to_file(tmpdir):
     assert output_metadata['output'] == str(ciphertext)
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_encrypt_with_metadata_full_file_path(tmpdir):
     plaintext_filename = 'source_plaintext'
     plaintext_file = tmpdir.join(plaintext_filename)
@@ -79,7 +78,6 @@ def test_encrypt_with_metadata_full_file_path(tmpdir):
     assert output_metadata['output'] == ciphertext_file_full_path
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
@@ -102,7 +100,6 @@ def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     assert output_metadata['output'] == str(ciphertext)
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_cycle_with_metadata_output_append(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
@@ -139,7 +136,6 @@ def test_cycle_with_metadata_output_append(tmpdir):
     assert 'header_auth' in output_metadata[1]
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('required_encryption_context', (
     'a',
     'c',
@@ -172,7 +168,6 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, requir
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
 def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
     plaintext = tmpdir.join('source_plaintext')
@@ -201,7 +196,6 @@ def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_
     assert parsed_metadata['reason'] == 'Missing encryption context key or value'
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
@@ -225,7 +219,6 @@ def test_file_to_file_cycle(tmpdir):
 
 
 @pytest.mark.skipif(is_windows(), reason=WINDOWS_SKIP_MESSAGE)
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle_target_through_symlink(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     output_dir = tmpdir.mkdir('output')
@@ -250,7 +243,6 @@ def test_file_to_file_cycle_target_through_symlink(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('encode, decode', (
     (True, False),
     (False, True),
@@ -298,7 +290,6 @@ def test_file_to_file_base64(tmpdir, encode, decode):
     assert decrypted_plaintext == plaintext_source
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle_with_caching(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
@@ -321,7 +312,6 @@ def test_file_to_file_cycle_with_caching(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_overwrite_source_file_to_file_custom_empty_prefix(tmpdir):
     plaintext_source = os.urandom(2014)
     plaintext = tmpdir.join('source_plaintext')
@@ -341,7 +331,6 @@ def test_file_overwrite_source_file_to_file_custom_empty_prefix(tmpdir):
         assert f.read() == plaintext_source
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_overwrite_source_dir_to_dir_custom_empty_prefix(tmpdir):
     plaintext_source = os.urandom(2014)
     plaintext = tmpdir.join('source_plaintext')
@@ -361,7 +350,6 @@ def test_file_overwrite_source_dir_to_dir_custom_empty_prefix(tmpdir):
         assert f.read() == plaintext_source
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
     plaintext_source = os.urandom(2014)
     plaintext = tmpdir.join('source_plaintext')
@@ -381,7 +369,6 @@ def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
         assert f.read() == plaintext_source
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_dir_cycle(tmpdir):
     inner_dir = tmpdir.mkdir('inner')
     plaintext = tmpdir.join('source_plaintext')
@@ -407,7 +394,6 @@ def test_file_to_dir_cycle(tmpdir):
 
 
 @pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_stdin_to_file_to_stdout_cycle(tmpdir):
     ciphertext_file = tmpdir.join('ciphertext')
     plaintext = os.urandom(1024)
@@ -431,7 +417,6 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
 
 
 @pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_stdin_stdout_stdin_stdout_cycle():
     plaintext = os.urandom(1024)
 
@@ -452,7 +437,6 @@ def test_stdin_stdout_stdin_stdout_cycle():
 
 
 @pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
 def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
     plaintext = tmpdir.join('source_plaintext')
@@ -487,7 +471,6 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
     assert parsed_metadata['reason'] == 'Missing encryption context key or value'
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_dir_to_dir_cycle(tmpdir):
     plaintext_dir = tmpdir.mkdir('plaintext')
     ciphertext_dir = tmpdir.mkdir('ciphertext')
@@ -520,7 +503,6 @@ def test_dir_to_dir_cycle(tmpdir):
             assert filecmp.cmp(plaintext_filename, decrypted_filename)
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_dir_to_dir_cycle_custom_suffix(tmpdir):
     plaintext_dir = tmpdir.mkdir('plaintext')
     ciphertext_dir = tmpdir.mkdir('ciphertext')
@@ -555,7 +537,6 @@ def test_dir_to_dir_cycle_custom_suffix(tmpdir):
             assert filecmp.cmp(plaintext_filename, decrypted_filename)
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_glob_to_dir_cycle(tmpdir):
     plaintext_dir = tmpdir.mkdir('plaintext')
     ciphertext_dir = tmpdir.mkdir('ciphertext')

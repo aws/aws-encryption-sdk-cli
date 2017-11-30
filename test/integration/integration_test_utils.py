@@ -21,24 +21,12 @@ import six
 
 from aws_encryption_sdk_cli.internal import logging_utils
 
-SKIP_MESSAGE = (
-    'Required environment variables not found. Skipping integration tests.'
-    ' See integration tests README.rst for more information.'
-)
 WINDOWS_SKIP_MESSAGE = 'Skipping test on Windows'
-TEST_CONTROL = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_CONTROL'
 AWS_KMS_KEY_ID = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID'
 
 
 def is_windows():
     return any(platform.win32_ver())
-
-
-def skip_tests():
-    """Only run tests if both required environment variables are found."""
-    test_control = os.environ.get(TEST_CONTROL, None)
-    key_id = os.environ.get(AWS_KMS_KEY_ID, None)
-    return not (test_control == 'RUN' and key_id is not None)
 
 
 def aws_encryption_cli_is_findable():

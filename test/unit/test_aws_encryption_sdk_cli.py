@@ -26,6 +26,8 @@ from aws_encryption_sdk_cli.internal.logging_utils import _KMSKeyRedactingFormat
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 from .unit_test_utils import is_windows
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
+
 
 @pytest.fixture
 def patch_process_cli_request(mocker):
