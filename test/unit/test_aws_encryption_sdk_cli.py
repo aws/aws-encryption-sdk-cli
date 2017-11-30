@@ -13,7 +13,6 @@
 """Unit test suite for ``aws_encryption_sdk_cli``."""
 import logging
 import os
-import platform
 import shlex
 
 import aws_encryption_sdk
@@ -25,10 +24,7 @@ import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.logging_utils import _KMSKeyRedactingFormatter, FORMAT_STRING
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
-
-
-def _is_windows():
-    return any(platform.win32_ver())
+from .unit_test_utils import is_windows
 
 
 @pytest.fixture
@@ -89,7 +85,7 @@ def build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_fi
 
 
 def build_same_file_and_dir_test_cases():
-    if _is_windows():
+    if is_windows():
         return [
             (False, False, True),
             (False, False, False)
@@ -188,7 +184,7 @@ def build_bad_metadata_file_requests():
         (False, False, 'source'),
         (False, False, 'dest')
     ]
-    if not _is_windows():
+    if not is_windows():
         bad_requests.extend([
             (True, False, 'source'),
             (False, True, 'source'),

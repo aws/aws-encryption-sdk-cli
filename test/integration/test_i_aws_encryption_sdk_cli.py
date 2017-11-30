@@ -15,7 +15,6 @@ import base64
 import filecmp
 import json
 import os
-import platform
 import shlex
 import shutil
 from subprocess import PIPE, Popen
@@ -25,7 +24,8 @@ import pytest
 import aws_encryption_sdk_cli
 from .integration_test_utils import (
     aws_encryption_cli_is_findable, decrypt_args_template,
-    encrypt_args_template, is_windows, SKIP_MESSAGE, skip_tests
+    encrypt_args_template, is_windows, SKIP_MESSAGE, skip_tests,
+    WINDOWS_SKIP_MESSAGE
 )
 
 
@@ -224,7 +224,7 @@ def test_file_to_file_cycle(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(is_windows(), reason='Skipping symlink test on Windows')
+@pytest.mark.skipif(is_windows(), reason=WINDOWS_SKIP_MESSAGE)
 @pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle_target_through_symlink(tmpdir):
     plaintext = tmpdir.join('source_plaintext')

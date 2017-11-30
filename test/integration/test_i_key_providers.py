@@ -18,8 +18,8 @@ import pytest
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
-from .integration_test_utils import kms_redacting_logger_stream  # noqa pylint: disable=unused-import
 from .integration_test_utils import encrypt_args_template, SKIP_MESSAGE, skip_tests
+from .integration_test_utils import kms_redacting_logger_stream  # noqa pylint: disable=unused-import
 
 
 @pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)

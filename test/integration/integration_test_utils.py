@@ -10,8 +10,7 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Utility functions to handle configuration, credentials setup, and test skip
-decision making for integration tests."""
+"""Utility functions to handle configuration, credentials setup, and test skip decision making for integration tests."""
 from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import logging
 import os
@@ -26,6 +25,7 @@ SKIP_MESSAGE = (
     'Required environment variables not found. Skipping integration tests.'
     ' See integration tests README.rst for more information.'
 )
+WINDOWS_SKIP_MESSAGE = 'Skipping test on Windows'
 TEST_CONTROL = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_CONTROL'
 AWS_KMS_KEY_ID = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID'
 
@@ -67,11 +67,12 @@ def encrypt_args_template(metadata=False, caching=False):
 
 
 def decrypt_args_template(metadata=False):
-    base = '-d -i {source} -o {target}'
+    template = '-d -i {source} -o {target}'
     if metadata:
-        return base + ' {metadata}'
+        template += ' {metadata}'
     else:
-        return base + ' -S'
+        template += ' -S'
+    return template
 
 
 @pytest.fixture
