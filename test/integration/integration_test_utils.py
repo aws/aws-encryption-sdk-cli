@@ -40,7 +40,14 @@ def aws_encryption_cli_is_findable():
 @pytest.fixture
 def cmk_arn():
     """Retrieves the target CMK ARN from environment variable."""
-    return os.environ.get(AWS_KMS_KEY_ID)
+    arn = os.environ.get(AWS_KMS_KEY_ID, None)
+    if arn is None:
+        raise ValueError(
+            'Environment variable "{}" must be set to a valid KMS CMK ARN for integration tests to run'.format(
+                AWS_KMS_KEY_ID
+            )
+        )
+    return arn
 
 
 def encrypt_args_template(metadata=False, caching=False):
