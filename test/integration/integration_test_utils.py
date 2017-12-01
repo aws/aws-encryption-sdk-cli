@@ -52,7 +52,7 @@ def cmk_arn():
     raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
 
 
-def encrypt_args_template(metadata=False, caching=False):
+def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
     template = '-e -i {source} -o {target} --encryption-context a=b c=d -m key=' + cmk_arn()
     if metadata:
         template += ' {metadata}'
@@ -60,15 +60,23 @@ def encrypt_args_template(metadata=False, caching=False):
         template += ' -S'
     if caching:
         template += ' --caching capacity=10 max_age=60.0'
+    if encode:
+        template += ' --encode'
+    if decode:
+        template += ' --decode'
     return template
 
 
-def decrypt_args_template(metadata=False):
+def decrypt_args_template(metadata=False, encode=False, decode=False):
     template = '-d -i {source} -o {target}'
     if metadata:
         template += ' {metadata}'
     else:
         template += ' -S'
+    if encode:
+        template += ' --encode'
+    if decode:
+        template += ' --decode'
     return template
 
 

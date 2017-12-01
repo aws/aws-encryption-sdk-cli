@@ -398,42 +398,42 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
     ciphertext_file = tmpdir.join('ciphertext')
     plaintext = os.urandom(1024)
 
-    encrypt_args = 'aws-encryption-cli ' + encrypt_args_template().format(
+    encrypt_args = 'aws-encryption-cli ' + encrypt_args_template(decode=True).format(
         source='-',
         target=str(ciphertext_file)
     )
-    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template().format(
+    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template(encode=True).format(
         source=str(ciphertext_file),
         target='-'
     )
 
     proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    _stdout, _stderr = proc.communicate(input=plaintext)
+    _stdout, _stderr = proc.communicate(input=base64.b64encode(plaintext))
 
     proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate()
 
-    assert decrypted_stdout == plaintext
+    assert base64.b64decode(decrypted_stdout) == plaintext
 
 
 @pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
 def test_stdin_stdout_stdin_stdout_cycle():
     plaintext = os.urandom(1024)
 
-    encrypt_args = 'aws-encryption-cli ' + encrypt_args_template().format(
+    encrypt_args = 'aws-encryption-cli ' + encrypt_args_template(decode=True, encode=True).format(
         source='-',
         target='-'
     )
-    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template().format(
+    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template(decode=True, encode=True).format(
         source='-',
         target='-'
     )
     proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    ciphertext, _stderr = proc.communicate(input=plaintext)
+    ciphertext, _stderr = proc.communicate(input=base64.b64encode(plaintext))
     proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
 
-    assert decrypted_stdout == plaintext
+    assert base64.b64decode(decrypted_stdout) == plaintext
 
 
 @pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
