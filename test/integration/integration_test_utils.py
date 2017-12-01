@@ -21,24 +21,12 @@ import six
 
 from aws_encryption_sdk_cli.internal import logging_utils
 
-SKIP_MESSAGE = (
-    'Required environment variables not found. Skipping integration tests.'
-    ' See integration tests README.rst for more information.'
-)
 WINDOWS_SKIP_MESSAGE = 'Skipping test on Windows'
-TEST_CONTROL = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_CONTROL'
 AWS_KMS_KEY_ID = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID'
 
 
 def is_windows():
     return any(platform.win32_ver())
-
-
-def skip_tests():
-    """Only run tests if both required environment variables are found."""
-    test_control = os.environ.get(TEST_CONTROL, None)
-    key_id = os.environ.get(AWS_KMS_KEY_ID, None)
-    return not (test_control == 'RUN' and key_id is not None)
 
 
 def aws_encryption_cli_is_findable():
@@ -52,7 +40,16 @@ def aws_encryption_cli_is_findable():
 @pytest.fixture
 def cmk_arn():
     """Retrieves the target CMK ARN from environment variable."""
-    return os.environ.get(AWS_KMS_KEY_ID)
+    arn = os.environ.get(AWS_KMS_KEY_ID, None)
+    if arn is None:
+        raise ValueError(
+            'Environment variable "{}" must be set to a valid KMS CMK ARN for integration tests to run'.format(
+                AWS_KMS_KEY_ID
+            )
+        )
+    if arn.startswith('arn:') and ':alias/' not in arn:
+        return arn
+    raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
 
 
 def encrypt_args_template(metadata=False, caching=False):

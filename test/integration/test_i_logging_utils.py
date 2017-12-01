@@ -19,7 +19,8 @@ import pytest
 
 from aws_encryption_sdk_cli.internal import logging_utils
 from .integration_test_utils import cmk_arn, kms_redacting_logger_stream  # noqa pylint: disable=unused-import
-from .integration_test_utils import SKIP_MESSAGE, skip_tests
+
+pytestmark = pytest.mark.integ
 
 
 @pytest.fixture
@@ -28,7 +29,6 @@ def kms_client(cmk_arn):
     return boto3.client('kms', region_name=region)
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_kms_generate_data_key(kms_redacting_logger_stream, kms_client, cmk_arn):
     response = kms_client.generate_data_key(KeyId=cmk_arn, NumberOfBytes=32)
 
@@ -40,7 +40,6 @@ def test_kms_generate_data_key(kms_redacting_logger_stream, kms_client, cmk_arn)
     assert log_output.count(codecs.decode(base64.b64encode(response['CiphertextBlob']), 'utf-8')) == 1
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_kms_encrypt(kms_redacting_logger_stream, kms_client, cmk_arn):
     raw_plaintext = b'some secret data'
     response = kms_client.encrypt(KeyId=cmk_arn, Plaintext=raw_plaintext)
@@ -53,7 +52,6 @@ def test_kms_encrypt(kms_redacting_logger_stream, kms_client, cmk_arn):
     assert log_output.count(codecs.decode(base64.b64encode(response['CiphertextBlob']), 'utf-8')) == 1
 
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_kms_decrypt(kms_redacting_logger_stream, kms_client, cmk_arn):
     raw_plaintext = b'some secret data'
     encrypt_response = kms_client.encrypt(KeyId=cmk_arn, Plaintext=raw_plaintext)

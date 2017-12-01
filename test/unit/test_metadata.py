@@ -22,6 +22,7 @@ import pytest
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import metadata
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
 GOOD_INIT_KWARGS = dict(
     suppress_output=False
 )

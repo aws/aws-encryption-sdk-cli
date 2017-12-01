@@ -18,11 +18,12 @@ import pytest
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
-from .integration_test_utils import encrypt_args_template, SKIP_MESSAGE, skip_tests
+from .integration_test_utils import encrypt_args_template
 from .integration_test_utils import kms_redacting_logger_stream  # noqa pylint: disable=unused-import
 
+pytestmark = pytest.mark.integ
 
-@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
+
 def test_encrypt_verify_user_agent(tmpdir, kms_redacting_logger_stream):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))

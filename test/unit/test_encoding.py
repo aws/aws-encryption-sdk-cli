@@ -21,6 +21,8 @@ import pytest
 
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
+
 
 def test_base64io_bad_wrap():
     with pytest.raises(TypeError) as excinfo:

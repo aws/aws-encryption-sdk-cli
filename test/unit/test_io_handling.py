@@ -24,6 +24,7 @@ import six
 from aws_encryption_sdk_cli.internal import identifiers, io_handling, metadata
 from .unit_test_utils import is_windows, WINDOWS_SKIP_MESSAGE
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
 DATA = b'aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98'
 
 
@@ -366,6 +367,7 @@ def test_process_single_operation_file_should_not_write(
     assert not io_handling._stdout.called
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize('interactive, no_overwrite', (
     (False, False),
     (False, True),
