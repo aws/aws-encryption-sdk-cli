@@ -49,7 +49,11 @@ environment:
       TOXENV: "py36-integ"
 
 install:
-  - "%PYTHON%\\python.exe -m pip install wheel tox"
+  # Prepend newly installed Python to the PATH of this build
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  # Check the Python version to verify the correct version was installed
+  - "python --version"
+  - "python -m pip install wheel tox"
 
 build: off
 
