@@ -13,6 +13,9 @@ aws-encryption-sdk-cli
 .. image:: https://travis-ci.org/awslabs/aws-encryption-sdk-cli.svg?branch=master
    :target: https://travis-ci.org/awslabs/aws-encryption-sdk-cli
 
+.. image:: https://ci.appveyor.com/api/projects/status/awslabs/aws-encryption-sdk-cli/branch/master?svg=true
+   :target: https://ci.appveyor.com/api/projects/status/awslabs/aws-encryption-sdk-cli/branch/master?svg=true
+
 This command line tool can be used to encrypt and decrypt files and directories using the `AWS Encryption SDK`_.
 
 The latest full documentation can be found at `Read the Docs`_.
