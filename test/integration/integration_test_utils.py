@@ -47,9 +47,9 @@ def cmk_arn():
                 AWS_KMS_KEY_ID
             )
         )
-    if 'key' not in arn:
-        raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
-    return arn
+    if arn.startswith('arn:') and ':alias/' not in arn:
+        return arn
+    raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
 
 
 def encrypt_args_template(metadata=False, caching=False):
