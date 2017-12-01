@@ -42,7 +42,7 @@ def test_encrypt_with_metadata_output_write_to_file(tmpdir):
         metadata='--metadata-output ' + str(metadata)
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     raw_metadata = metadata.read()
     output_metadata = json.loads(raw_metadata)
@@ -70,7 +70,7 @@ def test_encrypt_with_metadata_full_file_path(tmpdir):
     )
 
     with tmpdir.as_cwd():
-        aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+        aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     raw_metadata = metadata.read()
     output_metadata = json.loads(raw_metadata)
@@ -89,7 +89,7 @@ def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
         metadata='--metadata-output -'
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     out, _err = capsys.readouterr()
     output_metadata = json.loads(out)
@@ -118,8 +118,8 @@ def test_cycle_with_metadata_output_append(tmpdir):
         metadata='--metadata-output ' + str(metadata)
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     output_metadata = [json.loads(line) for line in metadata.readlines()]
     for line in output_metadata:
@@ -162,8 +162,8 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, requir
         target=str(decrypted)
     ) + ' --encryption-context ' + required_encryption_context
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
@@ -186,8 +186,8 @@ def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_
         metadata=' --metadata-output ' + str(metadata_file)
     ) + ' --encryption-context ' + required_encryption_context
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert not decrypted.isfile()
     raw_metadata = metadata_file.read()
@@ -212,8 +212,8 @@ def test_file_to_file_cycle(tmpdir):
         target=str(decrypted)
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
@@ -237,8 +237,8 @@ def test_file_to_file_cycle_target_through_symlink(tmpdir):
         target=str(decrypted)
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
@@ -270,7 +270,7 @@ def test_file_to_file_base64(tmpdir, encode, decode):
         target=str(decrypted)
     ) + decrypt_flag
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     if encode and not decode:
         with open(str(ciphertext_a), 'rb') as ct_a, open(str(ciphertext_b), 'wb') as ct_b:
@@ -282,7 +282,7 @@ def test_file_to_file_base64(tmpdir, encode, decode):
     else:
         shutil.copy2(str(ciphertext_a), str(ciphertext_b))
 
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     with open(str(decrypted), 'rb') as f:
         decrypted_plaintext = f.read()
@@ -306,8 +306,8 @@ def test_file_to_file_cycle_with_caching(tmpdir):
         target=str(decrypted)
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
@@ -323,7 +323,7 @@ def test_file_overwrite_source_file_to_file_custom_empty_prefix(tmpdir):
         target=str(plaintext)
     ) + ' --suffix'
 
-    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     assert test_result == 'Destination and source cannot be the same'
 
@@ -342,7 +342,7 @@ def test_file_overwrite_source_dir_to_dir_custom_empty_prefix(tmpdir):
         target=str(tmpdir)
     ) + ' --suffix'
 
-    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     assert test_result == 'Destination and source cannot be the same'
 
@@ -361,7 +361,7 @@ def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
         target=str(tmpdir)
     ) + ' --suffix'
 
-    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    test_result = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
     assert test_result is None
 
@@ -386,9 +386,9 @@ def test_file_to_dir_cycle(tmpdir):
         target=str(decrypted)
     )
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
     assert os.path.isfile(str(ciphertext))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
@@ -407,10 +407,10 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
         target='-'
     )
 
-    proc = Popen(shlex.split(encrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     _stdout, _stderr = proc.communicate(input=plaintext)
 
-    proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate()
 
     assert decrypted_stdout == plaintext
@@ -428,9 +428,9 @@ def test_stdin_stdout_stdin_stdout_cycle():
         source='-',
         target='-'
     )
-    proc = Popen(shlex.split(encrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     ciphertext, _stderr = proc.communicate(input=plaintext)
-    proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
 
     assert decrypted_stdout == plaintext
@@ -454,8 +454,8 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
         metadata=' --metadata-output ' + str(metadata_file)
     ) + ' --encryption-context ' + required_encryption_context
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    proc = Popen(shlex.split(decrypt_args), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_output, stderr = proc.communicate()
 
     # Verify that no output was written
@@ -490,8 +490,8 @@ def test_dir_to_dir_cycle(tmpdir):
         target=str(decrypted_dir)
     ) + ' -r'
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     for base_dir, _dirs, filenames in os.walk(str(plaintext_dir)):
         for file in filenames:
@@ -524,8 +524,8 @@ def test_dir_to_dir_cycle_custom_suffix(tmpdir):
         target=str(decrypted_dir)
     ) + ' -r' + ' --suffix ' + decrypt_suffix
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     for base_dir, _dirs, filenames in os.walk(str(plaintext_dir)):
         for file in filenames:
@@ -556,8 +556,8 @@ def test_glob_to_dir_cycle(tmpdir):
         target=str(decrypted_dir)
     ) + ' -r'
 
-    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args))
-    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args))
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     for base_dir, _dirs, filenames in os.walk(str(plaintext_dir)):
         for file in filenames:
