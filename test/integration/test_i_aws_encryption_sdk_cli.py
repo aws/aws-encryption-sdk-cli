@@ -12,11 +12,9 @@
 # language governing permissions and limitations under the License.
 """Integration testing suite for AWS Encryption SDK CLI."""
 import base64
-from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import filecmp
 import json
 import os
-import platform
 import shlex
 import shutil
 from subprocess import PIPE, Popen
@@ -24,43 +22,21 @@ from subprocess import PIPE, Popen
 import pytest
 
 import aws_encryption_sdk_cli
-
-ENABLE_TESTS_FLAG = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_CONTROL'
-HERE = os.path.abspath(os.path.dirname(__file__))
-CONFIG_FILE_NAME = os.path.join(HERE, 'integration_tests.conf')
-ENCRYPT_ARGS_TEMPLATE_BASE = '-e -i {source} -o {target} --encryption-context a=b c=d @' + CONFIG_FILE_NAME
-ENCRYPT_ARGS_TEMPLATE = ENCRYPT_ARGS_TEMPLATE_BASE + ' -S'
-ENCRYPT_ARGS_TEMPLATE_WITH_METADATA = ENCRYPT_ARGS_TEMPLATE_BASE + ' {metadata}'
-DECRYPT_ARGS_TEMPLATE_BASE = '-d -i {source} -o {target}'
-DECRYPT_ARGS_TEMPLATE = DECRYPT_ARGS_TEMPLATE_BASE + ' -S'
-DECRYPT_ARGS_TEMPLATE_WITH_METADATA = DECRYPT_ARGS_TEMPLATE_BASE + ' {metadata}'
-CACHING_CONFIG = ' --caching capacity=10 max_age=60.0'
+from .integration_test_utils import (
+    aws_encryption_cli_is_findable, decrypt_args_template,
+    encrypt_args_template, is_windows, SKIP_MESSAGE, skip_tests,
+    WINDOWS_SKIP_MESSAGE
+)
 
 
-def _should_run_tests():
-    return os.environ.get(ENABLE_TESTS_FLAG, None) == 'RUN'
-
-
-def _aws_encryption_cli_is_findable():
-    path = find_executable('aws-encryption-cli')
-    if path is None:
-        UserWarning('aws-encryption-cli executable could not be found')
-        return False
-    return True
-
-
-def _is_windows():
-    return any(platform.win32_ver())
-
-
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_encrypt_with_metadata_output_write_to_file(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
     ciphertext = tmpdir.join('ciphertext')
     metadata = tmpdir.join('metadata')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    encrypt_args = encrypt_args_template(metadata=True).format(
         source=str(plaintext),
         target=str(ciphertext),
         metadata='--metadata-output ' + str(metadata)
@@ -77,7 +53,7 @@ def test_encrypt_with_metadata_output_write_to_file(tmpdir):
     assert output_metadata['output'] == str(ciphertext)
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_encrypt_with_metadata_full_file_path(tmpdir):
     plaintext_filename = 'source_plaintext'
     plaintext_file = tmpdir.join(plaintext_filename)
@@ -88,7 +64,7 @@ def test_encrypt_with_metadata_full_file_path(tmpdir):
     ciphertext_file_full_path = str(ciphertext_file)
     metadata = tmpdir.join('metadata')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    encrypt_args = encrypt_args_template(metadata=True).format(
         source=plaintext_filename,
         target=ciphertext_filename,
         metadata='--metadata-output ' + str(metadata)
@@ -103,13 +79,13 @@ def test_encrypt_with_metadata_full_file_path(tmpdir):
     assert output_metadata['output'] == ciphertext_file_full_path
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
     ciphertext = tmpdir.join('ciphertext')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    encrypt_args = encrypt_args_template(metadata=True).format(
         source=str(plaintext),
         target=str(ciphertext),
         metadata='--metadata-output -'
@@ -126,7 +102,7 @@ def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
     assert output_metadata['output'] == str(ciphertext)
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_cycle_with_metadata_output_append(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
@@ -134,12 +110,12 @@ def test_cycle_with_metadata_output_append(tmpdir):
     decrypted = tmpdir.join('decrypted')
     metadata = tmpdir.join('metadata')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    encrypt_args = encrypt_args_template(metadata=True).format(
         source=str(plaintext),
         target=str(ciphertext),
         metadata='--metadata-output ' + str(metadata)
     )
-    decrypt_args = DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    decrypt_args = decrypt_args_template(metadata=True).format(
         source=str(ciphertext),
         target=str(decrypted),
         metadata='--metadata-output ' + str(metadata)
@@ -163,7 +139,7 @@ def test_cycle_with_metadata_output_append(tmpdir):
     assert 'header_auth' in output_metadata[1]
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('required_encryption_context', (
     'a',
     'c',
@@ -181,11 +157,11 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, requir
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext)
     )
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext),
         target=str(decrypted)
     ) + ' --encryption-context ' + required_encryption_context
@@ -196,7 +172,7 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, requir
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
 def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
     plaintext = tmpdir.join('source_plaintext')
@@ -205,11 +181,11 @@ def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_
     metadata_file = tmpdir.join('metadata')
     decrypted = tmpdir.join('decrypted')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext)
     )
-    decrypt_args = DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    decrypt_args = decrypt_args_template(metadata=True).format(
         source=str(ciphertext),
         target=str(decrypted),
         metadata=' --metadata-output ' + str(metadata_file)
@@ -225,7 +201,7 @@ def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_
     assert parsed_metadata['reason'] == 'Missing encryption context key or value'
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
@@ -233,11 +209,11 @@ def test_file_to_file_cycle(tmpdir):
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext)
     )
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext),
         target=str(decrypted)
     )
@@ -248,8 +224,8 @@ def test_file_to_file_cycle(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(_is_windows(), reason='Skipping symlink test on Windows')
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(is_windows(), reason=WINDOWS_SKIP_MESSAGE)
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle_target_through_symlink(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     output_dir = tmpdir.mkdir('output')
@@ -259,11 +235,11 @@ def test_file_to_file_cycle_target_through_symlink(tmpdir):
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext)
     )
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext),
         target=str(decrypted)
     )
@@ -274,7 +250,7 @@ def test_file_to_file_cycle_target_through_symlink(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('encode, decode', (
     (True, False),
     (False, True),
@@ -293,11 +269,11 @@ def test_file_to_file_base64(tmpdir, encode, decode):
     encrypt_flag = ' --encode' if encode else ''
     decrypt_flag = ' --decode' if decode else ''
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext_a)
     ) + encrypt_flag
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext_b),
         target=str(decrypted)
     ) + decrypt_flag
@@ -322,7 +298,7 @@ def test_file_to_file_base64(tmpdir, encode, decode):
     assert decrypted_plaintext == plaintext_source
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_file_cycle_with_caching(tmpdir):
     plaintext = tmpdir.join('source_plaintext')
     ciphertext = tmpdir.join('ciphertext')
@@ -330,11 +306,11 @@ def test_file_to_file_cycle_with_caching(tmpdir):
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template(caching=True).format(
         source=str(plaintext),
         target=str(ciphertext)
-    ) + CACHING_CONFIG
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    )
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext),
         target=str(decrypted)
     )
@@ -345,14 +321,14 @@ def test_file_to_file_cycle_with_caching(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_overwrite_source_file_to_file_custom_empty_prefix(tmpdir):
     plaintext_source = os.urandom(2014)
     plaintext = tmpdir.join('source_plaintext')
     with open(str(plaintext), 'wb') as f:
         f.write(plaintext_source)
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(plaintext)
     ) + ' --suffix'
@@ -365,14 +341,14 @@ def test_file_overwrite_source_file_to_file_custom_empty_prefix(tmpdir):
         assert f.read() == plaintext_source
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_overwrite_source_dir_to_dir_custom_empty_prefix(tmpdir):
     plaintext_source = os.urandom(2014)
     plaintext = tmpdir.join('source_plaintext')
     with open(str(plaintext), 'wb') as f:
         f.write(plaintext_source)
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(tmpdir),
         target=str(tmpdir)
     ) + ' --suffix'
@@ -385,14 +361,14 @@ def test_file_overwrite_source_dir_to_dir_custom_empty_prefix(tmpdir):
         assert f.read() == plaintext_source
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
     plaintext_source = os.urandom(2014)
     plaintext = tmpdir.join('source_plaintext')
     with open(str(plaintext), 'wb') as f:
         f.write(plaintext_source)
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(tmpdir)
     ) + ' --suffix'
@@ -405,7 +381,7 @@ def test_file_overwrite_source_file_to_dir_custom_empty_prefix(tmpdir):
         assert f.read() == plaintext_source
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_file_to_dir_cycle(tmpdir):
     inner_dir = tmpdir.mkdir('inner')
     plaintext = tmpdir.join('source_plaintext')
@@ -414,11 +390,11 @@ def test_file_to_dir_cycle(tmpdir):
     with open(str(plaintext), 'wb') as f:
         f.write(os.urandom(1024))
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(inner_dir)
     )
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext),
         target=str(decrypted)
     )
@@ -430,17 +406,17 @@ def test_file_to_dir_cycle(tmpdir):
     assert filecmp.cmp(str(plaintext), str(decrypted))
 
 
-@pytest.mark.skipif(not _aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_stdin_to_file_to_stdout_cycle(tmpdir):
     ciphertext_file = tmpdir.join('ciphertext')
     plaintext = os.urandom(1024)
 
-    encrypt_args = 'aws-encryption-cli ' + ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = 'aws-encryption-cli ' + encrypt_args_template().format(
         source='-',
         target=str(ciphertext_file)
     )
-    decrypt_args = 'aws-encryption-cli ' + DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template().format(
         source=str(ciphertext_file),
         target='-'
     )
@@ -454,16 +430,16 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
     assert decrypted_stdout == plaintext
 
 
-@pytest.mark.skipif(not _aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_stdin_stdout_stdin_stdout_cycle():
     plaintext = os.urandom(1024)
 
-    encrypt_args = 'aws-encryption-cli ' + ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = 'aws-encryption-cli ' + encrypt_args_template().format(
         source='-',
         target='-'
     )
-    decrypt_args = 'aws-encryption-cli ' + DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template().format(
         source='-',
         target='-'
     )
@@ -475,8 +451,8 @@ def test_stdin_stdout_stdin_stdout_cycle():
     assert decrypted_stdout == plaintext
 
 
-@pytest.mark.skipif(not _aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason='aws-encryption-cli executable could not be found.')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 @pytest.mark.parametrize('required_encryption_context', ('a=VALUE_NOT_FOUND', 'KEY_NOT_FOUND'))
 def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, required_encryption_context):
     plaintext = tmpdir.join('source_plaintext')
@@ -484,11 +460,11 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
     ciphertext = tmpdir.join('ciphertext')
     metadata_file = tmpdir.join('metadata')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext)
     )
-    decrypt_args = 'aws-encryption-cli ' + DECRYPT_ARGS_TEMPLATE_WITH_METADATA.format(
+    decrypt_args = 'aws-encryption-cli ' + decrypt_args_template(metadata=True).format(
         source=str(ciphertext),
         target='-',
         metadata=' --metadata-output ' + str(metadata_file)
@@ -511,7 +487,7 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
     assert parsed_metadata['reason'] == 'Missing encryption context key or value'
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_dir_to_dir_cycle(tmpdir):
     plaintext_dir = tmpdir.mkdir('plaintext')
     ciphertext_dir = tmpdir.mkdir('ciphertext')
@@ -522,11 +498,11 @@ def test_dir_to_dir_cycle(tmpdir):
         with open(os.path.join(str(plaintext_dir), *source_file_path), 'wb') as file:
             file.write(os.urandom(1024))
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext_dir),
         target=str(ciphertext_dir)
     ) + ' -r'
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext_dir),
         target=str(decrypted_dir)
     ) + ' -r'
@@ -544,7 +520,7 @@ def test_dir_to_dir_cycle(tmpdir):
             assert filecmp.cmp(plaintext_filename, decrypted_filename)
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_dir_to_dir_cycle_custom_suffix(tmpdir):
     plaintext_dir = tmpdir.mkdir('plaintext')
     ciphertext_dir = tmpdir.mkdir('ciphertext')
@@ -556,12 +532,12 @@ def test_dir_to_dir_cycle_custom_suffix(tmpdir):
             file.write(os.urandom(1024))
 
     encrypt_suffix = 'THIS_IS_A_CUSTOM_SUFFIX'
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext_dir),
         target=str(ciphertext_dir)
     ) + ' -r' + ' --suffix ' + encrypt_suffix
     decrypt_suffix = '.anotherSuffix'
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext_dir),
         target=str(decrypted_dir)
     ) + ' -r' + ' --suffix ' + decrypt_suffix
@@ -579,7 +555,7 @@ def test_dir_to_dir_cycle_custom_suffix(tmpdir):
             assert filecmp.cmp(plaintext_filename, decrypted_filename)
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
+@pytest.mark.skipif(skip_tests(), reason=SKIP_MESSAGE)
 def test_glob_to_dir_cycle(tmpdir):
     plaintext_dir = tmpdir.mkdir('plaintext')
     ciphertext_dir = tmpdir.mkdir('ciphertext')
@@ -590,11 +566,11 @@ def test_glob_to_dir_cycle(tmpdir):
 
     suffix = '.1'
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=os.path.join(str(plaintext_dir), '*' + suffix),
         target=str(ciphertext_dir)
     ) + ' -r'
-    decrypt_args = DECRYPT_ARGS_TEMPLATE.format(
+    decrypt_args = decrypt_args_template().format(
         source=str(ciphertext_dir),
         target=str(decrypted_dir)
     ) + ' -r'

@@ -25,7 +25,7 @@ from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import IO, Iterable, List, Optional  # noqa pylint: disable=unused-import
-except ImportError:
+except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
