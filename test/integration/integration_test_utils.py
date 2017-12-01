@@ -47,6 +47,8 @@ def cmk_arn():
                 AWS_KMS_KEY_ID
             )
         )
+    if 'key' not in arn:
+        raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
     return arn
 
 
