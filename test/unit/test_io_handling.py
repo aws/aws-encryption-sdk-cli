@@ -14,7 +14,6 @@
 import base64
 import io
 import os
-import platform
 import sys
 
 from mock import MagicMock, patch, sentinel
@@ -23,12 +22,10 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import six
 
 from aws_encryption_sdk_cli.internal import identifiers, io_handling, metadata
+from .unit_test_utils import is_windows, WINDOWS_SKIP_MESSAGE
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
 DATA = b'aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98'
-
-
-def _is_windows():
-    return any(platform.win32_ver())
 
 
 @pytest.yield_fixture
@@ -370,6 +367,7 @@ def test_process_single_operation_file_should_not_write(
     assert not io_handling._stdout.called
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize('interactive, no_overwrite', (
     (False, False),
     (False, True),
@@ -504,7 +502,7 @@ def test_process_single_file_source_is_destination(tmpdir, patch_process_single_
     assert not patch_process_single_operation.called
 
 
-@pytest.mark.skipif(_is_windows(), reason='Skipping symlink test on Windows')
+@pytest.mark.skipif(is_windows(), reason=WINDOWS_SKIP_MESSAGE)
 def test_process_single_file_destination_is_symlink_to_source(
         tmpdir,
         patch_process_single_operation,

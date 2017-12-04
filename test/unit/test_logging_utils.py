@@ -18,6 +18,8 @@ import pytest
 
 from aws_encryption_sdk_cli.internal import logging_utils
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
+
 
 @pytest.yield_fixture
 def patch_logging_levels(mocker):

@@ -18,17 +18,18 @@ import pytest
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
-from .test_i_aws_encryption_sdk_cli import _should_run_tests, ENCRYPT_ARGS_TEMPLATE
-from .test_i_logging_utils import kms_redacting_logger_stream  # noqa pylint: disable=unused-import
+from .integration_test_utils import encrypt_args_template
+from .integration_test_utils import kms_redacting_logger_stream  # noqa pylint: disable=unused-import
+
+pytestmark = pytest.mark.integ
 
 
-@pytest.mark.skipif(not _should_run_tests(), reason='Integration tests disabled. See test/integration/README.rst')
 def test_encrypt_verify_user_agent(tmpdir, kms_redacting_logger_stream):
     plaintext = tmpdir.join('source_plaintext')
     plaintext.write_binary(os.urandom(1024))
     ciphertext = tmpdir.join('ciphertext')
 
-    encrypt_args = ENCRYPT_ARGS_TEMPLATE.format(
+    encrypt_args = encrypt_args_template().format(
         source=str(plaintext),
         target=str(ciphertext)
     ) + ' -vvvv'

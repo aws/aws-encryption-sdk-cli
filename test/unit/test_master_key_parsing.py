@@ -23,6 +23,8 @@ from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import logging_utils, master_key_parsing
 from aws_encryption_sdk_cli.key_providers import aws_kms_master_key_provider
 
+pytestmark = [pytest.mark.unit, pytest.mark.local]
+
 
 @pytest.yield_fixture
 def patch_load_master_key_provider(mocker):
