@@ -207,7 +207,7 @@ def _build_parser():
     metadata_group.add_argument(
         '--metadata-output',
         type=MetadataWriter(),
-        help='File to which to write metadata records'
+        help='Output file for metadata records'
     )
     parser.add_dummy_redirect_argument('--metadata-output')
 
