@@ -2,6 +2,26 @@
 Changelog
 *********
 
+1.1.3
+=====
+
+Bugfixes
+--------
+* Blacklist pytest 3.3.0
+  `#125 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/125>`_
+  `pytest-dev/pytest#2956 <https://github.com/pytest-dev/pytest/issues/2957>`_
+* Expand input and output file paths in metadata
+  `#120 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/120>`_
+* Move metadata file writer to write in binary
+  `#121 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/121>`_
+* Skip symlink tests when running tests in Windows
+  `#128 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/128>`_
+
+Operational
+-----------
+* Move integration tests away from using config files to using environment variables
+  `#62 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/62>`_
+
 1.1.2
 =====
 
