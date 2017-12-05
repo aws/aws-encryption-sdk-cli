@@ -2,8 +2,6 @@
 aws-encryption-sdk-cli
 ######################
 
-You can use this command line version of the `AWS Encryption SDK`_ to encrypt and decrypt the data in your files and directories.
-=======
 .. image:: https://img.shields.io/pypi/v/aws-encryption-sdk-cli.svg
    :target: https://pypi.python.org/pypi/aws-encryption-sdk-cli
    :alt: Latest Version
@@ -14,6 +12,8 @@ You can use this command line version of the `AWS Encryption SDK`_ to encrypt an
 
 .. image:: https://travis-ci.org/awslabs/aws-encryption-sdk-cli.svg?branch=master
    :target: https://travis-ci.org/awslabs/aws-encryption-sdk-cli
+
+You can use this command line version of the `AWS Encryption SDK`_ to encrypt and decrypt the data in your files and directories.
 
 The latest full documentation is at `Read the Docs`_ and you can find additional details and examples in `AWS Encryption CLI topic`_ of the `AWS Encryption SDK Developer Guide`_.
 
