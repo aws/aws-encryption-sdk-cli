@@ -153,7 +153,7 @@ def _build_parser():
     """
     parser = CommentIgnoringArgumentParser(
         description='Encrypt or decrypt data using the AWS Encryption SDK',
-        epilog='For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/',
+        epilog='For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/ and https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-examples.html.',
         fromfile_prefix_chars='@'
     )
 
