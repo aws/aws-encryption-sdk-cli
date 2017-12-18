@@ -75,15 +75,15 @@ def build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_fi
         real = tmpdir.mkdir('real')
     link = tmpdir.join('link')
 
-    if not (source_is_symlink or dest_is_symlink):
-        return str(real), str(real)
+    if source_is_symlink or dest_is_symlink:
+        os.symlink(str(real), str(link))
 
-    os.symlink(str(real), str(link))
+        if source_is_symlink:
+            return str(link), str(real)
+        elif dest_is_symlink:
+            return str(real), str(link)
 
-    if source_is_symlink:
-        return str(link), str(real)
-    elif dest_is_symlink:
-        return str(real), str(link)
+    return str(real), str(real)
 
 
 def build_same_file_and_dir_test_cases():
