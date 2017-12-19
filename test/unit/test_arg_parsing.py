@@ -23,6 +23,7 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
+from .unit_test_utils import is_windows
 
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 
@@ -177,7 +178,7 @@ def test_unique_store_action_second_call():
     mock_parser.error.assert_called_once_with('SPECIAL_ATTRIBUTE argument may not be specified more than once')
 
 
-def build_expected_good_args():  # pylint: disable=too-many-locals
+def build_expected_good_args(from_file=False):  # pylint: disable=too-many-locals
     encrypt = '-e'
     decrypt = '-d'
     suppress_metadata = ' -S'
@@ -216,11 +217,23 @@ def build_expected_good_args():  # pylint: disable=too-many-locals
         'encryption_context',
         {'some': 'data', 'not': 'secret'}
     ))
-    good_args.append((
-        default_encrypt + ' -c "key with a space=value with a space"',
-        'encryption_context',
-        {'key with a space': 'value with a space'}
-    ))
+    if from_file:
+        good_args.append(pytest.param(
+            default_encrypt + ' -c "key with a space=value with a space"',
+            'encryption_context',
+            {'key with a space': 'value with a space'},
+            marks=pytest.mark.xfail(
+                is_windows(),
+                reason='https://github.com/awslabs/aws-encryption-sdk-cli/issues/110',
+                strict=True
+            )
+        ))
+    else:
+        good_args.append((
+            default_encrypt + ' -c "key with a space=value with a space"',
+            'encryption_context',
+            {'key with a space': 'value with a space'}
+        ))
 
     # algorithm
     algorithm_name = 'AES_128_GCM_IV12_TAG16'
@@ -274,7 +287,7 @@ def test_parser_from_shell(argstring, attribute, value):
     assert getattr(parsed, attribute) == value
 
 
-@pytest.mark.parametrize('argstring, attribute, value', build_expected_good_args())
+@pytest.mark.parametrize('argstring, attribute, value', build_expected_good_args(from_file=True))
 def test_parser_fromfile(tmpdir, argstring, attribute, value):
     argfile = tmpdir.join('argfile')
     argfile.write(argstring)
