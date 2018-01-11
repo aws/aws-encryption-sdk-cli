@@ -23,7 +23,6 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
-from .unit_test_utils import is_windows
 
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 
