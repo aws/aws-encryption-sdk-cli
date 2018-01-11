@@ -258,15 +258,10 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
         {'some': 'data', 'not': 'secret'}
     ))
     if from_file:
-        good_args.append(pytest.param(
+        good_args.append((
             default_encrypt + ' -c "key with a space=value with a space"',
             'encryption_context',
-            {'key with a space': 'value with a space'},
-            marks=pytest.mark.xfail(
-                is_windows(),
-                reason='https://github.com/awslabs/aws-encryption-sdk-cli/issues/110',
-                strict=True
-            )
+            {'key with a space': 'value with a space'}
         ))
     else:
         good_args.append((
