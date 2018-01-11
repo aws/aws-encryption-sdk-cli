@@ -97,10 +97,8 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
                 'Config files containing characters {} are not currently supported:'
                 ' https://github.com/awslabs/aws-encryption-sdk-cli/issues/110'.format(repr(problematic_characters))
             )
-        for arg in shlex.split(str(arg_line), posix=self.__is_posix):
+        for arg in shlex.split(str(arg_line), comments=True, posix=self.__is_posix):
             arg = arg.strip()
-            if arg.startswith('#'):
-                break
             user_arg = os.path.expanduser(arg)
             environ_arg = os.path.expandvars(user_arg)
             converted_line.append(environ_arg)
