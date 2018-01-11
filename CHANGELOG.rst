@@ -2,6 +2,15 @@
 Changelog
 *********
 
+1.1.4
+=====
+
+Bugfixes
+--------
+* Fixed config file handling of quotes in Windows
+  `#110 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/110>`_
+
+
 1.1.3
 =====
 
