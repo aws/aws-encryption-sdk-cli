@@ -89,13 +89,14 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
     def __parse_line(self, arg_line):
         # type: (ARGPARSE_TEXT) -> List[str]
         """Parses a line of arguments into individual arguments intelligently for different platforms.
+        This differs from standard shlex behavior in that is supports escaping both single and double
+        quotes and on Windows platforms uses the Windows-native escape character "`".
 
         :param str arg_line: Raw argument line
         :returns: Parsed line members
         :rtype: list of str
         """
         shlexer = shlex.shlex(six.StringIO(arg_line), posix=True)  # type: ignore #  shlex confuses mypy
-        shlexer.commenters = '#'
         shlexer.whitespace_split = True
         shlexer.escapedquotes = '\'"'
         if self.__is_windows:
