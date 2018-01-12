@@ -403,8 +403,9 @@ Configuration files can be referenced anywhere in ``aws-encryption-cli`` paramet
 
    aws-encryption-cli -e -i $INPUT_DIR -o $OUTPUT_DIR @master-key.conf @caching.conf --recursive
 
-Configuration files can have many lines, include comments using ``#`` and escaped characters
-(``\`` on Linux and MacOS, ````` on Windows), and include references to other configuration files.
+Configuration files can have many lines, include comments using ``#``. Escape characters are
+platform-specific: ``\`` on Linux and MacOS and ````` on Windows. Configuration files may
+also include references to other configuration files.
 
 **my-encrypt.config**
 
