@@ -20,8 +20,9 @@ import platform
 import shlex
 
 import aws_encryption_sdk
+import six
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
+from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
@@ -49,7 +50,7 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
         # I would rather not duplicate the typeshed's effort keeping it up to date.
         # https://github.com/python/typeshed/blob/master/stdlib/2and3/argparse.pyi#L27-L39
         self.__dummy_arguments = []
-        self.__is_posix = not any(platform.win32_ver())
+        self.__is_windows = any(platform.win32_ver())
         super(CommentIgnoringArgumentParser, self).__init__(*args, **kwargs)
 
     def add_dummy_redirect_argument(self, expected_name):
@@ -85,22 +86,34 @@ class CommentIgnoringArgumentParser(argparse.ArgumentParser):
 
         return super(CommentIgnoringArgumentParser, self).add_argument(*args, **kwargs)
 
+    def __parse_line(self, arg_line):
+        # type: (ARGPARSE_TEXT) -> List[str]
+        """Parses a line of arguments into individual arguments intelligently for different platforms.
+        This differs from standard shlex behavior in that is supports escaping both single and double
+        quotes and on Windows platforms uses the Windows-native escape character "`".
+
+        :param str arg_line: Raw argument line
+        :returns: Parsed line members
+        :rtype: list of str
+        """
+        shlexer = shlex.shlex(six.StringIO(arg_line), posix=True)  # type: ignore #  shlex confuses mypy
+        shlexer.whitespace_split = True
+        shlexer.escapedquotes = '\'"'
+        if self.__is_windows:
+            shlexer.escape = '`'
+        return list(shlexer)  # type: ignore #  shlex confuses mypy
+
     def convert_arg_line_to_args(self, arg_line):
         # type: (ARGPARSE_TEXT) -> List[str]
-        """Applies whitespace stripping to individual arguments in each line and
-        drops both full-line and in-line comments.
+        """Converts a line of arguments into individual arguments, expanding user and environment variables.
+
+        :param str arg_line: Raw argument line
+        :returns: Converted line members
+        :rtype: list of str
         """
         converted_line = []
-        problematic_characters = ['\'', '"']
-        if not self.__is_posix and any([val in arg_line for val in problematic_characters]):
-            raise BadUserArgumentError(
-                'Config files containing characters {} are not currently supported:'
-                ' https://github.com/awslabs/aws-encryption-sdk-cli/issues/110'.format(repr(problematic_characters))
-            )
-        for arg in shlex.split(str(arg_line), posix=self.__is_posix):
+        for arg in self.__parse_line(arg_line):
             arg = arg.strip()
-            if arg.startswith('#'):
-                break
             user_arg = os.path.expanduser(arg)
             environ_arg = os.path.expandvars(user_arg)
             converted_line.append(environ_arg)

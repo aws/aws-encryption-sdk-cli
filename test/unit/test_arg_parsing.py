@@ -21,9 +21,8 @@ import pytest
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk_cli
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
+from aws_encryption_sdk_cli.exceptions import ParameterParseError
 from aws_encryption_sdk_cli.internal import arg_parsing, identifiers, metadata
-from .unit_test_utils import is_windows
 
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 
@@ -121,12 +120,52 @@ def test_comment_ignoring_argument_parser_convert_filename(patch_platform_win32_
     parser = arg_parsing.CommentIgnoringArgumentParser()
 
     if any(win32_version):
-        assert not parser._CommentIgnoringArgumentParser__is_posix
+        assert parser._CommentIgnoringArgumentParser__is_windows
     else:
-        assert parser._CommentIgnoringArgumentParser__is_posix
+        assert not parser._CommentIgnoringArgumentParser__is_windows
 
     parsed_line = [arg for arg in parser.convert_arg_line_to_args(expected_transform[0])]
     assert expected_transform[1] == parsed_line
+
+
+def build_convert_special_cases():
+    test_cases = []
+    escape_chars = {
+        False: '\\',
+        True: '`'
+    }
+    for plat_is_windows in (True, False):
+        test_cases.append((
+            '-o "example file with spaces surrounded by double quotes"',
+            ['-o', 'example file with spaces surrounded by double quotes'],
+            plat_is_windows
+        ))
+        test_cases.append((
+            "-o 'example file with spaces surrounded by single quotes'",
+            ['-o', 'example file with spaces surrounded by single quotes'],
+            plat_is_windows
+        ))
+        test_cases.append((
+            '-o "example with an inner {}" double quote"'.format(escape_chars[plat_is_windows]),
+            ['-o', 'example with an inner " double quote'],
+            plat_is_windows
+        ))
+        test_cases.append((
+            "-o 'example with an inner {}' single quote'".format(escape_chars[plat_is_windows]),
+            ['-o', "example with an inner ' single quote"],
+            plat_is_windows
+        ))
+    return test_cases
+
+
+@pytest.mark.parametrize('arg_line, expected_args, plat_is_windows', build_convert_special_cases())
+def test_comment_ignoring_argument_parser_convert_special_cases(arg_line, expected_args, plat_is_windows):
+    parser = arg_parsing.CommentIgnoringArgumentParser()
+    parser._CommentIgnoringArgumentParser__is_windows = plat_is_windows
+
+    actual_args = parser.convert_arg_line_to_args(arg_line)
+
+    assert actual_args == expected_args
 
 
 @pytest.mark.functional
@@ -135,10 +174,10 @@ def test_f_comment_ignoring_argument_parser_convert_filename():
     parser = arg_parsing.CommentIgnoringArgumentParser()
 
     if any(platform.win32_ver()):
-        assert not parser._CommentIgnoringArgumentParser__is_posix
+        assert parser._CommentIgnoringArgumentParser__is_windows
         expected_transform = NON_POSIX_FILEPATH
     else:
-        assert parser._CommentIgnoringArgumentParser__is_posix
+        assert not parser._CommentIgnoringArgumentParser__is_windows
         expected_transform = POSIX_FILEPATH
 
     parsed_line = [arg for arg in parser.convert_arg_line_to_args(expected_transform[0])]
@@ -218,15 +257,10 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
         {'some': 'data', 'not': 'secret'}
     ))
     if from_file:
-        good_args.append(pytest.param(
+        good_args.append((
             default_encrypt + ' -c "key with a space=value with a space"',
             'encryption_context',
-            {'key with a space': 'value with a space'},
-            marks=pytest.mark.xfail(
-                is_windows(),
-                reason='https://github.com/awslabs/aws-encryption-sdk-cli/issues/110',
-                strict=True
-            )
+            {'key with a space': 'value with a space'}
         ))
     else:
         good_args.append((
@@ -660,17 +694,3 @@ def test_process_encryption_context_encrypt_required_key_fail():
             raw_encryption_context=['encryption=context', 'with=values', 'key_3'],
             raw_required_encryption_context_keys=['key_1', 'key_2']
         )
-
-
-@pytest.mark.parametrize('arg_line', (
-    'single-quote \' line',
-    'double-quote " line'
-))
-def test_line_contains_problematic_characters(arg_line):
-    parser = arg_parsing.CommentIgnoringArgumentParser()
-    parser._CommentIgnoringArgumentParser__is_posix = False
-
-    with pytest.raises(BadUserArgumentError) as excinfo:
-        parser.convert_arg_line_to_args(arg_line)
-
-    excinfo.match(r'Config files containing characters *')
