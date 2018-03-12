@@ -49,7 +49,7 @@ def cmk_arn():
         )
     if arn.startswith('arn:') and ':alias/' not in arn:
         return arn
-    raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
+    raise ValueError('KMS CMK ARN provided for integration tests must be a key not an alias')
 
 
 def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
