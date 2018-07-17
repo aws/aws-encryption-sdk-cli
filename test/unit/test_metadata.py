@@ -14,10 +14,10 @@
 import json
 import os
 
+import pytest
 from aws_encryption_sdk.identifiers import Algorithm, ContentType, ObjectType, SerializationVersion
 from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication
 from aws_encryption_sdk.structures import EncryptedDataKey, MasterKeyInfo, MessageHeader
-import pytest
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import metadata

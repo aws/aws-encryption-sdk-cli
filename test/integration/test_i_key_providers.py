@@ -18,8 +18,10 @@ import pytest
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
-from .integration_test_utils import encrypt_args_template
-from .integration_test_utils import is_windows, kms_redacting_logger_stream  # noqa pylint: disable=unused-import
+
+from .integration_test_utils import encrypt_args_template, is_windows
+
+from .integration_test_utils import kms_redacting_logger_stream  # isort:skip noqa pylint: disable=unused-import
 
 pytestmark = pytest.mark.integ
 

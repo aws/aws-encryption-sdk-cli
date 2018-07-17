@@ -12,18 +12,18 @@
 # language governing permissions and limitations under the License.
 """Helper functions for parsing and processing input arguments."""
 import argparse
-from collections import defaultdict, OrderedDict
 import copy
 import logging
 import os
 import platform
 import shlex
+from collections import OrderedDict, defaultdict
 
 import aws_encryption_sdk
 import six
 
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal.identifiers import __version__, ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER
+from aws_encryption_sdk_cli.internal.identifiers import ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER, __version__
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 

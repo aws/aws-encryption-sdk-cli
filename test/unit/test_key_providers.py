@@ -11,8 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.key_providers``."""
-from mock import sentinel
 import pytest
+from mock import sentinel
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli import key_providers

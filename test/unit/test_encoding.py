@@ -16,8 +16,8 @@ import functools
 import io
 import os
 
-from mock import MagicMock, sentinel
 import pytest
+from mock import MagicMock, sentinel
 
 from aws_encryption_sdk_cli.internal.encoding import Base64IO
 

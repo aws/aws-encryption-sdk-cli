@@ -16,8 +16,8 @@ import platform
 import shlex
 
 import aws_encryption_sdk
-from mock import MagicMock, sentinel
 import pytest
+from mock import MagicMock, sentinel
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk_cli

@@ -11,10 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Utility functions to handle configuration, credentials setup, and test skip decision making for integration tests."""
-from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import logging
 import os
 import platform
+from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 
 import pytest
 import six

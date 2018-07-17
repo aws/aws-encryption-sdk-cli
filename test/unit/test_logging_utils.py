@@ -13,8 +13,8 @@
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.logging``."""
 import logging
 
-from mock import call, MagicMock, sentinel
 import pytest
+from mock import MagicMock, call, sentinel
 
 from aws_encryption_sdk_cli.internal import logging_utils
 

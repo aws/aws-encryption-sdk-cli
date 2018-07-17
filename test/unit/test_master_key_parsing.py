@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.master_key_parsing``."""
-from collections import defaultdict, namedtuple
 import logging
+from collections import defaultdict, namedtuple
 
-from mock import call, MagicMock, sentinel
 import pytest
-from pytest_mock import mocker  # noqa pylint: disable=unused-import
 import six
+from mock import MagicMock, call, sentinel
+from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import logging_utils, master_key_parsing

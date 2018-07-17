@@ -16,14 +16,15 @@ import os
 import shlex
 
 import aws_encryption_sdk
-from mock import ANY, call, MagicMock, sentinel
 import pytest
 import six
+from mock import ANY, MagicMock, call, sentinel
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
-from aws_encryption_sdk_cli.internal.logging_utils import _KMSKeyRedactingFormatter, FORMAT_STRING
+from aws_encryption_sdk_cli.internal.logging_utils import FORMAT_STRING, _KMSKeyRedactingFormatter
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
+
 from .unit_test_utils import is_windows
 
 pytestmark = [pytest.mark.unit, pytest.mark.local]

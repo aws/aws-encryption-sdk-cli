@@ -1,9 +1,9 @@
 # pylint: disable=invalid-name
 """Sphinx configuration."""
-from datetime import datetime
 import io
 import os
 import re
+from datetime import datetime
 
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 HERE = os.path.abspath(os.path.dirname(__file__))

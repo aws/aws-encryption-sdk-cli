@@ -13,8 +13,8 @@
 """Master key providers."""
 import copy
 
-from aws_encryption_sdk import KMSMasterKeyProvider
 import botocore.session
+from aws_encryption_sdk import KMSMasterKeyProvider
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX

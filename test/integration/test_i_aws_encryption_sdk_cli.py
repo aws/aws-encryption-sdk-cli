@@ -22,9 +22,9 @@ from subprocess import PIPE, Popen
 import pytest
 
 import aws_encryption_sdk_cli
+
 from .integration_test_utils import (
-    aws_encryption_cli_is_findable, decrypt_args_template,
-    encrypt_args_template, is_windows, WINDOWS_SKIP_MESSAGE
+    WINDOWS_SKIP_MESSAGE, aws_encryption_cli_is_findable, decrypt_args_template, encrypt_args_template, is_windows
 )
 
 pytestmark = pytest.mark.integ
