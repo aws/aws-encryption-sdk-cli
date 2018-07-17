@@ -48,6 +48,16 @@ environment:
     - PYTHON: "C:\\Python36-x64"
       TOXENV: "py36-integ"
 
+    # Python 3.7
+    - PYTHON: "C:\\Python37"
+      TOXENV: "py37-local"
+    - PYTHON: "C:\\Python37"
+      TOXENV: "py37-integ"
+    - PYTHON: "C:\\Python37-x64"
+      TOXENV: "py37-local"
+    - PYTHON: "C:\\Python37-x64"
+      TOXENV: "py37-integ"
+
 install:
   # Prepend newly installed Python to the PATH of this build
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
