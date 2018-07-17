@@ -60,6 +60,6 @@ setup(
     ],
     entry_points={
         "console_scripts": ["aws-encryption-cli=aws_encryption_sdk_cli:cli"],
-        "aws_encryption_sdk_cli.master_key_providers": "aws-kms=aws_encryption_sdk_cli.key_providers:aws_kms_master_key_provider",  # noqa
+        "aws_encryption_sdk_cli.master_key_providers": "aws-kms=aws_encryption_sdk_cli.key_providers:aws_kms_master_key_provider",  # noqa pylint: disable=line-too-long
     },
 )
