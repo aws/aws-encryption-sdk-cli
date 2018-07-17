@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.internal.metadata``."""
+# remove once this is resolved https://github.com/PyCQA/pylint/issues/2313
+# pylint: disable=no-name-in-module,import-error
 import json
 import os
 
