@@ -6,8 +6,8 @@ aws-encryption-sdk-cli
    :target: https://pypi.python.org/pypi/aws-encryption-sdk-cli
    :alt: Latest Version
 
-.. image:: https://img.shields.io/pypi/pyversions/base64io.svg
-   :target: https://pypi.python.org/pypi/base64io
+.. image:: https://img.shields.io/pypi/pyversions/aws-encryption-sdk-cli.svg
+   :target: https://pypi.python.org/pypi/aws-encryption-sdk-cli
    :alt: Supported Python Versions
 
 .. image:: https://img.shields.io/badge/code_style-black-000000.svg
