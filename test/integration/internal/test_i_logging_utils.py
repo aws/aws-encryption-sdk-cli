@@ -19,7 +19,7 @@ import pytest
 
 from aws_encryption_sdk_cli.internal import logging_utils
 
-from .integration_test_utils import cmk_arn, kms_redacting_logger_stream  # noqa pylint: disable=unused-import
+from ..integration_test_utils import cmk_arn, kms_redacting_logger_stream  # noqa pylint: disable=unused-import
 
 pytestmark = pytest.mark.integ
 

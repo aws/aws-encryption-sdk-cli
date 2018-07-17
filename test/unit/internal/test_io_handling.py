@@ -23,7 +23,7 @@ from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.internal import identifiers, io_handling, metadata
 
-from .unit_test_utils import WINDOWS_SKIP_MESSAGE, is_windows
+from ..unit_test_utils import WINDOWS_SKIP_MESSAGE, is_windows
 
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 DATA = b"aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98"
