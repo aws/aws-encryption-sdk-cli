@@ -23,8 +23,6 @@ from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  #
 
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
-
-# convenience import separated from other imports from this module to avoid over-application of linting override
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
 from aws_encryption_sdk_cli.internal.io_handling import IOHandler, output_filename
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
