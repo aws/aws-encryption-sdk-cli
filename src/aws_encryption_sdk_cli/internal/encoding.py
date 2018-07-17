@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-__all__ = ('Base64IO',)
+__all__ = ("Base64IO",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
@@ -62,14 +62,14 @@ class Base64IO(io.IOBase):
 
         :raises TypeError: if ``wrapped`` does not have attributes needed to determine the stream's state
         """
-        required_attrs = ('read', 'write', 'close', 'closed', 'flush')
+        required_attrs = ("read", "write", "close", "closed", "flush")
         if not all(hasattr(wrapped, attr) for attr in required_attrs):
-            raise TypeError('Base64IO wrapped object must have attributes: {}'.format(repr(sorted(required_attrs))))
+            raise TypeError("Base64IO wrapped object must have attributes: {}".format(repr(sorted(required_attrs))))
         super(Base64IO, self).__init__()
         self.__wrapped = wrapped
         self.__close_wrapped_on_close = close_wrapped_on_close
-        self.__read_buffer = b''
-        self.__write_buffer = b''
+        self.__read_buffer = b""
+        self.__write_buffer = b""
 
     def __enter__(self):
         # type: () -> Base64IO
@@ -92,7 +92,7 @@ class Base64IO(io.IOBase):
         """
         if self.__write_buffer:
             self.__wrapped.write(base64.b64encode(self.__write_buffer))
-            self.__write_buffer = b''
+            self.__write_buffer = b""
         self.closed = True
         if self.__close_wrapped_on_close:
             self.__wrapped.close()
@@ -128,7 +128,7 @@ class Base64IO(io.IOBase):
 
         :rtype: bool
         """
-        return self._passthrough_interactive_check('writable', 'w')
+        return self._passthrough_interactive_check("writable", "w")
 
     def readable(self):
         # type: () -> bool
@@ -138,7 +138,7 @@ class Base64IO(io.IOBase):
 
         :rtype: bool
         """
-        return self._passthrough_interactive_check('readable', 'r')
+        return self._passthrough_interactive_check("readable", "r")
 
     def flush(self):
         # type: () -> None
@@ -161,14 +161,14 @@ class Base64IO(io.IOBase):
         :raises IOError: if underlying stream is not writable
         """
         if self.closed:
-            raise ValueError('I/O operation on closed file.')
+            raise ValueError("I/O operation on closed file.")
 
         if not self.writable():
-            raise IOError('Stream is not writable')
+            raise IOError("Stream is not writable")
 
         # Load any stashed bytes and clear the buffer
         _bytes_to_write = self.__write_buffer + b
-        self.__write_buffer = b''
+        self.__write_buffer = b""
 
         # If an even base64 chunk or finalizing the stream, write through.
         if len(_bytes_to_write) % 3 == 0:
@@ -204,7 +204,7 @@ class Base64IO(io.IOBase):
             return data
 
         _data_buffer = io.BytesIO()
-        _data_buffer.write(b''.join(data.split()))
+        _data_buffer.write(b"".join(data.split()))
         _remaining_bytes_to_read = total_bytes_to_read - _data_buffer.tell()
 
         while _remaining_bytes_to_read > 0:
@@ -213,7 +213,7 @@ class Base64IO(io.IOBase):
                 # No more data to read from wrapped stream.
                 break
 
-            _data_buffer.write(b''.join(_raw_additional_data.split()))
+            _data_buffer.write(b"".join(_raw_additional_data.split()))
             _remaining_bytes_to_read = total_bytes_to_read - _data_buffer.tell()
         return _data_buffer.getvalue()
 
@@ -227,10 +227,10 @@ class Base64IO(io.IOBase):
         :rtype: bytes
         """
         if self.closed:
-            raise ValueError('I/O operation on closed file.')
+            raise ValueError("I/O operation on closed file.")
 
         if not self.readable():
-            raise IOError('Stream is not readable')
+            raise IOError("Stream is not readable")
 
         if b is not None and b < 0:
             b = None
@@ -238,7 +238,7 @@ class Base64IO(io.IOBase):
         if b is not None:
             # Calculate number of encoded bytes that must be read to get b raw bytes.
             _bytes_to_read = int((b - len(self.__read_buffer)) * 4 / 3)
-            _bytes_to_read += (4 - _bytes_to_read % 4)
+            _bytes_to_read += 4 - _bytes_to_read % 4
 
         # Read encoded bytes from wrapped stream.
         data = self.__wrapped.read(_bytes_to_read)

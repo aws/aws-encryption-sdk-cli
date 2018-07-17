@@ -13,16 +13,18 @@
 """Utilities for handling operation metadata."""
 import base64
 import codecs
-from enum import Enum
 import json
 import os
 import sys
+from enum import Enum
 from types import TracebackType  # noqa pylint: disable=unused-import
 
 import attr
-from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=unused-import
-from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication  # noqa pylint: disable=unused-import
 import six
+from aws_encryption_sdk.internal.structures import MessageHeaderAuthentication  # noqa pylint: disable=unused-import
+from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=unused-import
+
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Any, Dict, IO, Optional, Text, Union  # noqa pylint: disable=unused-import
@@ -30,9 +32,8 @@ except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 
-__all__ = ('MetadataWriter', 'unicode_b64_encode', 'json_ready_header', 'json_ready_header_auth')
+__all__ = ("MetadataWriter", "unicode_b64_encode", "json_ready_header", "json_ready_header_auth")
 
 
 @attr.s(hash=False, init=False, cmp=True)
@@ -45,8 +46,7 @@ class MetadataWriter(object):
 
     suppress_output = attr.ib(validator=attr.validators.instance_of(bool))
     output_file = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(six.string_types)),
-        default=None
+        validator=attr.validators.optional(attr.validators.instance_of(six.string_types)), default=None
     )
     _output_mode = None  # type: str
     _output_stream = None  # type: IO
@@ -74,16 +74,16 @@ class MetadataWriter(object):
             return self
 
         if self.output_file is None:
-            raise TypeError('output_file cannot be None when suppress_output is False')
+            raise TypeError("output_file cannot be None when suppress_output is False")
 
-        if self.output_file == '-':
-            self._output_mode = 'w'
+        if self.output_file == "-":
+            self._output_mode = "w"
             return self
 
         if not os.path.isdir(os.path.dirname(os.path.realpath(self.output_file))):
-            raise BadUserArgumentError('Parent directory for requested metdata file does not exist.')
+            raise BadUserArgumentError("Parent directory for requested metdata file does not exist.")
 
-        self._output_mode = 'ab'
+        self._output_mode = "ab"
         self.output_file = os.path.abspath(self.output_file)
 
         attr.validate(self)
@@ -93,13 +93,13 @@ class MetadataWriter(object):
     def force_overwrite(self):
         # type: () -> None
         """Force the output to overwrite the target metadata file."""
-        self._output_mode = 'wb'
+        self._output_mode = "wb"
 
     def open(self):
         # type: () -> None
         """Create and open the output stream."""
         if not self.suppress_output:
-            if self.output_file == '-':
+            if self.output_file == "-":
                 self._output_stream = sys.stdout
             else:
                 self._output_stream = open(self.output_file, self._output_mode)
@@ -120,8 +120,8 @@ class MetadataWriter(object):
 
         # Since we re-use each instance of this in a single call, we only want to overwrite
         # the first time if we are overwriting.
-        if self.output_file != '-':
-            self._output_mode = 'ab'
+        if self.output_file != "-":
+            self._output_mode = "ab"
 
     def __exit__(self, exc_type, exc_value, traceback):
         # type: (type, BaseException, TracebackType) -> None
@@ -138,9 +138,9 @@ class MetadataWriter(object):
             return 0  # wrote 0 bytes
 
         metadata_line = json.dumps(metadata, sort_keys=True) + os.linesep
-        metadata_output = ''  # type: Union[str, bytes]
-        if 'b' in self._output_mode:
-            metadata_output = metadata_line.encode('utf-8')
+        metadata_output = ""  # type: Union[str, bytes]
+        if "b" in self._output_mode:
+            metadata_output = metadata_line.encode("utf-8")
         else:
             metadata_output = metadata_line
         return self._output_stream.write(metadata_output)
@@ -154,7 +154,7 @@ def unicode_b64_encode(value):
     :returns: Unicode base64-encoded value
     :rtype: str/unicode
     """
-    return codecs.decode(base64.b64encode(value), 'utf-8')
+    return codecs.decode(base64.b64encode(value), "utf-8")
 
 
 def json_ready_header(header):
@@ -169,24 +169,24 @@ def json_ready_header(header):
     """
     dict_header = attr.asdict(header)
 
-    del dict_header['content_aad_length']
-    dict_header['version'] = str(float(dict_header['version'].value))
-    dict_header['algorithm'] = dict_header['algorithm'].name
+    del dict_header["content_aad_length"]
+    dict_header["version"] = str(float(dict_header["version"].value))
+    dict_header["algorithm"] = dict_header["algorithm"].name
 
     for key, value in dict_header.items():
         if isinstance(value, Enum):
             dict_header[key] = value.value
 
-    dict_header['message_id'] = unicode_b64_encode(dict_header['message_id'])
+    dict_header["message_id"] = unicode_b64_encode(dict_header["message_id"])
 
-    dict_header['encrypted_data_keys'] = sorted(
-        list(dict_header['encrypted_data_keys']),
-        key=lambda x: six.b(x['key_provider']['provider_id']) + x['key_provider']['key_info']
+    dict_header["encrypted_data_keys"] = sorted(
+        list(dict_header["encrypted_data_keys"]),
+        key=lambda x: six.b(x["key_provider"]["provider_id"]) + x["key_provider"]["key_info"],
     )
-    for data_key in dict_header['encrypted_data_keys']:
-        data_key['key_provider']['provider_id'] = unicode_b64_encode(six.b(data_key['key_provider']['provider_id']))
-        data_key['key_provider']['key_info'] = unicode_b64_encode(data_key['key_provider']['key_info'])
-        data_key['encrypted_data_key'] = unicode_b64_encode(data_key['encrypted_data_key'])
+    for data_key in dict_header["encrypted_data_keys"]:
+        data_key["key_provider"]["provider_id"] = unicode_b64_encode(six.b(data_key["key_provider"]["provider_id"]))
+        data_key["key_provider"]["key_info"] = unicode_b64_encode(data_key["key_provider"]["key_info"])
+        data_key["encrypted_data_key"] = unicode_b64_encode(data_key["encrypted_data_key"])
 
     return dict_header
 

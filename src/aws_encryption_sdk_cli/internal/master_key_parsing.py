@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Helper functions for building crypto materials manager and underlying master key provider(s) from arguments."""
-from collections import defaultdict
 import copy
 import logging
+from collections import defaultdict
 
 import aws_encryption_sdk
-from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 import pkg_resources
+from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import MASTER_KEY_PROVIDERS_ENTRY_POINT, PLUGIN_NAMESPACE_DIVIDER
@@ -26,13 +26,14 @@ from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Callable, DefaultDict, Dict, List, Union  # noqa pylint: disable=unused-import
     from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
-        CACHING_CONFIG, RAW_MASTER_KEY_PROVIDER_CONFIG
+        CACHING_CONFIG,
+        RAW_MASTER_KEY_PROVIDER_CONFIG,
     )
 except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-__all__ = ('build_crypto_materials_manager_from_args',)
+__all__ = ("build_crypto_materials_manager_from_args",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
 _ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
 
@@ -40,23 +41,26 @@ _ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resour
 def _discover_entry_points():
     # type: () -> None
     """Discover all registered entry points."""
-    _LOGGER.debug('Discovering master key provider plugins')
+    _LOGGER.debug("Discovering master key provider plugins")
 
     for entry_point in pkg_resources.iter_entry_points(MASTER_KEY_PROVIDERS_ENTRY_POINT):
         _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
-        _LOGGER.debug('Plugin details: %s', dict(
-            name=entry_point.name,
-            module_name=entry_point.module_name,
-            attrs=entry_point.attrs,
-            extras=entry_point.extras,
-            dist=entry_point.dist
-        ))
+        _LOGGER.debug(
+            "Plugin details: %s",
+            dict(
+                name=entry_point.name,
+                module_name=entry_point.module_name,
+                attrs=entry_point.attrs,
+                extras=entry_point.extras,
+                dist=entry_point.dist,
+            ),
+        )
 
         if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
             _LOGGER.warning(
                 'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
                 PLUGIN_NAMESPACE_DIVIDER,
-                entry_point.name
+                entry_point.name,
             )
             continue
 
@@ -87,7 +91,7 @@ def _load_master_key_provider(name):
     if PLUGIN_NAMESPACE_DIVIDER in name:
         package_name, entry_point_name = name.split(PLUGIN_NAMESPACE_DIVIDER, 1)
     else:
-        package_name = ''
+        package_name = ""
         entry_point_name = name
 
     entry_points = _entry_points()[entry_point_name]
@@ -100,8 +104,8 @@ def _load_master_key_provider(name):
             return list(entry_points.values())[0].load()
 
         raise BadUserArgumentError(
-            'Multiple entry points discovered and no package specified. Packages discovered registered by: ({})'.format(
-                ', '.join([str(entry.dist) for entry in entry_points.values()])
+            "Multiple entry points discovered and no package specified. Packages discovered registered by: ({})".format(
+                ", ".join([str(entry.dist) for entry in entry_points.values()])
             )
         )
 
@@ -115,7 +119,7 @@ def _load_master_key_provider(name):
             ).format(
                 requested=name,
                 entry_point=entry_point_name,
-                discovered=', '.join([str(entry.dist) for entry in entry_points.values()])
+                discovered=", ".join([str(entry.dist) for entry in entry_points.values()]),
             )
         )
 
@@ -130,7 +134,7 @@ def _build_master_key_provider(provider, key, **kwargs):
     :returns: Master key provider constructed as defined
     :rtype: aws_encryption_sdk.key_providers.base.MasterKeyProvider
     """
-    _LOGGER.debug('Loading provider: %s', provider)
+    _LOGGER.debug("Loading provider: %s", provider)
 
     provider_callable = _load_master_key_provider(provider)
     key_provider = provider_callable(**kwargs)
@@ -166,13 +170,9 @@ def _parse_master_key_providers_from_args(*key_providers_info):
     key_providers = []
     for provider_info in key_providers_info:
         info = copy.deepcopy(provider_info)
-        provider = str(info.pop('provider'))
-        key_ids = [str(key_id) for key_id in info.pop('key')]
-        key_providers.append(_build_master_key_provider(
-            provider=provider,
-            key=key_ids,
-            **info
-        ))
+        provider = str(info.pop("provider"))
+        key_ids = [str(key_id) for key_id in info.pop("key")]
+        key_providers.append(_build_master_key_provider(provider=provider, key=key_ids, **info))
 
     return _assemble_master_key_providers(*key_providers)  # pylint: disable=no-value-for-parameter
 
@@ -192,9 +192,7 @@ def build_crypto_materials_manager_from_args(key_providers_config, caching_confi
     if caching_config is None:
         return cmm
 
-    cache = aws_encryption_sdk.LocalCryptoMaterialsCache(capacity=caching_config.pop('capacity'))
+    cache = aws_encryption_sdk.LocalCryptoMaterialsCache(capacity=caching_config.pop("capacity"))
     return aws_encryption_sdk.CachingCryptoMaterialsManager(
-        backing_materials_manager=cmm,
-        cache=cache,
-        **caching_config
+        backing_materials_manager=cmm, cache=cache, **caching_config
     )

@@ -2,8 +2,9 @@
 # Disabling messages that we either don't care about
 # for tests or are necessary to break for tests.
 #
+# C0330 : bad-continuation (we let black handle this)
 # R0801 : duplicate-code (we have several functions in io_handling with similar profiles)
-disable = R0801
+disable = C0330, R0801
 
 [BASIC]
 # Allow function names up to 50 characters
