@@ -23,29 +23,26 @@ except ImportError:  # pragma: no cover
 
 
 __all__ = (
-    'OUTPUT_SUFFIX',
-    'ALGORITHM_NAMES',
-    'MASTER_KEY_PROVIDERS_ENTRY_POINT',
-    'PLUGIN_NAMESPACE_DIVIDER',
-    'USER_AGENT_SUFFIX',
-    'DEFAULT_MASTER_KEY_PROVIDER',
-    'OperationResult'
+    "OUTPUT_SUFFIX",
+    "ALGORITHM_NAMES",
+    "MASTER_KEY_PROVIDERS_ENTRY_POINT",
+    "PLUGIN_NAMESPACE_DIVIDER",
+    "USER_AGENT_SUFFIX",
+    "DEFAULT_MASTER_KEY_PROVIDER",
+    "OperationResult",
 )
-__version__ = '1.1.4'  # type: str
+__version__ = "1.1.4"  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.
-OUTPUT_SUFFIX = {
-    'encrypt': '.encrypted',
-    'decrypt': '.decrypted'
-}  # type: Dict[str, str]
+OUTPUT_SUFFIX = {"encrypt": ".encrypted", "decrypt": ".decrypted"}  # type: Dict[str, str]
 
-ALGORITHM_NAMES = set([
-    alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith('_')
-])  # type: Set[aws_encryption_sdk.Algorithm]
-MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
-PLUGIN_NAMESPACE_DIVIDER = '::'
-USER_AGENT_SUFFIX = 'AwsEncryptionSdkCli/{}'.format(__version__)
-DEFAULT_MASTER_KEY_PROVIDER = 'aws-encryption-sdk-cli' + PLUGIN_NAMESPACE_DIVIDER + 'aws-kms'
+ALGORITHM_NAMES = set(
+    [alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith("_")]
+)  # type: Set[aws_encryption_sdk.Algorithm]
+MASTER_KEY_PROVIDERS_ENTRY_POINT = "aws_encryption_sdk_cli.master_key_providers"
+PLUGIN_NAMESPACE_DIVIDER = "::"
+USER_AGENT_SUFFIX = "AwsEncryptionSdkCli/{}".format(__version__)
+DEFAULT_MASTER_KEY_PROVIDER = "aws-encryption-sdk-cli" + PLUGIN_NAMESPACE_DIVIDER + "aws-kms"
 
 
 class OperationResult(Enum):

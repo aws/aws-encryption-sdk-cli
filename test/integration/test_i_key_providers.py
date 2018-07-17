@@ -21,20 +21,17 @@ from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 
 from .integration_test_utils import encrypt_args_template, is_windows
 
-from .integration_test_utils import kms_redacting_logger_stream  # isort:skip noqa pylint: disable=unused-import
+from .integration_test_utils import kms_redacting_logger_stream  # noqa isort:skip pylint: disable=unused-import
 
 pytestmark = pytest.mark.integ
 
 
 def test_encrypt_verify_user_agent(tmpdir, kms_redacting_logger_stream):
-    plaintext = tmpdir.join('source_plaintext')
+    plaintext = tmpdir.join("source_plaintext")
     plaintext.write_binary(os.urandom(1024))
-    ciphertext = tmpdir.join('ciphertext')
+    ciphertext = tmpdir.join("ciphertext")
 
-    encrypt_args = encrypt_args_template().format(
-        source=str(plaintext),
-        target=str(ciphertext)
-    ) + ' -vvvv'
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext)) + " -vvvv"
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 

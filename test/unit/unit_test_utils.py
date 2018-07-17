@@ -13,7 +13,7 @@
 """Utility functions to handle configuration, credentials setup, and test skip decision making for unit tests."""
 import platform
 
-WINDOWS_SKIP_MESSAGE = 'Skipping test on Windows'
+WINDOWS_SKIP_MESSAGE = "Skipping test on Windows"
 
 
 def is_windows():

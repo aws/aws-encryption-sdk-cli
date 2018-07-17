@@ -22,16 +22,12 @@ except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-__all__ = ('setup_logger', 'LOGGER_NAME')
-LOGGING_LEVELS = {
-    0: logging.CRITICAL,
-    1: logging.INFO,
-    2: logging.DEBUG
-}  # type: Dict[int, int]
-LOGGER_NAME = 'aws_encryption_sdk_cli'  # type: str
-FORMAT_STRING = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'  # type: str
+__all__ = ("setup_logger", "LOGGER_NAME")
+LOGGING_LEVELS = {0: logging.CRITICAL, 1: logging.INFO, 2: logging.DEBUG}  # type: Dict[int, int]
+LOGGER_NAME = "aws_encryption_sdk_cli"  # type: str
+FORMAT_STRING = "%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s"  # type: str
 MAX_LOGGING_LEVEL = 2  # type: int
-_REDACTED = '<**-redacted-**>'  # type: str
+_REDACTED = "<**-redacted-**>"  # type: str
 
 
 class _KMSKeyRedactingFormatter(logging.Formatter):
@@ -46,7 +42,7 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
         :rtype: str
         """
         if isinstance(value, bytes):
-            return codecs.decode(value, 'utf-8')
+            return codecs.decode(value, "utf-8")
         return value
 
     def __is_kms_encrypt_request(self, record):  # pylint: disable=no-self-use
@@ -58,11 +54,13 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
         :rtype: bool
         """
         try:
-            return all((
-                record.name == 'botocore.endpoint',
-                record.msg.startswith('Making request'),
-                cast(tuple, record.args)[-1]['headers']['X-Amz-Target'] == 'TrentService.Encrypt'
-            ))
+            return all(
+                (
+                    record.name == "botocore.endpoint",
+                    record.msg.startswith("Making request"),
+                    cast(tuple, record.args)[-1]["headers"]["X-Amz-Target"] == "TrentService.Encrypt",
+                )
+            )
         except Exception:  # pylint: disable=broad-except
             return False
 
@@ -74,9 +72,9 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
         :type record: logging.LogRecord
         """
         try:
-            parsed_body = json.loads(self.__to_str(cast(tuple, record.args)[-1]['body']))
-            parsed_body['Plaintext'] = _REDACTED
-            cast(tuple, record.args)[-1]['body'] = json.dumps(parsed_body, sort_keys=True)
+            parsed_body = json.loads(self.__to_str(cast(tuple, record.args)[-1]["body"]))
+            parsed_body["Plaintext"] = _REDACTED
+            cast(tuple, record.args)[-1]["body"] = json.dumps(parsed_body, sort_keys=True)
         except Exception:  # pylint: disable=broad-except
             return
 
@@ -89,12 +87,14 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
         :rtype: bool
         """
         try:
-            return all((
-                record.name == 'botocore.parsers',
-                record.msg.startswith('Response body:'),
-                b'KeyId' in cast(tuple, record.args)[0],
-                b'Plaintext' in cast(tuple, record.args)[0]
-            ))
+            return all(
+                (
+                    record.name == "botocore.parsers",
+                    record.msg.startswith("Response body:"),
+                    b"KeyId" in cast(tuple, record.args)[0],
+                    b"Plaintext" in cast(tuple, record.args)[0],
+                )
+            )
         except Exception:  # pylint: disable=broad-except
             return False
 
@@ -107,7 +107,7 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
         """
         try:
             parsed_body = json.loads(self.__to_str(cast(tuple, record.args)[0]))
-            parsed_body['Plaintext'] = _REDACTED
+            parsed_body["Plaintext"] = _REDACTED
             new_args = (json.dumps(parsed_body, sort_keys=True),) + cast(tuple, record.args)[1:]
             record.args = new_args
         except Exception:  # pylint: disable=broad-except

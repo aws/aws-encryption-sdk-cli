@@ -23,6 +23,7 @@ from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  #
 
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
+
 # convenience import separated from other imports from this module to avoid over-application of linting override
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
 from aws_encryption_sdk_cli.internal.io_handling import IOHandler, output_filename
@@ -37,7 +38,7 @@ except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-__all__ = ('cli', 'process_cli_request', 'stream_kwargs_from_args')
+__all__ = ("cli", "process_cli_request", "stream_kwargs_from_args")
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
@@ -52,9 +53,9 @@ def _expand_sources(source):
     """
     all_sources = glob.glob(source)
     if not all_sources:
-        raise BadUserArgumentError('Invalid source.  Must be a valid pathname pattern or stdin (-)')
-    _LOGGER.debug('Requested source: %s', source)
-    _LOGGER.debug('Expanded source: %s', all_sources)
+        raise BadUserArgumentError("Invalid source.  Must be a valid pathname pattern or stdin (-)")
+    _LOGGER.debug("Requested source: %s", source)
+    _LOGGER.debug("Expanded source: %s", all_sources)
     return all_sources
 
 
@@ -65,9 +66,9 @@ def _catch_bad_destination_requests(destination):
     :param str destination: Identifier for the destination (filesystem path or ``-`` for stdout)
     :raises BadUserArgument: if destination is a file in a directory that does not already exist
     """
-    if destination != '-' and not os.path.isdir(destination):
+    if destination != "-" and not os.path.isdir(destination):
         if not os.path.isdir(os.path.realpath(os.path.dirname(destination))):
-            raise BadUserArgumentError('If destination is a file, the immediate parent directory must already exist.')
+            raise BadUserArgumentError("If destination is a file, the immediate parent directory must already exist.")
 
 
 def _catch_bad_stdin_stdout_requests(source, destination):
@@ -80,12 +81,12 @@ def _catch_bad_stdin_stdout_requests(source, destination):
     :raises BadUserArgument: if source and destination are the same
     :raises BadUserArgument: if source is stdin and destination is a directory
     """
-    acting_as_pipe = destination == '-' and source == '-'
+    acting_as_pipe = destination == "-" and source == "-"
     if not acting_as_pipe and os.path.realpath(source) == os.path.realpath(destination):
-        raise BadUserArgumentError('Destination and source cannot be the same')
+        raise BadUserArgumentError("Destination and source cannot be the same")
 
-    if source == '-' and os.path.isdir(destination):
-        raise BadUserArgumentError('Destination may not be a directory when source is stdin')
+    if source == "-" and os.path.isdir(destination):
+        raise BadUserArgumentError("Destination may not be a directory when source is stdin")
 
 
 def _catch_bad_file_and_directory_requests(expanded_sources, destination):
@@ -99,13 +100,13 @@ def _catch_bad_file_and_directory_requests(expanded_sources, destination):
     :raises BadUserArgumentError: if source contains a directory and destination is not an existing directory
     """
     if len(expanded_sources) > 1 and not os.path.isdir(destination):
-        raise BadUserArgumentError('If operating on multiple sources, destination must be an existing directory')
+        raise BadUserArgumentError("If operating on multiple sources, destination must be an existing directory")
 
     for _source in expanded_sources:
         if os.path.isdir(_source):
             if not os.path.isdir(destination):
                 raise BadUserArgumentError(
-                    'If operating on a source directory, destination must be an existing directory'
+                    "If operating on a source directory, destination must be an existing directory"
                 )
 
 
@@ -124,9 +125,9 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
     if metadata_output.suppress_output:
         return
 
-    if metadata_output.output_file == '-':
-        if destination == '-':
-            raise BadUserArgumentError('Metadata output cannot be stdout when output is stdout')
+    if metadata_output.output_file == "-":
+        if destination == "-":
+            raise BadUserArgumentError("Metadata output cannot be stdout when output is stdout")
         return
 
     real_source = os.path.realpath(source)
@@ -134,16 +135,16 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
     real_metadata = os.path.realpath(metadata_output.output_file)
 
     if os.path.isdir(real_metadata):
-        raise BadUserArgumentError('Metadata output cannot be a directory')
+        raise BadUserArgumentError("Metadata output cannot be a directory")
 
     if real_metadata == real_source or real_metadata == real_destination:
-        raise BadUserArgumentError('Metadata output file cannot be the input or output')
+        raise BadUserArgumentError("Metadata output file cannot be the input or output")
 
     if os.path.isdir(real_destination) and real_metadata.startswith(real_destination):
-        raise BadUserArgumentError('Metadata output file cannot be in the output directory')
+        raise BadUserArgumentError("Metadata output file cannot be in the output directory")
 
     if os.path.isdir(real_source) and real_metadata.startswith(real_source):
-        raise BadUserArgumentError('Metadata output file cannot be in the input directory')
+        raise BadUserArgumentError("Metadata output file cannot be in the input directory")
 
 
 def process_cli_request(stream_args, parsed_args):
@@ -156,9 +157,7 @@ def process_cli_request(stream_args, parsed_args):
     """
     _catch_bad_destination_requests(parsed_args.output)
     _catch_bad_metadata_file_requests(
-        metadata_output=parsed_args.metadata_output,
-        source=parsed_args.input,
-        destination=parsed_args.output
+        metadata_output=parsed_args.metadata_output, source=parsed_args.input, destination=parsed_args.output
     )
     _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
@@ -169,15 +168,13 @@ def process_cli_request(stream_args, parsed_args):
         decode_input=parsed_args.decode,
         encode_output=parsed_args.encode,
         required_encryption_context=parsed_args.encryption_context,
-        required_encryption_context_keys=parsed_args.required_encryption_context_keys
+        required_encryption_context_keys=parsed_args.required_encryption_context_keys,
     )
 
-    if parsed_args.input == '-':
+    if parsed_args.input == "-":
         # read from stdin
         handler.process_single_operation(
-            stream_args=stream_args,
-            source=parsed_args.input,
-            destination=parsed_args.output
+            stream_args=stream_args, source=parsed_args.input, destination=parsed_args.output
         )
         return
 
@@ -189,14 +186,11 @@ def process_cli_request(stream_args, parsed_args):
 
         if os.path.isdir(_source):
             if not parsed_args.recursive:
-                _LOGGER.warning('Skipping %s because it is a directory and -r/-R/--recursive is not set', _source)
+                _LOGGER.warning("Skipping %s because it is a directory and -r/-R/--recursive is not set", _source)
                 continue
 
             handler.process_dir(
-                stream_args=stream_args,
-                source=_source,
-                destination=_destination,
-                suffix=parsed_args.suffix
+                stream_args=stream_args, source=_source, destination=_destination, suffix=parsed_args.suffix
             )
 
         elif os.path.isfile(_source):
@@ -205,15 +199,11 @@ def process_cli_request(stream_args, parsed_args):
                 _destination = output_filename(
                     source_filename=_source,
                     destination_dir=_destination,
-                    mode=str(stream_args['mode']),
-                    suffix=parsed_args.suffix
+                    mode=str(stream_args["mode"]),
+                    suffix=parsed_args.suffix,
                 )
             # write to file
-            handler.process_single_file(
-                stream_args=stream_args,
-                source=_source,
-                destination=_destination
-            )
+            handler.process_single_file(stream_args=stream_args, source=_source, destination=_destination)
 
 
 def stream_kwargs_from_args(args, crypto_materials_manager):
@@ -228,20 +218,17 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
     :returns: Translated kwargs object for aws_encryption_sdk.stream
     :rtype: dict
     """
-    stream_args = {
-        'materials_manager': crypto_materials_manager,
-        'mode': args.action
-    }
+    stream_args = {"materials_manager": crypto_materials_manager, "mode": args.action}
     # Look for additional arguments only if encrypting
-    if args.action == 'encrypt':
-        stream_args['encryption_context'] = args.encryption_context
+    if args.action == "encrypt":
+        stream_args["encryption_context"] = args.encryption_context
         if args.algorithm is not None:
-            stream_args['algorithm'] = getattr(aws_encryption_sdk.Algorithm, args.algorithm)
+            stream_args["algorithm"] = getattr(aws_encryption_sdk.Algorithm, args.algorithm)
         if args.frame_length is not None:
-            stream_args['frame_length'] = args.frame_length
+            stream_args["frame_length"] = args.frame_length
 
     if args.max_length is not None:
-        stream_args['max_body_length'] = args.max_length
+        stream_args["max_body_length"] = args.max_length
     return stream_args
 
 
@@ -256,15 +243,14 @@ def cli(raw_args=None):
 
         setup_logger(args.verbosity, args.quiet)
 
-        _LOGGER.debug('Encryption mode: %s', args.action)
-        _LOGGER.debug('Encryption source: %s', args.input)
-        _LOGGER.debug('Encryption destination: %s', args.output)
-        _LOGGER.debug('Master key provider configuration: %s', args.master_keys)
-        _LOGGER.debug('Suffix requested: %s', args.suffix)
+        _LOGGER.debug("Encryption mode: %s", args.action)
+        _LOGGER.debug("Encryption source: %s", args.input)
+        _LOGGER.debug("Encryption destination: %s", args.output)
+        _LOGGER.debug("Master key provider configuration: %s", args.master_keys)
+        _LOGGER.debug("Suffix requested: %s", args.suffix)
 
         crypto_materials_manager = build_crypto_materials_manager_from_args(
-            key_providers_config=args.master_keys,
-            caching_config=args.caching
+            key_providers_config=args.master_keys, caching_config=args.caching
         )
 
         stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
@@ -275,13 +261,14 @@ def cli(raw_args=None):
     except AWSEncryptionSDKCLIError as error:
         return error.args[0]
     except Exception as error:  # pylint: disable=broad-except
-        message = os.linesep.join([
-            'Encountered unexpected error: increase verbosity to see details.',
-            '{cls}({args})'.format(
-                cls=error.__class__.__name__,
-                args=', '.join(['"{}"'.format(arg) for arg in error.args])
-            )
-        ])
+        message = os.linesep.join(
+            [
+                "Encountered unexpected error: increase verbosity to see details.",
+                "{cls}({args})".format(
+                    cls=error.__class__.__name__, args=", ".join(['"{}"'.format(arg) for arg in error.args])
+                ),
+            ]
+        )
         _LOGGER.debug(message)
         # copy.deepcopy can't handle raw exc_info objects, so format it first
         formatted_traceback = traceback.format_exc()

@@ -21,8 +21,8 @@ import six
 
 from aws_encryption_sdk_cli.internal import logging_utils
 
-WINDOWS_SKIP_MESSAGE = 'Skipping test on Windows'
-AWS_KMS_KEY_ID = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID'
+WINDOWS_SKIP_MESSAGE = "Skipping test on Windows"
+AWS_KMS_KEY_ID = "AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID"
 
 
 def is_windows():
@@ -30,9 +30,9 @@ def is_windows():
 
 
 def aws_encryption_cli_is_findable():
-    path = find_executable('aws-encryption-cli')
+    path = find_executable("aws-encryption-cli")
     if path is None:
-        UserWarning('aws-encryption-cli executable could not be found')
+        UserWarning("aws-encryption-cli executable could not be found")
         return False
     return True
 
@@ -47,36 +47,36 @@ def cmk_arn():
                 AWS_KMS_KEY_ID
             )
         )
-    if arn.startswith('arn:') and ':alias/' not in arn:
+    if arn.startswith("arn:") and ":alias/" not in arn:
         return arn
-    raise ValueError('KMS CMK ARN provided for integration tests must be a key not an alias')
+    raise ValueError("KMS CMK ARN provided for integration tests must be a key not an alias")
 
 
 def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
-    template = '-e -i {source} -o {target} --encryption-context a=b c=d -m key=' + cmk_arn()
+    template = "-e -i {source} -o {target} --encryption-context a=b c=d -m key=" + cmk_arn()
     if metadata:
-        template += ' {metadata}'
+        template += " {metadata}"
     else:
-        template += ' -S'
+        template += " -S"
     if caching:
-        template += ' --caching capacity=10 max_age=60.0'
+        template += " --caching capacity=10 max_age=60.0"
     if encode:
-        template += ' --encode'
+        template += " --encode"
     if decode:
-        template += ' --decode'
+        template += " --decode"
     return template
 
 
 def decrypt_args_template(metadata=False, encode=False, decode=False):
-    template = '-d -i {source} -o {target}'
+    template = "-d -i {source} -o {target}"
     if metadata:
-        template += ' {metadata}'
+        template += " {metadata}"
     else:
-        template += ' -S'
+        template += " -S"
     if encode:
-        template += ' --encode'
+        template += " --encode"
     if decode:
-        template += ' --decode'
+        template += " --decode"
     return template
 
 

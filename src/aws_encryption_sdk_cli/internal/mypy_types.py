@@ -19,15 +19,15 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager
 
     __all__ = (
-        'STREAM_KWARGS',
-        'CACHING_CONFIG',
-        'RAW_MASTER_KEY_PROVIDER_CONFIG',
-        'MASTER_KEY_PROVIDER_CONFIG',
-        'RAW_CONFIG',
-        'PARSED_CONFIG',
-        'COLLAPSED_CONFIG',
-        'SOURCE',
-        'ARGPARSE_TEXT'
+        "STREAM_KWARGS",
+        "CACHING_CONFIG",
+        "RAW_MASTER_KEY_PROVIDER_CONFIG",
+        "MASTER_KEY_PROVIDER_CONFIG",
+        "RAW_CONFIG",
+        "PARSED_CONFIG",
+        "COLLAPSED_CONFIG",
+        "SOURCE",
+        "ARGPARSE_TEXT",
     )
 
     STREAM_KWARGS = Dict[str, Union[CryptoMaterialsManager, str, Dict[str, str], Algorithm, int]]

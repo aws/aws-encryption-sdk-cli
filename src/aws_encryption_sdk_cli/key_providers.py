@@ -25,7 +25,7 @@ except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-__all__ = ('aws_kms_master_key_provider',)
+__all__ = ("aws_kms_master_key_provider",)
 
 
 def aws_kms_master_key_provider(**kwargs):
@@ -40,10 +40,10 @@ def aws_kms_master_key_provider(**kwargs):
     """
     kwargs = copy.deepcopy(kwargs)
     try:
-        profile_names = kwargs.pop('profile')
+        profile_names = kwargs.pop("profile")
         if len(profile_names) != 1:
             raise BadUserArgumentError(
-                'Only one profile may be specified per master key provider configuration. {} provided.'.format(
+                "Only one profile may be specified per master key provider configuration. {} provided.".format(
                     len(profile_names)
                 )
             )
@@ -53,17 +53,17 @@ def aws_kms_master_key_provider(**kwargs):
 
     botocore_session = botocore.session.Session(profile=profile_name)
     botocore_session.user_agent_extra = USER_AGENT_SUFFIX
-    kwargs['botocore_session'] = botocore_session
+    kwargs["botocore_session"] = botocore_session
 
     try:
-        region_name = kwargs.pop('region')
+        region_name = kwargs.pop("region")
         if len(region_name) != 1:
             raise BadUserArgumentError(
-                'Only one region may be specified per master key provider configuration. {} provided.'.format(
+                "Only one region may be specified per master key provider configuration. {} provided.".format(
                     len(region_name)
                 )
             )
-        kwargs['region_names'] = region_name
+        kwargs["region_names"] = region_name
     except KeyError:
         pass
     return KMSMasterKeyProvider(**kwargs)
