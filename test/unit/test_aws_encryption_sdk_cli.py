@@ -81,7 +81,8 @@ def build_same_files_and_dirs(tmpdir, source_is_symlink, dest_is_symlink, use_fi
 
         if source_is_symlink:
             return str(link), str(real)
-        elif dest_is_symlink:
+
+        if dest_is_symlink:
             return str(real), str(link)
 
     return str(real), str(real)

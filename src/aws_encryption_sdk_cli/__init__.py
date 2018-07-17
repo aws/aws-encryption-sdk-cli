@@ -135,7 +135,7 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
     if os.path.isdir(real_metadata):
         raise BadUserArgumentError("Metadata output cannot be a directory")
 
-    if real_metadata == real_source or real_metadata == real_destination:
+    if real_metadata in (real_source, real_destination):
         raise BadUserArgumentError("Metadata output file cannot be the input or output")
 
     if os.path.isdir(real_destination) and real_metadata.startswith(real_destination):

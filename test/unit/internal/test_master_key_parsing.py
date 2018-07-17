@@ -96,7 +96,7 @@ def test_entry_points(monkeypatch):
 
 
 def test_entry_points_aws_kms():
-    assert master_key_parsing._entry_points()["aws-kms"]["aws-encryption-sdk-cli"].load() == aws_kms_master_key_provider
+    assert master_key_parsing._entry_points()["aws-kms"]["aws-encryption-sdk-cli"].load() is aws_kms_master_key_provider
 
 
 def test_entry_points_invalid_substring(logger_stream, patch_iter_entry_points):
@@ -133,7 +133,7 @@ def test_load_master_key_provider_unknown_name(monkeypatch):
 
 
 def test_load_master_key_provider_known_name_only_single_entry_point():
-    assert master_key_parsing._load_master_key_provider("aws-kms") == aws_kms_master_key_provider
+    assert master_key_parsing._load_master_key_provider("aws-kms") is aws_kms_master_key_provider
 
 
 def test_load_master_key_provider_known_name_only_multiple_entry_points(monkeypatch):
@@ -156,7 +156,7 @@ def test_load_master_key_provider_known_name_only_multiple_entry_points(monkeypa
 
 def test_load_master_key_provider_known_package_and_name():
     assert (
-        master_key_parsing._load_master_key_provider("aws-encryption-sdk-cli::aws-kms") == aws_kms_master_key_provider
+        master_key_parsing._load_master_key_provider("aws-encryption-sdk-cli::aws-kms") is aws_kms_master_key_provider
     )
 
 
