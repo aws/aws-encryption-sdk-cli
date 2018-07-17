@@ -4,6 +4,7 @@
 #
 # C0103 : invalid-name (we prefer long, descriptive, names for tests)
 # C0111 : missing-docstring (we don't write docstrings for tests)
+# C0330 : bad-continuation (we let black handle this)
 # E1101 : no-member (raised on patched objects with mock checks)
 # R0801 : duplicate-code (unit tests for similar things tend to be similar)
 # R0914 : too-many-locals (we prefer clarity over brevity in tests)
@@ -11,7 +12,7 @@
 # W0212 : protected-access (raised when calling _ methods)
 # W0621 : redefined-outer-name (raised when using pytest-mock)
 # W0613 : unused-argument (raised when patches are needed but not called)
-disable = C0103, C0111, E1101, R0801, R0903, R0914, W0212, W0621, W0613
+disable = C0103, C0111, C0330, E1101, R0801, R0903, R0914, W0212, W0621, W0613
 
 [VARIABLES]
 additional-builtins = raw_input
