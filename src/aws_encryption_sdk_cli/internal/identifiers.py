@@ -36,9 +36,9 @@ __version__ = "1.1.4"  # type: str
 #: Suffix added to output files if specific output filename is not specified.
 OUTPUT_SUFFIX = {"encrypt": ".encrypted", "decrypt": ".decrypted"}  # type: Dict[str, str]
 
-ALGORITHM_NAMES = set(
-    [alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith("_")]
-)  # type: Set[aws_encryption_sdk.Algorithm]
+ALGORITHM_NAMES = {
+    alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith("_")
+}  # type: Set[aws_encryption_sdk.Algorithm]
 MASTER_KEY_PROVIDERS_ENTRY_POINT = "aws_encryption_sdk_cli.master_key_providers"
 PLUGIN_NAMESPACE_DIVIDER = "::"
 USER_AGENT_SUFFIX = "AwsEncryptionSdkCli/{}".format(__version__)

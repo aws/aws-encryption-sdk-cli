@@ -295,7 +295,8 @@ class Base64IO(io.IOBase):
         lines = []
         for line in self:  # type: ignore
             lines.append(line)
-            if hint > 0 and len(lines) * io.DEFAULT_BUFFER_SIZE > hint:
+            # pylint sweep (this module is going away)
+            if hint > 0 and len(lines) * io.DEFAULT_BUFFER_SIZE > hint:  # pylint: disable=chained-comparison
                 break
         return lines
 
