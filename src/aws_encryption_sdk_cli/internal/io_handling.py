@@ -21,8 +21,8 @@ import sys
 import attr
 import aws_encryption_sdk
 import six
+from base64io import Base64IO
 
-from aws_encryption_sdk_cli.internal.encoding import Base64IO
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX, OperationResult
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter, json_ready_header, json_ready_header_auth
