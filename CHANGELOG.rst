@@ -2,8 +2,17 @@
 Changelog
 *********
 
-1.1.4
-=====
+1.1.5 -- 201x-xx-xx
+===================
+
+Operational
+-----------
+* Remove base64 stream encoding/decoding logic in in favor of ``base64io`` library.
+  `#154 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/154>`_
+
+
+1.1.4 -- 2018-01-15
+===================
 
 Bugfixes
 --------
@@ -11,8 +20,8 @@ Bugfixes
   `#110 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/110>`_
 
 
-1.1.3
-=====
+1.1.3 -- 2017-12-05
+===================
 
 Bugfixes
 --------
@@ -31,24 +40,24 @@ Operational
 * Move integration tests away from using config files to using environment variables
   `#62 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/62>`_
 
-1.1.2
-=====
+1.1.2 -- 2017-11-22
+===================
 
 Bugfixes
 --------
 * Fixed permissions issue from installing metadata files
   `#122 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/122>`_
 
-1.1.1
-=====
+1.1.1 -- 2017-11-21
+===================
 
 Bugfixes
 --------
 * Fixed import issue with Python 3.5.0 and 3.5.1
   `#114 <https://github.com/awslabs/aws-encryption-sdk-cli/issues/114>`_
 
-1.1.0
-=====
+1.1.0 -- 2017-11-18
+===================
 Public release
 
 Known Issues
