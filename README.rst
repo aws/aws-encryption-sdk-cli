@@ -18,8 +18,8 @@ aws-encryption-sdk-cli
    :target: https://aws-encryption-sdk-cli.readthedocs.io/en/stable/
    :alt: Documentation Status
 
-.. image:: https://travis-ci.org/awslabs/aws-encryption-sdk-cli.svg?branch=master
-   :target: https://travis-ci.org/awslabs/aws-encryption-sdk-cli
+.. image:: https://travis-ci.org/aws/aws-encryption-sdk-cli.svg?branch=master
+   :target: https://travis-ci.org/aws/aws-encryption-sdk-cli
 
 .. image:: https://ci.appveyor.com/api/projects/status/jp8kywq86ctxgn3b/branch/master?svg=true
    :target: https://ci.appveyor.com/project/mattsb42-aws/aws-encryption-sdk-cli-oruqs
@@ -561,7 +561,7 @@ Execution
 .. _message header data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-structure
 .. _message header authentication data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-authentication
 .. _Read the Docs: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
-.. _GitHub: https://github.com/awslabs/aws-encryption-sdk-cli/
+.. _GitHub: https://github.com/aws/aws-encryption-sdk-cli/
 .. _cryptography: https://cryptography.io/en/latest/
 .. _cryptography installation guide: https://cryptography.io/en/latest/installation/
 .. _data key caching documentation: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/data-key-caching.html
