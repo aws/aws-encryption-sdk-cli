@@ -2,13 +2,14 @@
 Changelog
 *********
 
-1.1.5 -- 201x-xx-xx
+1.1.5 -- 2018-08-01
 ===================
 
 Operational
 -----------
 * Remove base64 stream encoding/decoding logic in in favor of ``base64io`` library.
   `#154 <https://github.com/aws/aws-encryption-sdk-cli/issues/154>`_
+* Move the ``aws-encryption-sdk-cli`` repository from ``awslabs`` to ``aws``.
 
 
 1.1.4 -- 2018-01-15

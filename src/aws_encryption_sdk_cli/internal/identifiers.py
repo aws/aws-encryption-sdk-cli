@@ -31,7 +31,7 @@ __all__ = (
     "DEFAULT_MASTER_KEY_PROVIDER",
     "OperationResult",
 )
-__version__ = "1.1.4"  # type: str
+__version__ = "1.1.5"  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.
 OUTPUT_SUFFIX = {"encrypt": ".encrypted", "decrypt": ".decrypted"}  # type: Dict[str, str]
