@@ -37,8 +37,7 @@ def aws_encryption_cli_is_findable():
     return True
 
 
-@pytest.fixture
-def cmk_arn():
+def cmk_arn_value():
     """Retrieves the target CMK ARN from environment variable."""
     arn = os.environ.get(AWS_KMS_KEY_ID, None)
     if arn is None:
@@ -52,8 +51,14 @@ def cmk_arn():
     raise ValueError("KMS CMK ARN provided for integration tests must be a key not an alias")
 
 
+@pytest.fixture
+def cmk_arn():
+    """As of Pytest 4.0.0, fixtures cannot be called directly."""
+    return cmk_arn_value()
+
+
 def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
-    template = "-e -i {source} -o {target} --encryption-context a=b c=d -m key=" + cmk_arn()
+    template = "-e -i {source} -o {target} --encryption-context a=b c=d -m key=" + cmk_arn_value()
     if metadata:
         template += " {metadata}"
     else:
