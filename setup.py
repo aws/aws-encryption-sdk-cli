@@ -2,6 +2,7 @@
 import io
 import os
 import re
+import sys
 
 from setuptools import find_packages, setup
 
@@ -23,6 +24,8 @@ def get_version():
 def get_requirements():
     """Reads the requirements file."""
     requirements = read("requirements.txt")
+    if sys.version_info < (3, 5):
+        requirements.append('typing >= 3.6.2')
     return [r for r in requirements.strip().splitlines()]
 
 
