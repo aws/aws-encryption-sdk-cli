@@ -23,9 +23,7 @@ def get_version():
 
 def get_requirements():
     """Reads the requirements file."""
-    requirements = read("requirements.txt")
-    if sys.version_info < (3, 5):
-        requirements.append('typing >= 3.6.2')
+    requirements = read('requirements.txt')
     return [r for r in requirements.strip().splitlines()]
 
 

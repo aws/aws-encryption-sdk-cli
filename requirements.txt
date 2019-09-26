@@ -1,4 +1,5 @@
 base64io>=1.0.1
 aws-encryption-sdk>=1.3.2
+typing >= 3.6.2;python_version<"3.5"
 setuptools
 attrs>=17.1.0
