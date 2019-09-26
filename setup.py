@@ -2,7 +2,6 @@
 import io
 import os
 import re
-import sys
 
 from setuptools import find_packages, setup
 
