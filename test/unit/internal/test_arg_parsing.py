@@ -93,7 +93,7 @@ def test_comment_ignoring_argument_parser_convert_arg_line_to_args(monkeypatch, 
     monkeypatch.setenv("MY_SPECIAL_VAR", "aVerySpecialPrefix")
     monkeypatch.setenv("ANOTHER_VAR", "someOtherData")
     parser = arg_parsing.CommentIgnoringArgumentParser()
-    parsed_line = [arg for arg in parser.convert_arg_line_to_args(arg_line)]
+    parsed_line = list(parser.convert_arg_line_to_args(arg_line))
     assert line_args == parsed_line
 
 
@@ -114,7 +114,7 @@ def test_comment_ignoring_argument_parser_convert_filename(patch_platform_win32_
     else:
         assert not parser._CommentIgnoringArgumentParser__is_windows
 
-    parsed_line = [arg for arg in parser.convert_arg_line_to_args(expected_transform[0])]
+    parsed_line = list(parser.convert_arg_line_to_args(expected_transform[0]))
     assert expected_transform[1] == parsed_line
 
 
@@ -175,7 +175,7 @@ def test_f_comment_ignoring_argument_parser_convert_filename():
         assert not parser._CommentIgnoringArgumentParser__is_windows
         expected_transform = POSIX_FILEPATH
 
-    parsed_line = [arg for arg in parser.convert_arg_line_to_args(expected_transform[0])]
+    parsed_line = list(parser.convert_arg_line_to_args(expected_transform[0]))
     assert expected_transform[1] == parsed_line
 
 
