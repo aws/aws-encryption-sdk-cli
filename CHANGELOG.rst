@@ -2,6 +2,15 @@
 Changelog
 *********
 
+1.1.6 -- 2019-09-30
+===================
+
+Operational
+-----------
+* Update requirements to only require the typing module for 
+  Python versions earlier than 3.5
+  
+
 1.1.5 -- 2018-08-01
 ===================
 
