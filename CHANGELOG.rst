@@ -2,13 +2,22 @@
 Changelog
 *********
 
+1.1.7 -- 2019-10-15
+===================
+
+Operational
+-----------
+* Completely remove ``typing`` as an install requirement.
+  `#167 <https://github.com/aws/aws-encryption-sdk-cli/pull/167>`_
+
 1.1.6 -- 2019-09-30
 ===================
 
 Operational
 -----------
 * Update requirements to only require the typing module for
-  Python versions earlier than 3.5
+  Python versions earlier than 3.5.
+  `#165 <https://github.com/aws/aws-encryption-sdk-cli/pull/165>`_
 
 
 1.1.5 -- 2018-08-01
