@@ -38,8 +38,8 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
         RAW_CONFIG,
     )
 except ImportError:  # pragma: no cover
-    # We only actually need these imports when running the mypy checks
-    pass
+    cast = lambda typ, val: val  # noqa pylint: disable=invalid-name
+    # We only actually need the other imports when running the mypy checks
 
 __all__ = ("parse_args",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
