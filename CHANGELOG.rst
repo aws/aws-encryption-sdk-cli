@@ -8,6 +8,7 @@ Changelog
 Operational
 -----------
 * Completely remove ``typing`` as an install requirement.
+  `#166 <https://github.com/aws/aws-encryption-sdk-cli/issues/166>`_
   `#167 <https://github.com/aws/aws-encryption-sdk-cli/pull/167>`_
 
 1.1.6 -- 2019-09-30
