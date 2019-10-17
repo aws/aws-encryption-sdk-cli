@@ -146,8 +146,8 @@ elements in the same parameter value.
 
    --encryption-context required_key classification=secret
 
-If the encryption context check fails, the output metadata includes additional
-information about the failure. For more information, see `Encryption Context Failures`_.
+The output metadata includes additional information about the success or failure of the encryption context
+check. For more information, see `Encryption Context Failures`_.
 
 .. warning::
 
@@ -163,7 +163,7 @@ In addition to the primary output of the operation, the ``aws-encryption-cli`` g
 useful metadata about the encrypt and decrypt operation. This metadata includes
 information about the operation as well as the complete header of the encrypted message.
 
-The ``aws-encryption-cli`` writes the metadata to a text file that you specify. The
+The ``aws-encryption-cli`` writes the metadata to a file that you specify. The
 metadata consists of a single line of formatted JSON for each cryptographic operation.
 When a command performs multiple operations, the ``aws-encryption-cli`` writes a separate
 line of JSON for each operation.
