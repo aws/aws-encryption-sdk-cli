@@ -48,7 +48,7 @@ Installation
 .. note::
 
    If you have not already installed `cryptography`_, you might need to install
-   additional prerequisites. For details, see  the `cryptography installation guide`_ 
+   additional prerequisites. For details, see  the `cryptography installation guide`_
    for your operating system.
 
    .. code::
@@ -62,11 +62,11 @@ Usage
 Input and Output
 ================
 
-In general, the ``aws-encryption-cli`` handles files like GNU CLIs, such as ``cp``.  
+In general, the ``aws-encryption-cli`` handles files like GNU CLIs, such as ``cp``.
 However, when the output location is a directory, instead of creating a file in the
-output directory with the same name as the file in the input directory, the 
+output directory with the same name as the file in the input directory, the
 ``aws-encryption-cli``it appends a suffix to the filename. By default, the suffix is
-``.encrypted`` when encrypting and ``.decrypted`` when decrypting, but you can specify 
+``.encrypted`` when encrypting and ``.decrypted`` when decrypting, but you can specify
 a custom suffix.
 
 If a destination file already exists, the ``aws-encryption-cli`` overwrites the contents
@@ -88,13 +88,13 @@ by default.
     |           |   **directory**  |            |          | Y             |
     +-----------+------------------+------------+----------+---------------+
 
-If the source includes a directory and the ``--recursive`` parameter is specified, 
+If the source includes a directory and the ``--recursive`` parameter is specified,
 the ``aws-encryption-cli`` replicates the entire source tree in the output directory.
 
 Parameter Values
 ----------------
-Some ``aws-encryption-cli`` parameters take arguments with a 
-``key=value`` format, as shown below. 
+Some ``aws-encryption-cli`` parameters take arguments with a
+``key=value`` format, as shown below.
 
 .. code-block:: sh
 
@@ -110,12 +110,12 @@ Encrypt
 ```````
 
 The `encryption context`_ is an optional, but recommended, set of key-value pairs that
-contain arbitrary nonsecret data. The encryption context can contain any data you choose, 
-but it typically consists of data that is useful in logging and tracking, such as data 
+contain arbitrary nonsecret data. The encryption context can contain any data you choose,
+but it typically consists of data that is useful in logging and tracking, such as data
 about the file type, purpose, or ownership.
 
-The encryption context is cryptographically bound to the encrypted data and is included in 
-plain text in the encrypted message. 
+The encryption context is cryptographically bound to the encrypted data and is included in
+plain text in the encrypted message.
 
 The ``aws-encryption-cli`` also includes the encryption context in the metadata for the
 operation. For more information, see `Output Metadata`_.
@@ -127,56 +127,56 @@ operation. For more information, see `Output Metadata`_.
 Decrypt
 ```````
 
-If you provide an encryption context in a decrypt command, the ``aws-encryption-cli`` 
-verifies that the message being decrypted was encrypted with an encryption context that 
+If you provide an encryption context in a decrypt command, the ``aws-encryption-cli``
+verifies that the message being decrypted was encrypted with an encryption context that
 meets the following requirements.
 
-If you provide ``key=value`` pairs, the encryption context in the encrypted message must 
+If you provide ``key=value`` pairs, the encryption context in the encrypted message must
 contain matching pairs.
 
 .. code-block:: sh
 
    --encryption-context required_key=required_value classification=secret
 
-If you provide only ``key`` elements, the encryption context in the encrypted message 
-must contain those keys, regardless of the values. You can mix ``key`` and ``key=value`` 
+If you provide only ``key`` elements, the encryption context in the encrypted message
+must contain those keys, regardless of the values. You can mix ``key`` and ``key=value``
 elements in the same parameter value.
 
 .. code-block:: sh
 
    --encryption-context required_key classification=secret
 
-If the encryption context check fails, the output metadata includes additional 
-information about the failure. For more information, , see 
+If the encryption context check fails, the output metadata includes additional
+information about the failure. For more information, , see
 `Encryption Context Failures`_.
-   
+
 .. warning::
 
-   The ``aws-encryption-cli`` deletes any existing output files before checking 
-   the encryption context. If the encrypted message does not satisfy the encryption 
-   context requirements, the decrypt operation stops, but the deleted output file 
+   The ``aws-encryption-cli`` deletes any existing output files before checking
+   the encryption context. If the encrypted message does not satisfy the encryption
+   context requirements, the decrypt operation stops, but the deleted output file
    is not restored.
 
 
 Output Metadata
 ---------------
 In addition to the primary output of the operation, the ``aws-encryption-cli`` generates
-useful metadata about the encrypt and decrypt operation. This metadata includes 
+useful metadata about the encrypt and decrypt operation. This metadata includes
 information about the operation as well as the complete header of the encrypted message.
 
-The ``aws-encryption-cli`` writes the metadata to a text file that you specify. The 
-metadata consists of a single line of formatted JSON for each cryptographic operation. 
-When a command performs multiple operations, the ``aws-encryption-cli`` writes a separate 
+The ``aws-encryption-cli`` writes the metadata to a text file that you specify. The
+metadata consists of a single line of formatted JSON for each cryptographic operation.
+When a command performs multiple operations, the ``aws-encryption-cli`` writes a separate
 line of JSON for each operation.
 
 The metadata file contains lines of JSON, but it is not formatted as a JSON file.
 
  There are three options for writing metadata:
 
-* ``--metadata-output FILE`` : Writes the metadata output to ``FILE`` (can be ``-`` for 
-  stdout as long as primary output is not stdout). By default, the ``aws-encryption-cli`` 
+* ``--metadata-output FILE`` : Writes the metadata output to ``FILE`` (can be ``-`` for
+  stdout as long as primary output is not stdout). By default, the ``aws-encryption-cli``
   appends the metadata entry to the end of ``FILE``.
-* ``--overwrite-metadata`` : Force the ``aws-encryption-cli`` to overwrite the contents 
+* ``--overwrite-metadata`` : Force the ``aws-encryption-cli`` to overwrite the contents
   of ``FILE`` with the new metadata.
 * ``-S/--suppress-metadata`` : Suppresses the metadata.
 
@@ -192,16 +192,16 @@ The metadata JSON contains the following fields:
 
 Encryption Context Failures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When a decrypt operation fails because the encryption context that was specified in 
-the decrypt operation does not match any elements in the encryption context of the 
-encrypted message, the ``aws-encryption-cli`` writes the following additional fields 
+When a decrypt operation fails because the encryption context that was specified in
+the decrypt operation does not match any elements in the encryption context of the
+encrypted message, the ``aws-encryption-cli`` writes the following additional fields
 in the metadata:
 
 * ``skipped`` : ``true``
 * ``reason`` : ``"Missing encryption context key or value"``
-* ``missing_encryption_context_keys`` : List of encryption context keys that were 
+* ``missing_encryption_context_keys`` : List of encryption context keys that were
   specified in the decrypt operation, but were missing from the message.
-* ``missing_encryption_context_pairs`` : List of encryption context key-value pairs 
+* ``missing_encryption_context_pairs`` : List of encryption context key-value pairs
   that were specified in the decrypt operation, but were missing from the message.
 
 
@@ -214,33 +214,33 @@ The parameter values are formatted as ``key=value`` pairs.
 
 Required parameters:
 
-* **provider** *(default: aws-encryption-sdk-cli::aws-kms)* : Identifies the master 
+* **provider** *(default: aws-encryption-sdk-cli::aws-kms)* : Identifies the master
   key provider.
 
-    * For more information about using custom master key providers, see 
+    * For more information about using custom master key providers, see
       `Advanced Configuration`_.
 
-* **key** *(at least one required, many allowed)* : Identifies the master key. Any 
+* **key** *(at least one required, many allowed)* : Identifies the master key. Any
   identifer that the master key provider recognizes is valid.
 
     * If you are using ``aws-kms`` to decrypt, `you cannot specify a key`.
 
-The ``aws-encryption-cli`` collects any additional parameters into lists by parameter 
-name and passes them to the master key provider entry point when it is instantiated. 
-Custom master key providers must accept all arguments as prepared. See 
+The ``aws-encryption-cli`` collects any additional parameters into lists by parameter
+name and passes them to the master key provider entry point when it is instantiated.
+Custom master key providers must accept all arguments as prepared. See
 `Advanced Configuration`_ for more information.
 
-To specify multiple master keys, you can use multiple instances of the ``key`` argument 
+To specify multiple master keys, you can use multiple instances of the ``key`` argument
 or define multiple ``--master-keys`` groups.
 
 If you specify multiple master key providers, the first master key provider is treated
 as the primary.
 
-If you specify multiple master keys for the primary master key provider, the first 
-master key is treated as the primary. The primary master key is used to generate the 
+If you specify multiple master keys for the primary master key provider, the first
+master key is treated as the primary. The primary master key is used to generate the
 data key.
 
-The ``aws-encryption-cli`` uses the following logic to construct all master key 
+The ``aws-encryption-cli`` uses the following logic to construct all master key
 providers. This example uses ``KMSMasterKeyProvider``.
 
 .. code-block:: python
@@ -270,10 +270,10 @@ providers. This example uses ``KMSMasterKeyProvider``.
 
 AWS KMS
 ```````
-To use the ``aws-kms`` master key provider, you can either specify ``aws-kms`` in the 
+To use the ``aws-kms`` master key provider, you can either specify ``aws-kms`` in the
 provider attribute or omit the provider attribute.
 
-You can use the following parameter attributes only with the ``aws-kms`` master key 
+You can use the following parameter attributes only with the ``aws-kms`` master key
 provider:
 
 * **region**  : Use the specified the target region.
@@ -296,15 +296,15 @@ The following logic determines which AWS Region to use:
 Advanced Configuration
 ``````````````````````
 To use a different master key provider, that provider must register a
-`setuptools entry point`_. You can find an example of registering this entry point 
+`setuptools entry point`_. You can find an example of registering this entry point
 in the ``setup.py`` for this package.
 
-When you specify a provider name, the ``aws-encryption-cli`` uses the entry point 
+When you specify a provider name, the ``aws-encryption-cli`` uses the entry point
 for that name.
 
 Handling Multiple Entry Points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-If multiple entry points are registered for a given name, you need to 
+If multiple entry points are registered for a given name, you need to
 specify the package that registered the entry point you want to use.
 
 To specify the package name, use the format: ``PACKAGE_NAME::ENTRY_POINT``.
@@ -313,15 +313,15 @@ To specify the package name, use the format: ``PACKAGE_NAME::ENTRY_POINT``.
 * ``provider=aws-kms``
 * ``provider=aws-encryption-sdk-cli::aws-kms``
 
-If you supply a package and an entry point name, the ``aws-encryption-cli`` uses that 
-entry point. If the entry point is not accessible, the ``aws-encryption-cli`` raises an 
+If you supply a package and an entry point name, the ``aws-encryption-cli`` uses that
+entry point. If the entry point is not accessible, the ``aws-encryption-cli`` raises an
 error.
 
-If you supply only an entry point name and there is only one entry point registered for 
+If you supply only an entry point name and there is only one entry point registered for
 that name, the ``aws-encryption-cli`` uses that entry point.
 
 If you supply only an entry point name, but there is more than one entry point registered
-for that name, the ``aws-encryption-cli`` raises an error that includes a list all 
+for that name, the ``aws-encryption-cli`` raises an error that includes a list all
 packages that have an entry point registered for that name.
 
 External Master Key Providers
@@ -329,23 +329,23 @@ External Master Key Providers
 The entry point name cannot contain the string ``::``. This is used as a namespace
 separator, as descibed in `Handling Multiple Entry Points`_.
 
-When called, these entry points must return an instance of a master key provider. They 
+When called, these entry points must return an instance of a master key provider. They
 must accept the parameters prepared by the CLI, as described in `Master Key Provider`_.
 
-These entry points must be registered in the 
+These entry points must be registered in the
 ``aws_encryption_sdk_cli.master_key_providers`` group.
 
-If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``, 
+If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``,
 the CLI displays the error message to the user to indicate invalid user input.
 
 Data Key Caching
 ----------------
-Data key caching is optional, but if you use it, you must provide values for the required 
-parameters. For detailed information about using data key caching with the AWS Encryption 
+Data key caching is optional, but if you use it, you must provide values for the required
+parameters. For detailed information about using data key caching with the AWS Encryption
 SDK, see the `data key caching documentation`_.
 
-You can find an example of using data key caching in the ``aws-encryption-cli`` 
-in `AWS Encryption CLI Examples`_. 
+You can find an example of using data key caching in the ``aws-encryption-cli``
+in `AWS Encryption CLI Examples`_.
 
 The `data key caching`_ parameter arguments have a ``key=value`` format.
 
@@ -356,9 +356,9 @@ Data key caching parameters:
 * **capacity** *(required)* : Number of entries that the cache will hold.
 * **max_age** *(required)* :  Determines how long each entry can be used, beginning when
   it was added to the cache.
-* **max_messages_encrypted** :  Specifies the maximum number of messages that a cached data 
+* **max_messages_encrypted** :  Specifies the maximum number of messages that a cached data
   key can encrypt. The default value is 2^32.
-* **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can 
+* **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can
   encrypt. The default value is 2^63 - 1.
 
 
@@ -372,9 +372,9 @@ desired level. The more ``-v`` arguments you supply, the more verbose the output
   critical messages
 * ``-vv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies log only
   critical messages
-* ``-vvv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies 
+* ``-vvv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies
   perform moderate logging
-* ``-vvvv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies perform 
+* ``-vvvv`` :  ``aws-encryption-cli`` performs detailed logging, all dependencies perform
   detailed logging
 
 .. table::
@@ -399,37 +399,37 @@ desired level. The more ``-v`` arguments you supply, the more verbose the output
 
 Configuration Files
 -------------------
-You can save ``aws-encryption-cli`` parameters and values in configuration files. 
-When you refer to the configuration file in a command, the parameters and values 
-in the file are added to the command, just as if you had typed them. This feature 
+You can save ``aws-encryption-cli`` parameters and values in configuration files.
+When you refer to the configuration file in a command, the parameters and values
+in the file are added to the command, just as if you had typed them. This feature
 lets you standardize and reuse parameter values, and prevents typing errors.
 
 .. warning::
 
-   There is a `known issue with configuration file parsing in Windows`_. On Windows 
-   only, configuration files cannot contain quotation marks (single or double). 
-   ``aws-encryption-cli`` commands fail if they refer to configuration files that 
-   contain quotation marks. If this affects you, please let us know by filing an issue 
-   in our `GitHub`_ repo. 
-   
-   
-Configuration files are supported by using Python's native `argparse file support`_, 
-which allows you to write configuration files exactly as you would enter arguments in 
-the shell. 
+   There is a `known issue with configuration file parsing in Windows`_. On Windows
+   only, configuration files cannot contain quotation marks (single or double).
+   ``aws-encryption-cli`` commands fail if they refer to configuration files that
+   contain quotation marks. If this affects you, please let us know by filing an issue
+   in our `GitHub`_ repo.
 
-Configuration files are text files. They can have any valid file name and extension. 
 
-To refer to a configuration file in an ``aws-encryption-cli`` command, prefix the file 
-name with ``@``. 
+Configuration files are supported by using Python's native `argparse file support`_,
+which allows you to write configuration files exactly as you would enter arguments in
+the shell.
+
+Configuration files are text files. They can have any valid file name and extension.
+
+To refer to a configuration file in an ``aws-encryption-cli`` command, prefix the file
+name with ``@``.
 
 .. note::
 
-   In PowerShell, use a backtick to escape the ``@`` symbol (```@``) so that the 
-   configuration file reference is sent to ``aws-encryption-cli`` and not interpreted 
+   In PowerShell, use a backtick to escape the ``@`` symbol (```@``) so that the
+   configuration file reference is sent to ``aws-encryption-cli`` and not interpreted
    by PowerShell.
 
-For example, to use a common master key configuration for multiple commands, create 
-a ``master-key.conf`` file that contains the parameters and parameter values that 
+For example, to use a common master key configuration for multiple commands, create
+a ``master-key.conf`` file that contains the parameters and parameter values that
 describe your master key configuration.
 
 **master-key.conf**
@@ -438,8 +438,8 @@ describe your master key configuration.
 
    --master-key key=A_KEY key=ANOTHER_KEY
 
-In the ``aws-encryption-cli`` command, enter the remaining parameters and reference 
-the configuration file. The ``aws-encryption-cli`` combines the parameters on the 
+In the ``aws-encryption-cli`` command, enter the remaining parameters and reference
+the configuration file. The ``aws-encryption-cli`` combines the parameters on the
 command line with the parameters in the configuration file.
 
 .. code-block:: sh
@@ -447,8 +447,8 @@ command line with the parameters in the configuration file.
    aws-encryption-cli -e -i $INPUT_FILE -o $OUTPUT_FILE --metadata-output $METADATA_FILE @master-key.conf
 
    To create a configuration file that saves your data key caching settings, save
-   the caching parameter and its attributes in a configuration file. The following 
-   example creates a ``caching.conf`` configuration file and uses it in two different 
+   the caching parameter and its attributes in a configuration file. The following
+   example creates a ``caching.conf`` configuration file and uses it in two different
    commands.
 
 **caching.conf**
@@ -462,7 +462,7 @@ command line with the parameters in the configuration file.
    aws-encryption-cli -e -i $INPUT_FILE -o $OUTPUT_FILE @master-key.conf @caching.conf
 
 You can place the configuration file reference in any position in an ``aws-encryption-cli``
-command. 
+command.
 
 .. code-block:: sh
 
@@ -491,7 +491,7 @@ also include references to other configuration files.
 Encoding
 --------
 By default, ``aws-encryption-cli`` always returns raw binary data and expects
-raw binary data as input. However, there are some cases where binary data is 
+raw binary data as input. However, there are some cases where binary data is
 undesirable.
 
 You might want to avoid binary data as a convenience:
@@ -503,7 +503,7 @@ Sometimes, you cannot accept binary data.
 
 * Saving ciphertext output to a shell variable.
 
-   * Most shells encode any data stored in a variable. Data might be corrupted if 
+   * Most shells encode any data stored in a variable. Data might be corrupted if
      it is stored  in a variable without encoding.
 
 * Piping ciphertext in PowerShell.
@@ -511,7 +511,8 @@ Sometimes, you cannot accept binary data.
    * All data passed through a PowerShell pipe is encoded using the
      system encoding.
 
-To address these scenarios, ``aws-encryption-cli`` includes a built-in encoding and decoding feature. We provide two optional parameters:
+To address these scenarios, ``aws-encryption-cli`` includes a built-in encoding and decoding feature.
+We provide two optional parameters:
 
 * ``--decode`` : Base64-decode input before processing.
 * ``--encode`` : Base64-encode output after processing.
@@ -525,7 +526,7 @@ targetting a directory, decoding/encoding applies to all files.
 Execution
 =========
 
-.. The contents of the following code block was copied from autogenerated output. 
+.. The contents of the following code block was copied from autogenerated output.
    To change it, edit `arg_parsing.py`_
 
 .. code-block:: sh
@@ -562,7 +563,7 @@ Execution
                            Suppress metadata output.
      --metadata-output METADATA_OUTPUT
                            Output file for metadata records
-     --overwrite-metadata  Force metadata output to overwrite file contents, 
+     --overwrite-metadata  Force metadata output to overwrite file contents,
                            rather than appending to file
      -m MASTER_KEYS [MASTER_KEYS ...], --master-keys MASTER_KEYS [MASTER_KEYS ...]
                            Identifies a master key provider and
@@ -617,8 +618,8 @@ Execution
 
    For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/ and https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-examples.html.
 
-  
-   
+
+
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
 .. _AWS Encryption SDK Developer Guide: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
 .. _AWS Encryption CLI topic: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli.html
