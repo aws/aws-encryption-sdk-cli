@@ -39,6 +39,7 @@ setup(
         "This command line tool can be used to encrypt and decrypt files and directories using the AWS Encryption SDK."
     ),
     long_description=read("README.rst"),
+    long_description_content_type="text/x-rst",
     keywords="aws-encryption-sdk aws kms encryption cli command line",
     license="Apache License 2.0",
     install_requires=get_requirements(),

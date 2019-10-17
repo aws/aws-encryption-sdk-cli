@@ -223,7 +223,7 @@ Required parameters:
 * **key** *(at least one required, many allowed)* : Identifies the master key. Any 
   identifer that the master key provider recognizes is valid.
 
-    * If you are using ``aws-kms`` to decrypt, `you cannot specify a key`_.
+    * If you are using ``aws-kms`` to decrypt, `you cannot specify a key`.
 
 The ``aws-encryption-cli`` collects any additional parameters into lists by parameter 
 name and passes them to the master key provider entry point when it is instantiated. 
