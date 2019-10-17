@@ -11,18 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Utility functions to handle configuration, credentials setup, and test skip decision making for integration tests."""
-from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 import logging
 import os
 import platform
+from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 
 import pytest
 import six
 
 from aws_encryption_sdk_cli.internal import logging_utils
 
-WINDOWS_SKIP_MESSAGE = 'Skipping test on Windows'
-AWS_KMS_KEY_ID = 'AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID'
+WINDOWS_SKIP_MESSAGE = "Skipping test on Windows"
+AWS_KMS_KEY_ID = "AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID"
 
 
 def is_windows():
@@ -30,15 +30,14 @@ def is_windows():
 
 
 def aws_encryption_cli_is_findable():
-    path = find_executable('aws-encryption-cli')
+    path = find_executable("aws-encryption-cli")
     if path is None:
-        UserWarning('aws-encryption-cli executable could not be found')
+        UserWarning("aws-encryption-cli executable could not be found")
         return False
     return True
 
 
-@pytest.fixture
-def cmk_arn():
+def cmk_arn_value():
     """Retrieves the target CMK ARN from environment variable."""
     arn = os.environ.get(AWS_KMS_KEY_ID, None)
     if arn is None:
@@ -47,28 +46,42 @@ def cmk_arn():
                 AWS_KMS_KEY_ID
             )
         )
-    if arn.startswith('arn:') and ':alias/' not in arn:
+    if arn.startswith("arn:") and ":alias/" not in arn:
         return arn
-    raise ValueError('KMS CMK ARN provided for integration tests much be a key not an alias')
+    raise ValueError("KMS CMK ARN provided for integration tests must be a key not an alias")
 
 
-def encrypt_args_template(metadata=False, caching=False):
-    template = '-e -i {source} -o {target} --encryption-context a=b c=d -m key=' + cmk_arn()
+@pytest.fixture
+def cmk_arn():
+    """As of Pytest 4.0.0, fixtures cannot be called directly."""
+    return cmk_arn_value()
+
+
+def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
+    template = "-e -i {source} -o {target} --encryption-context a=b c=d -m key=" + cmk_arn_value()
     if metadata:
-        template += ' {metadata}'
+        template += " {metadata}"
     else:
-        template += ' -S'
+        template += " -S"
     if caching:
-        template += ' --caching capacity=10 max_age=60.0'
+        template += " --caching capacity=10 max_age=60.0"
+    if encode:
+        template += " --encode"
+    if decode:
+        template += " --decode"
     return template
 
 
-def decrypt_args_template(metadata=False):
-    template = '-d -i {source} -o {target}'
+def decrypt_args_template(metadata=False, encode=False, decode=False):
+    template = "-d -i {source} -o {target}"
     if metadata:
-        template += ' {metadata}'
+        template += " {metadata}"
     else:
-        template += ' -S'
+        template += " -S"
+    if encode:
+        template += " --encode"
+    if decode:
+        template += " --decode"
     return template
 
 

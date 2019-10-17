@@ -18,6 +18,14 @@ matrix:
       env: TOXENV=py36-local
     - python: 3.6
       env: TOXENV=py36-integ
+    - python: 3.7
+      env: TOXENV=py37-local
+      dist: xenial
+      sudo: true
+    - python: 3.7
+      env: TOXENV=py37-integ
+      dist: xenial
+      sudo: true
     - python: 3.6
       env: TOXENV=mypy-py2
     - python: 3.6
@@ -38,5 +46,9 @@ matrix:
       env: TOXENV=flake8-tests
     - python: 3.6
       env: TOXENV=pylint-tests
+    - python: 3.6
+      env: TOXENV=black-check
+    - python: 3.6
+      env: TOXENV=isort-check
 install: pip install tox
 script: tox

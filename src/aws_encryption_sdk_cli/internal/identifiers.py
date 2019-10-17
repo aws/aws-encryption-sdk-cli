@@ -13,38 +13,36 @@
 """Static identifier values for the AWS Encryption SDK CLI."""
 from enum import Enum
 
+import aws_encryption_sdk
+
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Dict, Set  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
 
-import aws_encryption_sdk
 
 __all__ = (
-    'OUTPUT_SUFFIX',
-    'ALGORITHM_NAMES',
-    'MASTER_KEY_PROVIDERS_ENTRY_POINT',
-    'PLUGIN_NAMESPACE_DIVIDER',
-    'USER_AGENT_SUFFIX',
-    'DEFAULT_MASTER_KEY_PROVIDER',
-    'OperationResult'
+    "OUTPUT_SUFFIX",
+    "ALGORITHM_NAMES",
+    "MASTER_KEY_PROVIDERS_ENTRY_POINT",
+    "PLUGIN_NAMESPACE_DIVIDER",
+    "USER_AGENT_SUFFIX",
+    "DEFAULT_MASTER_KEY_PROVIDER",
+    "OperationResult",
 )
-__version__ = '1.1.2'  # type: str
+__version__ = "1.1.7"  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.
-OUTPUT_SUFFIX = {
-    'encrypt': '.encrypted',
-    'decrypt': '.decrypted'
-}  # type: Dict[str, str]
+OUTPUT_SUFFIX = {"encrypt": ".encrypted", "decrypt": ".decrypted"}  # type: Dict[str, str]
 
-ALGORITHM_NAMES = set([
-    alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith('_')
-])  # type: Set[aws_encryption_sdk.Algorithm]
-MASTER_KEY_PROVIDERS_ENTRY_POINT = 'aws_encryption_sdk_cli.master_key_providers'
-PLUGIN_NAMESPACE_DIVIDER = '::'
-USER_AGENT_SUFFIX = 'AwsEncryptionSdkCli/{}'.format(__version__)
-DEFAULT_MASTER_KEY_PROVIDER = 'aws-encryption-sdk-cli' + PLUGIN_NAMESPACE_DIVIDER + 'aws-kms'
+ALGORITHM_NAMES = {
+    alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith("_")
+}  # type: Set[aws_encryption_sdk.Algorithm]
+MASTER_KEY_PROVIDERS_ENTRY_POINT = "aws_encryption_sdk_cli.master_key_providers"
+PLUGIN_NAMESPACE_DIVIDER = "::"
+USER_AGENT_SUFFIX = "AwsEncryptionSdkCli/{}".format(__version__)
+DEFAULT_MASTER_KEY_PROVIDER = "aws-encryption-sdk-cli" + PLUGIN_NAMESPACE_DIVIDER + "aws-kms"
 
 
 class OperationResult(Enum):

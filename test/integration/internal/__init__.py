@@ -10,11 +10,4 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Utility functions to handle configuration, credentials setup, and test skip decision making for unit tests."""
-import platform
-
-WINDOWS_SKIP_MESSAGE = "Skipping test on Windows"
-
-
-def is_windows():
-    return any(platform.win32_ver())
+"""Dummy stub to make linters work better."""

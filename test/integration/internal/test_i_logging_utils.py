@@ -18,15 +18,16 @@ import boto3
 import pytest
 
 from aws_encryption_sdk_cli.internal import logging_utils
-from .integration_test_utils import cmk_arn, kms_redacting_logger_stream  # noqa pylint: disable=unused-import
+
+from ..integration_test_utils import cmk_arn, kms_redacting_logger_stream  # noqa pylint: disable=unused-import
 
 pytestmark = pytest.mark.integ
 
 
 @pytest.fixture
 def kms_client(cmk_arn):
-    region = cmk_arn.split(':')[3]
-    return boto3.client('kms', region_name=region)
+    region = cmk_arn.split(":")[3]
+    return boto3.client("kms", region_name=region)
 
 
 def test_kms_generate_data_key(kms_redacting_logger_stream, kms_client, cmk_arn):
@@ -36,30 +37,30 @@ def test_kms_generate_data_key(kms_redacting_logger_stream, kms_client, cmk_arn)
 
     assert log_output.count(logging_utils._REDACTED) == 1
     assert log_output.count(cmk_arn) == 2
-    assert codecs.decode(base64.b64encode(response['Plaintext']), 'utf-8') not in log_output
-    assert log_output.count(codecs.decode(base64.b64encode(response['CiphertextBlob']), 'utf-8')) == 1
+    assert codecs.decode(base64.b64encode(response["Plaintext"]), "utf-8") not in log_output
+    assert log_output.count(codecs.decode(base64.b64encode(response["CiphertextBlob"]), "utf-8")) == 1
 
 
 def test_kms_encrypt(kms_redacting_logger_stream, kms_client, cmk_arn):
-    raw_plaintext = b'some secret data'
+    raw_plaintext = b"some secret data"
     response = kms_client.encrypt(KeyId=cmk_arn, Plaintext=raw_plaintext)
 
     log_output = kms_redacting_logger_stream.getvalue()
 
     assert log_output.count(logging_utils._REDACTED) == 1
     assert log_output.count(cmk_arn) == 2
-    assert codecs.decode(base64.b64encode(raw_plaintext), 'utf-8') not in log_output
-    assert log_output.count(codecs.decode(base64.b64encode(response['CiphertextBlob']), 'utf-8')) == 1
+    assert codecs.decode(base64.b64encode(raw_plaintext), "utf-8") not in log_output
+    assert log_output.count(codecs.decode(base64.b64encode(response["CiphertextBlob"]), "utf-8")) == 1
 
 
 def test_kms_decrypt(kms_redacting_logger_stream, kms_client, cmk_arn):
-    raw_plaintext = b'some secret data'
+    raw_plaintext = b"some secret data"
     encrypt_response = kms_client.encrypt(KeyId=cmk_arn, Plaintext=raw_plaintext)
-    kms_client.decrypt(CiphertextBlob=encrypt_response['CiphertextBlob'])
+    kms_client.decrypt(CiphertextBlob=encrypt_response["CiphertextBlob"])
 
     log_output = kms_redacting_logger_stream.getvalue()
 
     assert log_output.count(logging_utils._REDACTED) == 2
     assert log_output.count(cmk_arn) == 3
-    assert codecs.decode(base64.b64encode(raw_plaintext), 'utf-8') not in log_output
-    assert log_output.count(codecs.decode(base64.b64encode(encrypt_response['CiphertextBlob']), 'utf-8')) == 2
+    assert codecs.decode(base64.b64encode(raw_plaintext), "utf-8") not in log_output
+    assert log_output.count(codecs.decode(base64.b64encode(encrypt_response["CiphertextBlob"]), "utf-8")) == 2

@@ -13,5 +13,10 @@ dist
 .cache
 .python-version
 .mypy_cache
+.pytest_cache
 build
 test/integration/integration_tests.conf
+
+# PyCharm
+.idea/
+venv/

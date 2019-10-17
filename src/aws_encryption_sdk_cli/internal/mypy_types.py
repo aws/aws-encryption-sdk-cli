@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Complex type constructions for use with mypy annotations."""
+# mypy types confuse pylint: disable=invalid-name
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     import sys
     from typing import Dict, IO, List, Text, Union
@@ -19,15 +20,15 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager
 
     __all__ = (
-        'STREAM_KWARGS',
-        'CACHING_CONFIG',
-        'RAW_MASTER_KEY_PROVIDER_CONFIG',
-        'MASTER_KEY_PROVIDER_CONFIG',
-        'RAW_CONFIG',
-        'PARSED_CONFIG',
-        'COLLAPSED_CONFIG',
-        'SOURCE',
-        'ARGPARSE_TEXT'
+        "STREAM_KWARGS",
+        "CACHING_CONFIG",
+        "RAW_MASTER_KEY_PROVIDER_CONFIG",
+        "MASTER_KEY_PROVIDER_CONFIG",
+        "RAW_CONFIG",
+        "PARSED_CONFIG",
+        "COLLAPSED_CONFIG",
+        "SOURCE",
+        "ARGPARSE_TEXT",
     )
 
     STREAM_KWARGS = Dict[str, Union[CryptoMaterialsManager, str, Dict[str, str], Algorithm, int]]
@@ -43,7 +44,7 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     if sys.version_info >= (3,):
         ARGPARSE_TEXT = str  # pylint: disable=invalid-name
     else:
-        ARGPARSE_TEXT = Union[str, unicode]  # noqa: F821 # pylint: disable=undefined-variable
+        ARGPARSE_TEXT = Union[str, unicode]  # noqa:F821 pylint: disable=undefined-variable
 except ImportError:  # pragma: no cover
     # We only actually need these when running the mypy checks
     pass

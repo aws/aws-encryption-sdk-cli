@@ -6,12 +6,23 @@ aws-encryption-sdk-cli
    :target: https://pypi.python.org/pypi/aws-encryption-sdk-cli
    :alt: Latest Version
 
+.. image:: https://img.shields.io/pypi/pyversions/aws-encryption-sdk-cli.svg
+   :target: https://pypi.python.org/pypi/aws-encryption-sdk-cli
+   :alt: Supported Python Versions
+
+.. image:: https://img.shields.io/badge/code_style-black-000000.svg
+   :target: https://github.com/ambv/black
+   :alt: Code style: black
+
 .. image:: https://readthedocs.org/projects/aws-encryption-sdk-cli/badge/
    :target: https://aws-encryption-sdk-cli.readthedocs.io/en/stable/
    :alt: Documentation Status
 
-.. image:: https://travis-ci.org/awslabs/aws-encryption-sdk-cli.svg?branch=master
-   :target: https://travis-ci.org/awslabs/aws-encryption-sdk-cli
+.. image:: https://travis-ci.org/aws/aws-encryption-sdk-cli.svg?branch=master
+   :target: https://travis-ci.org/aws/aws-encryption-sdk-cli
+
+.. image:: https://ci.appveyor.com/api/projects/status/jp8kywq86ctxgn3b/branch/master?svg=true
+   :target: https://ci.appveyor.com/project/mattsb42-aws/aws-encryption-sdk-cli-oruqs
 
 You can use this command line version of the `AWS Encryption SDK`_ to encrypt and decrypt
 the data in your files and directories.
@@ -457,8 +468,9 @@ command.
 
    aws-encryption-cli -e -i $INPUT_DIR -o $OUTPUT_DIR @master-key.conf @caching.conf --recursive
 
-Configuration files can have multiple lines, include comments using ``#``, and include
-references to other configuration files.
+Configuration files can have many lines, include comments using ``#``. Escape characters are
+platform-specific: ``\`` on Linux and MacOS and ````` on Windows. Configuration files may
+also include references to other configuration files.
 
 **my-encrypt.config**
 
@@ -614,7 +626,7 @@ Execution
 .. _message header data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-structure
 .. _message header authentication data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-authentication
 .. _Read the Docs: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
-.. _GitHub: https://github.com/awslabs/aws-encryption-sdk-cli/
+.. _GitHub: https://github.com/aws/aws-encryption-sdk-cli/
 .. _cryptography: https://cryptography.io/en/latest/
 .. _cryptography installation guide: https://cryptography.io/en/latest/installation/
 .. _data key caching documentation: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/data-key-caching.html
