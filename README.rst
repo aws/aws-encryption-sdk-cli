@@ -147,8 +147,7 @@ elements in the same parameter value.
    --encryption-context required_key classification=secret
 
 If the encryption context check fails, the output metadata includes additional
-information about the failure. For more information, , see
-`Encryption Context Failures`_.
+information about the failure. For more information, see `Encryption Context Failures`_.
 
 .. warning::
 
@@ -223,7 +222,7 @@ Required parameters:
 * **key** *(at least one required, many allowed)* : Identifies the master key. Any
   identifer that the master key provider recognizes is valid.
 
-    * If you are using ``aws-kms`` to decrypt, `you cannot specify a key`.
+    * If you are using ``aws-kms`` to decrypt, `you cannot specify a key` _.
 
 The ``aws-encryption-cli`` collects any additional parameters into lists by parameter
 name and passes them to the master key provider entry point when it is instantiated.
