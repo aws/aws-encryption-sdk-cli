@@ -30,6 +30,8 @@ The latest full documentation can be found at `Read the Docs`_.
 
 Find us on `GitHub`_.
 
+`Security issue notifications`_
+
 ***************
 Getting Started
 ***************
@@ -571,3 +573,4 @@ Execution
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 .. _you must not specify a key: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
+.. _Security issue notifications: https://github.com/aws/aws-encryption-sdk-cli/tree/master/CONTRIBUTING.md#security-issue-notifications
