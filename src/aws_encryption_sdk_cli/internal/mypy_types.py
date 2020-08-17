@@ -14,7 +14,7 @@
 # mypy types confuse pylint: disable=invalid-name
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     import sys
-    from typing import Dict, IO, List, Text, Union
+    from typing import IO, Dict, List, Text, Union
 
     from aws_encryption_sdk import Algorithm
     from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager

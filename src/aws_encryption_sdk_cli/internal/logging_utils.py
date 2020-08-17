@@ -17,7 +17,7 @@ import json
 import logging
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
-    from typing import cast, Dict, Sequence, Text, Union  # noqa pylint: disable=unused-import
+    from typing import Dict, Sequence, Text, Union, cast  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
     cast = lambda typ, val: val  # noqa pylint: disable=invalid-name
     # We only actually need the other imports when running the mypy checks

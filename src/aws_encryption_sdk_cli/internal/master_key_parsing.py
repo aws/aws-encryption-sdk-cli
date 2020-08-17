@@ -25,6 +25,7 @@ from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Callable, DefaultDict, Dict, List, Union  # noqa pylint: disable=unused-import
+
     from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
         CACHING_CONFIG,
         RAW_MASTER_KEY_PROVIDER_CONFIG,
