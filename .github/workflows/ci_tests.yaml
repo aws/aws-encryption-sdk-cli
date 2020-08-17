@@ -1,0 +1,51 @@
+# This workflow runs tests on pull requests.
+name: tests
+
+on:
+  pull_request:
+  push:
+  # Run once a day
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            architecture: x64
+          - os: windows-latest
+            architecture: x64
+          # x86 builds are only meaningful for Windows
+          - os: windows-latest
+            architecture: x86
+          - os: macos-latest
+            architecture: x64
+        python:
+          - 2.7
+          - 3.5
+          - 3.6
+          - 3.7
+          - 3.8
+          - 3.x
+        category:
+          - local
+# These require credentials.
+# Enable them once we sort how to provide them.
+#          - integ
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.platform.architecture }}
+      - run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade -r ci-requirements.txt
+      - name: run test
+        env:
+          TOXENV: ${{ matrix.category }}
+        run: tox -- -vv
