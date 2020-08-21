@@ -15,9 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         category:
-#          These should be enabled but will require some nuanced work.
-#          - mypy-py2
-#          - mypy-py3
+          - mypy-py2
+          - mypy-py3
           - bandit
           - doc8
           - readme
