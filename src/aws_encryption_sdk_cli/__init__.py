@@ -31,6 +31,7 @@ from aws_encryption_sdk_cli.internal.metadata import MetadataWriter  # noqa pyli
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import List, Optional, Union  # noqa pylint: disable=unused-import
+
     from aws_encryption_sdk_cli.internal.mypy_types import STREAM_KWARGS  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
@@ -119,9 +120,13 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
     :raises BadUserArgumentError: if metadata file is a directory
     :raises BadUserArgumentError: if input is a directory and contains metadata file
     :raises BadUserArgumentError: if output is a directory and contains metadata file
+    :raises BadUserArgumentError: if metadata file value is empty
     """
     if metadata_output.suppress_output:
         return
+
+    if not metadata_output.output_file:
+        raise BadUserArgumentError("Metadata output file name cannot be empty")
 
     if metadata_output.output_file == "-":
         if destination == "-":

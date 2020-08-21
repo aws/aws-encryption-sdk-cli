@@ -20,7 +20,7 @@ from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
-    from typing import Dict, List, Text, Union  # noqa pylint: disable=unused-import
+    from typing import Dict, List, Optional, Text, Union  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
@@ -47,7 +47,7 @@ def aws_kms_master_key_provider(**kwargs):
                     len(profile_names)
                 )
             )
-        profile_name = profile_names[0]
+        profile_name = profile_names[0]  # type: Optional[Text]
     except KeyError:
         profile_name = None
 

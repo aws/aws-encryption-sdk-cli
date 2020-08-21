@@ -29,6 +29,7 @@ from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Any, Dict, List, Optional, Sequence, Tuple, Union  # noqa pylint: disable=unused-import
+
     from aws_encryption_sdk_cli.internal.mypy_types import (  # noqa pylint: disable=unused-import
         ARGPARSE_TEXT,
         CACHING_CONFIG,
@@ -510,10 +511,11 @@ def parse_args(raw_args=None):
 
         parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
 
+        # mypy does not appear to understand nargs="+" behavior
         parsed_args.encryption_context, parsed_args.required_encryption_context_keys = _process_encryption_context(
             action=parsed_args.action,
             raw_encryption_context=parsed_args.encryption_context,
-            raw_required_encryption_context_keys=parsed_args.required_encryption_context_keys,
+            raw_required_encryption_context_keys=parsed_args.required_encryption_context_keys,  # type: ignore
         )
 
         if parsed_args.caching is not None:

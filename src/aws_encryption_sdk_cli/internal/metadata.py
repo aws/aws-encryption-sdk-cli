@@ -27,7 +27,7 @@ from aws_encryption_sdk.structures import MessageHeader  # noqa pylint: disable=
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
-    from typing import Any, Dict, IO, Optional, Text, Union  # noqa pylint: disable=unused-import
+    from typing import IO, Any, Dict, Optional, Text, Union  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
     # We only actually need these imports when running the mypy checks
     pass
@@ -52,7 +52,7 @@ class MetadataWriter(object):
     _output_stream = None  # type: IO
 
     def __init__(self, suppress_output=False):
-        # type: (Optional[bool]) -> None
+        # type: (bool) -> None
         """Workaround pending resolution of attrs/mypy interaction.
         https://github.com/python/mypy/issues/2088
         https://github.com/python-attrs/attrs/issues/215
@@ -102,7 +102,10 @@ class MetadataWriter(object):
             if self.output_file == "-":
                 self._output_stream = sys.stdout
             else:
-                self._output_stream = open(self.output_file, self._output_mode)
+                # mypy insists that by this point that output_file can be None
+                # That potentiality is addressed by the initial constructor logic,
+                # but I can't figure out how to tell mypy that.
+                self._output_stream = open(self.output_file, self._output_mode)  # type: ignore
 
     def __enter__(self):
         # type: () -> MetadataWriter
