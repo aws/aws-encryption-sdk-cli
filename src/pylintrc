@@ -1,12 +1,14 @@
 [MESSAGES CONTROL]
 # Disabling messages that we either don't care about
 # for tests or are necessary to break for tests.
-#
-# C0330 : bad-continuation (we let black handle this)
-# C0412 : ungrouped-imports (we let isort handle this)
-# R0205 : useless-object-inheritance (we need to support Python 2, so no, not useless)
-# R0801 : duplicate-code (we have several functions in io_handling with similar profiles)
-disable = C0330, C0412, R0205, R0801
+disable =
+    bad-continuation,  # we let black handle this
+    ungrouped-imports,  # we let black handle this
+    duplicate-code,  # we have several functions in io_handling with similar profiles
+    # All below are disabled because we need to support Python 2
+    useless-object-inheritance,
+    raise-missing-from,
+    super-with-arguments,
 
 [BASIC]
 # Allow function names up to 50 characters
