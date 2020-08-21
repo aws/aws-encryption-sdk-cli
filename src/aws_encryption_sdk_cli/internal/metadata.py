@@ -102,7 +102,10 @@ class MetadataWriter(object):
             if self.output_file == "-":
                 self._output_stream = sys.stdout
             else:
-                self._output_stream = open(self.output_file, self._output_mode)
+                # mypy insists that by this point that output_file can be None
+                # That potentiality is addressed by the initial constructor logic,
+                # but I can't figure out how to tell mypy that.
+                self._output_stream = open(self.output_file, self._output_mode)  # type: ignore
 
     def __enter__(self):
         # type: () -> MetadataWriter

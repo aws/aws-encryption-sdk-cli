@@ -65,7 +65,8 @@ def _discover_entry_points():
             )
             continue
 
-        _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point
+        # mypy has trouble with pkgs_resources.iter_entry_points members
+        _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point  # type: ignore
 
 
 def _entry_points():
