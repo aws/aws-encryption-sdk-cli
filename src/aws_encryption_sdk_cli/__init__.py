@@ -120,9 +120,13 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
     :raises BadUserArgumentError: if metadata file is a directory
     :raises BadUserArgumentError: if input is a directory and contains metadata file
     :raises BadUserArgumentError: if output is a directory and contains metadata file
+    :raises BadUserArgumentError: if metadata file value is empty
     """
     if metadata_output.suppress_output:
         return
+
+    if not metadata_output.output_file:
+        raise BadUserArgumentError("Metadata output file name cannot be empty")
 
     if metadata_output.output_file == "-":
         if destination == "-":

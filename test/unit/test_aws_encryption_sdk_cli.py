@@ -176,6 +176,13 @@ def test_catch_bad_metadata_file_requests_metadata_all_are_unique_files(tmpdir):
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
 
 
+def test_catch_bad_metadata_file_requests_metadata_is_empty_or_not_set(tmpdir):
+    metadata_writer = MetadataWriter(suppress_output=False)(output_file="")
+
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, "", "")
+
+
 def build_bad_metadata_file_requests():
     bad_requests = [(False, False, "source"), (False, False, "dest")]
     if not is_windows():
