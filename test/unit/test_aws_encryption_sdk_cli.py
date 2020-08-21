@@ -176,11 +176,15 @@ def test_catch_bad_metadata_file_requests_metadata_all_are_unique_files(tmpdir):
     aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, str(source), str(destination))
 
 
-def test_catch_bad_metadata_file_requests_metadata_is_empty_or_not_set(tmpdir):
+def test_catch_bad_metadata_file_requests_metadata_is_empty(tmpdir):
     metadata_writer = MetadataWriter(suppress_output=False)(output_file="")
+    # __call__ resolves empty output file to current directory
+    metadata_writer.output_file = ""
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         aws_encryption_sdk_cli._catch_bad_metadata_file_requests(metadata_writer, "", "")
+
+    excinfo.match("Metadata output file name cannot be empty")
 
 
 def build_bad_metadata_file_requests():
