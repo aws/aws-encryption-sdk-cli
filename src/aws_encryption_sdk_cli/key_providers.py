@@ -47,7 +47,7 @@ def aws_kms_master_key_provider(**kwargs):
                     len(profile_names)
                 )
             )
-        profile_name = profile_names[0]  # type: Optional[str]
+        profile_name = profile_names[0]  # type: Optional[Text]
     except KeyError:
         profile_name = None
 
