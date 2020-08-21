@@ -52,7 +52,7 @@ class MetadataWriter(object):
     _output_stream = None  # type: IO
 
     def __init__(self, suppress_output=False):
-        # type: (Optional[bool]) -> None
+        # type: (bool) -> None
         """Workaround pending resolution of attrs/mypy interaction.
         https://github.com/python/mypy/issues/2088
         https://github.com/python-attrs/attrs/issues/215
