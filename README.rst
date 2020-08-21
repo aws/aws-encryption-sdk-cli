@@ -18,11 +18,18 @@ aws-encryption-sdk-cli
    :target: https://aws-encryption-sdk-cli.readthedocs.io/en/stable/
    :alt: Documentation Status
 
+.. image:: https://github.com/aws/aws-encryption-sdk-cli/workflows/tests/badge.svg
+   :target: https://github.com/aws/aws-encryption-sdk-cli/actions?query=workflow%3Atests
+   :alt: tests
+
+.. image:: https://github.com/aws/aws-encryption-sdk-cli/workflows/static%20analysis/badge.svg
+   :target: https://github.com/aws/aws-encryption-sdk-cli/actions?query=workflow%3A%22static+analysis%22
+   :alt: static analysis
+
 .. image:: https://travis-ci.org/aws/aws-encryption-sdk-cli.svg?branch=master
    :target: https://travis-ci.org/aws/aws-encryption-sdk-cli
+   :alt: integration tests
 
-.. image:: https://ci.appveyor.com/api/projects/status/jp8kywq86ctxgn3b/branch/master?svg=true
-   :target: https://ci.appveyor.com/project/mattsb42-aws/aws-encryption-sdk-cli-oruqs
 
 This command line tool can be used to encrypt and decrypt files and directories using the `AWS Encryption SDK`_.
 
