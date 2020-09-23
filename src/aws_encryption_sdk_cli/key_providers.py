@@ -14,7 +14,7 @@
 import copy
 
 import botocore.session
-from aws_encryption_sdk import KMSMasterKeyProvider
+from aws_encryption_sdk import DiscoveryAwsKmsMasterKeyProvider, StrictAwsKmsMasterKeyProvider
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
@@ -28,15 +28,16 @@ except ImportError:  # pragma: no cover
 __all__ = ("aws_kms_master_key_provider",)
 
 
-def aws_kms_master_key_provider(**kwargs):
-    # type: (**List[Union[Text, str]]) -> KMSMasterKeyProvider
+def aws_kms_master_key_provider(discovery=True, **kwargs):
+    # type: (bool, **List[Union[Text, str]]) -> Union[DiscoveryAwsKmsMasterKeyProvider, StrictAwsKmsMasterKeyProvider]
     """Apply post-processing to transform ``KMSMasterKeyProvider``-specific values from CLI
     arguments to valid ``KMSMasterKeyProvider`` parameters, then call ``KMSMasterKeyprovider``
     with those parameters.
 
+    :param bool discovery: Return a DiscoveryAwsKmsMasterKeyProvider
     :param dict kwargs: Named parameters collected from CLI arguments as prepared
         in aws_encryption_sdk_cli.internal.master_key_parsing._parse_master_key_providers_from_args
-    :rtype: aws_encryption_sdk.key_providers.kms.KMSMasterKeyProvider
+    :rtype: aws_encryption_sdk.key_providers.kms.BaseKMSMasterKeyProvider
     """
     kwargs = copy.deepcopy(kwargs)
     try:
@@ -66,4 +67,6 @@ def aws_kms_master_key_provider(**kwargs):
         kwargs["region_names"] = region_name
     except KeyError:
         pass
-    return KMSMasterKeyProvider(**kwargs)
+    if discovery:
+        return DiscoveryAwsKmsMasterKeyProvider(**kwargs)
+    return StrictAwsKmsMasterKeyProvider(**kwargs)

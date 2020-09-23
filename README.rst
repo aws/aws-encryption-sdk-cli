@@ -47,7 +47,7 @@ Required Prerequisites
 ======================
 
 * Python 2.7+ or 3.4+
-* aws-encryption-sdk >= 1.3.2
+* aws-encryption-sdk >= 1.7.0
 
 Installation
 ============
@@ -215,40 +215,40 @@ must accept all arguments as prepared. See `Advanced Configuration`_ for more in
 
 Multiple master keys can be defined using multiple instances of the ``key`` argument.
 
-Multiple master key providers can be defined using multiple ``--master-keys`` groups.
+Multiple master key providers can be defined using multiple ``--wrapping-keys`` groups.
 
 If multiple master key providers are defined, the first one is treated as the primary.
 
 If multiple master keys are defined in the primary master key provider, the first one is treated
 as the primary. The primary master key is used to generate the data key.
 
-The below logic is used to construct all master key providers. We use ``KMSMasterKeyProvider``
-as an example.
+The below logic is used to construct all master key providers. We use
+``DiscoveryAwsKmsMasterKeyProvider`` as an example.
 
 .. code-block:: python
 
    # With parameters:
-   --master-keys provider=aws-kms key=$KEY_1 key=$KEY_2
+   --wrapping-keys provider=aws-kms key=$KEY_1 key=$KEY_2
 
    # KMSMasterKeyProvider is called as:
-   key_provider = KMSMasterKeyProvider()
+   key_provider = DiscoveryAwsKmsMasterKeyProvider()
    key_provider.add_master_key($KEY_1)
    key_provider.add_master_key($KEY_2)
 
 .. code-block:: sh
 
    # Single KMS CMK
-   --master-keys provider=aws-kms key=$KEY_ARN_1
+   --wrapping-keys provider=aws-kms key=$KEY_ARN_1
 
    # Two KMS CMKs
-   --master-keys provider=aws-kms key=$KEY_ARN_1 key=$KEY_ARN_2
+   --wrapping-keys provider=aws-kms key=$KEY_ARN_1 key=$KEY_ARN_2
 
    # KMS Alias by name in default region
-   --master-keys provider=aws-kms key=$ALIAS_NAME
+   --wrapping-keys provider=aws-kms key=$ALIAS_NAME
 
    # KMS Alias by name in two specific regions
-   --master-keys provider=aws-kms key=$ALIAS_NAME region=us-west-2
-   --master-keys provider=aws-kms key=$ALIAS_NAME region=eu-central-1
+   --wrapping-keys provider=aws-kms key=$ALIAS_NAME region=us-west-2
+   --wrapping-keys provider=aws-kms key=$ALIAS_NAME region=eu-central-1
 
 AWS KMS
 ```````
@@ -517,6 +517,12 @@ Execution
                            master keys. Each instance must include a master key
                            provider identifier and identifiers for one or more
                            master key supplied by that provider. ex: --master-
+                           keys provider=aws-kms key=$AWS_KMS_KEY_ARN
+     -w WRAPPING_KEYS [WRAPPING_KEYS ...], --wrapping-keys WRAPPING_KEYS [WRAPPING_KEYS ...]
+                           Identifying information for a master key provider and
+                           master keys. Each instance must include a master key
+                           provider identifier and identifiers for one or more
+                           master key supplied by that provider. ex: --wrapping-
                            keys provider=aws-kms key=$AWS_KMS_KEY_ARN
      --caching CACHING [CACHING ...]
                            Configuration options for a caching cryptographic

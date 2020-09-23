@@ -17,6 +17,8 @@ from collections import defaultdict
 
 import aws_encryption_sdk
 import pkg_resources
+from aws_encryption_sdk import CachingCryptoMaterialsManager  # noqa pylint: disable=unused-import
+from aws_encryption_sdk import DefaultCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
@@ -146,7 +148,7 @@ def _build_master_key_provider(provider, key, **kwargs):
 
 
 def _assemble_master_key_providers(primary_provider, *providers):
-    # type: (MasterKeyProvider, MasterKeyProvider) -> MasterKeyProvider
+    # type: (MasterKeyProvider, List[MasterKeyProvider]) -> MasterKeyProvider
     """Given one or more MasterKeyProvider instance, loads first MasterKeyProvider instance
     with all remaining MasterKeyProvider instances.
 
@@ -166,6 +168,7 @@ def _parse_master_key_providers_from_args(*key_providers_info):
     """Parses the input key info from argparse and loads all key providers and key IDs.
 
     :param *key_providers_info: One or more dict containing key provider configuration (see _build_master_key_provider)
+    :param bool discovery: Discovery mode
     :returns: MasterKeyProvider instance containing all referenced providers and keys
     :rtype: aws_encryption_sdk.key_providers.base.MasterKeyProvider
     """
@@ -179,8 +182,11 @@ def _parse_master_key_providers_from_args(*key_providers_info):
     return _assemble_master_key_providers(*key_providers)  # pylint: disable=no-value-for-parameter
 
 
-def build_crypto_materials_manager_from_args(key_providers_config, caching_config):
-    # type:(List[RAW_MASTER_KEY_PROVIDER_CONFIG], CACHING_CONFIG) -> aws_encryption_sdk.CachingCryptoMaterialsManager
+def build_crypto_materials_manager_from_args(
+    key_providers_config,  # type: List[RAW_MASTER_KEY_PROVIDER_CONFIG]
+    caching_config,  # type: CACHING_CONFIG
+):
+    # type:(...) -> Union[CachingCryptoMaterialsManager, DefaultCryptoMaterialsManager]
     """Builds a cryptographic materials manager from the provided arguments.
 
     :param list key_providers_config: List of one or more dicts containing key provider configuration

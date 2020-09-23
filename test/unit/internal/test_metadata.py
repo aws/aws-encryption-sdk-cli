@@ -239,6 +239,7 @@ def test_json_ready_message_header():
         "version": "1.0",
         "type": ObjectType.CUSTOMER_AE_DATA.value,
         "algorithm": Algorithm.AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384.name,
+        "commitment_key": None,
         "message_id": metadata.unicode_b64_encode(message_id),
         "encryption_context": encryption_context,
         "encrypted_data_keys": [

@@ -18,10 +18,12 @@ import shlex
 import aws_encryption_sdk
 import pytest
 import six
+from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from mock import ANY, MagicMock, call, sentinel
 
 import aws_encryption_sdk_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
+from aws_encryption_sdk_cli.internal.arg_parsing import CommitmentPolicyArgs
 from aws_encryption_sdk_cli.internal.logging_utils import FORMAT_STRING, _KMSKeyRedactingFormatter
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 
@@ -261,10 +263,12 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
             encode=sentinel.encode_output,
             encryption_context=sentinel.encryption_context,
             required_encryption_context_keys=sentinel.required_keys,
+            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
         ),
     )
 
     patch_iohandler.assert_called_once_with(
+        commitment_policy=CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT,
         metadata_writer=metadata_writer,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
@@ -294,6 +298,7 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
+                commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
             ),
         )
     excinfo.match(r"If operating on a source directory, destination must be an existing directory")
@@ -398,6 +403,7 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_iohandle
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
+            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -423,6 +429,7 @@ def test_process_cli_request_invalid_source(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
+                commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
             ),
         )
     excinfo.match(r"Invalid source.  Must be a valid pathname pattern or stdin \(-\)")
@@ -472,6 +479,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
             encode=False,
             decode=False,
             metadata_output=MetadataWriter(True)(),
+            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
         ),
     )
 
@@ -600,6 +608,7 @@ def patch_for_cli(mocker):
         verbosity=sentinel.verbosity,
         quiet=sentinel.quiet,
         master_keys=sentinel.master_keys,
+        wrapping_keys=sentinel.wrapping_keys,
         caching=sentinel.caching_config,
         input=sentinel.input,
         output=sentinel.output,
@@ -607,8 +616,12 @@ def patch_for_cli(mocker):
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
         suffix=sentinel.suffix,
+        discovery=sentinel.discovery,
+        discovery_account=sentinel.discovery_account,
+        discovery_partition=sentinel.discovery_partition,
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
+        commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
     )
     mocker.patch.object(aws_encryption_sdk_cli, "setup_logger")
     mocker.patch.object(aws_encryption_sdk_cli, "build_crypto_materials_manager_from_args")
@@ -624,7 +637,7 @@ def test_cli(patch_for_cli):
     aws_encryption_sdk_cli.parse_args.assert_called_once_with(sentinel.raw_args)
     aws_encryption_sdk_cli.setup_logger.assert_called_once_with(sentinel.verbosity, sentinel.quiet)
     aws_encryption_sdk_cli.build_crypto_materials_manager_from_args.assert_called_once_with(
-        key_providers_config=sentinel.master_keys, caching_config=sentinel.caching_config
+        key_providers_config=sentinel.wrapping_keys, caching_config=sentinel.caching_config
     )
     aws_encryption_sdk_cli.stream_kwargs_from_args.assert_called_once_with(
         aws_encryption_sdk_cli.parse_args.return_value, sentinel.crypto_materials_manager

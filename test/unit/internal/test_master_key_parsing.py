@@ -179,10 +179,10 @@ def test_build_master_key_provider_known_provider(patch_load_master_key_provider
     mock_provider_callable = MagicMock()
     patch_load_master_key_provider.return_value = mock_provider_callable
     test = master_key_parsing._build_master_key_provider(
-        provider=sentinel.known_provider_id, key=[], a=sentinel.a, b=sentinel.b
+        discovery=sentinel.discovery, provider=sentinel.known_provider_id, key=[], a=sentinel.a, b=sentinel.b
     )
     patch_load_master_key_provider.assert_called_once_with(sentinel.known_provider_id)
-    mock_provider_callable.assert_called_once_with(a=sentinel.a, b=sentinel.b)
+    mock_provider_callable.assert_called_once_with(a=sentinel.a, b=sentinel.b, discovery=sentinel.discovery)
     assert not mock_provider_callable.return_value.add_master_key.called
     assert test is mock_provider_callable.return_value
 
@@ -191,7 +191,7 @@ def test_build_master_key_provider_add_keys(patch_load_master_key_provider):
     mock_provider = MagicMock()
     patch_load_master_key_provider.return_value.return_value = mock_provider
     master_key_parsing._build_master_key_provider(
-        provider=sentinel.unknown_provider_id, key=[sentinel.key_id_1, sentinel.key_id_2]
+        discovery=True, provider=sentinel.unknown_provider_id, key=[sentinel.key_id_1, sentinel.key_id_2]
     )
     mock_provider.add_master_key.assert_has_calls(
         calls=(call(sentinel.key_id_1), call(sentinel.key_id_2)), any_order=False
@@ -199,7 +199,7 @@ def test_build_master_key_provider_add_keys(patch_load_master_key_provider):
 
 
 def test_build_master_key_provider_additional_kwargs(patch_load_master_key_provider):
-    kwargs = {"a": 1, "b": "asdf"}
+    kwargs = {"a": 1, "b": "asdf", "discovery": True}
     master_key_parsing._build_master_key_provider(provider=sentinel.unknown_provider_id, key=[], **kwargs)
     patch_load_master_key_provider.return_value.assert_called_once_with(**kwargs)
 
@@ -233,10 +233,12 @@ def test_build_crypto_materials_manager_from_args_no_caching(
     patch_parse_master_key_providers, patch_aws_encryption_sdk
 ):
     test = master_key_parsing.build_crypto_materials_manager_from_args(
-        key_providers_config=(sentinel.key_config_1, sentinel.key_config_2), caching_config=None
+        key_providers_config=(sentinel.key_config_1, sentinel.key_config_2, sentinel.discovery), caching_config=None
     )
 
-    patch_parse_master_key_providers.assert_called_once_with(sentinel.key_config_1, sentinel.key_config_2)
+    patch_parse_master_key_providers.assert_called_once_with(
+        sentinel.key_config_1, sentinel.key_config_2, sentinel.discovery
+    )
     patch_aws_encryption_sdk.DefaultCryptoMaterialsManager.assert_called_once_with(
         patch_parse_master_key_providers.return_value
     )

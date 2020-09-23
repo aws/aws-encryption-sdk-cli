@@ -37,8 +37,8 @@ def patch_botocore_session(mocker):
 
 @pytest.yield_fixture
 def patch_kms_master_key_provider(mocker):
-    mocker.patch.object(key_providers, "KMSMasterKeyProvider")
-    yield key_providers.KMSMasterKeyProvider
+    mocker.patch.object(key_providers, "DiscoveryAwsKmsMasterKeyProvider")
+    yield key_providers.DiscoveryAwsKmsMasterKeyProvider
 
 
 @pytest.mark.parametrize(

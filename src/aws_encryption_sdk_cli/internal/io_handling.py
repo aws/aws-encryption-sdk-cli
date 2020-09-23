@@ -21,6 +21,7 @@ import sys
 import attr
 import aws_encryption_sdk
 import six
+from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from base64io import Base64IO
 
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX, OperationResult
@@ -165,6 +166,7 @@ class IOHandler(object):
     required_encryption_context_keys = attr.ib(
         validator=attr.validators.instance_of(list)
     )  # noqa pylint: disable=invalid-name
+    client = attr.ib(validator=attr.validators.instance_of(aws_encryption_sdk.EncryptionSDKClient))
 
     def __init__(
         self,
@@ -175,6 +177,7 @@ class IOHandler(object):
         encode_output,  # type: bool
         required_encryption_context,  # type: Dict[str, str]
         required_encryption_context_keys,  # type: List[str]
+        commitment_policy,  # type: Union[CommitmentPolicy, None]
     ):
         # type: (...) -> None
         """Workaround pending resolution of attrs/mypy interaction.
@@ -188,13 +191,16 @@ class IOHandler(object):
         self.encode_output = encode_output
         self.required_encryption_context = required_encryption_context
         self.required_encryption_context_keys = required_encryption_context_keys  # pylint: disable=invalid-name
+        if not commitment_policy:
+            commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+        self.client = aws_encryption_sdk.EncryptionSDKClient(commitment_policy=commitment_policy)
         attr.validate(self)
 
     def _single_io_write(self, stream_args, source, destination_writer):
         # type: (STREAM_KWARGS, IO, IO) -> OperationResult
         """Performs the actual write operations for a single operation.
 
-        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param dict stream_args: kwargs to pass to `EncryptionSDKClient.stream`
         :param source: source to write
         :type source: file-like object
         :param destination_writer: destination object to which to write
@@ -205,7 +211,7 @@ class IOHandler(object):
         with _encoder(source, self.decode_input) as _source, _encoder(
             destination_writer, self.encode_output
         ) as _destination:  # noqa pylint: disable=line-too-long
-            with aws_encryption_sdk.stream(source=_source, **stream_args) as handler, self.metadata_writer as metadata:
+            with self.client.stream(source=_source, **stream_args) as handler, self.metadata_writer as metadata:
                 metadata_kwargs = dict(
                     mode=stream_args["mode"],
                     input=source.name,
@@ -249,7 +255,7 @@ class IOHandler(object):
         # type: (STREAM_KWARGS, SOURCE, str) -> OperationResult
         """Processes a single encrypt/decrypt operation given a pre-loaded source.
 
-        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param dict stream_args: kwargs to pass to `EncryptionSDKClient.stream`
         :param source: source to write
         :type source: str or file-like object
         :param str destination: destination identifier
@@ -313,7 +319,7 @@ class IOHandler(object):
         # type: (STREAM_KWARGS, str, str) -> None
         """Processes a single encrypt/decrypt operation on a source file.
 
-        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param dict stream_args: kwargs to pass to `EncryptionSDKClient.stream`
         :param str source: Full file path to source file
         :param str destination: Full file path to destination file
         """
@@ -355,7 +361,7 @@ class IOHandler(object):
         # type: (STREAM_KWARGS, str, str, str) -> None
         """Processes encrypt/decrypt operations on all files in a directory tree.
 
-        :param dict stream_args: kwargs to pass to `aws_encryption_sdk.stream`
+        :param dict stream_args: kwargs to pass to `EncryptionSDKClient.stream`
         :param str source: Full file path to source directory root
         :param str destination: Full file path to destination directory root
         :param str suffix: Suffix to append to output filename
