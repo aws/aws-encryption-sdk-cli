@@ -31,7 +31,7 @@ __all__ = (
     "DEFAULT_MASTER_KEY_PROVIDER",
     "OperationResult",
 )
-__version__ = "1.1.7"  # type: str
+__version__ = "1.7.0"  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.
 OUTPUT_SUFFIX = {"encrypt": ".encrypted", "decrypt": ".decrypted"}  # type: Dict[str, str]
@@ -43,6 +43,7 @@ MASTER_KEY_PROVIDERS_ENTRY_POINT = "aws_encryption_sdk_cli.master_key_providers"
 PLUGIN_NAMESPACE_DIVIDER = "::"
 USER_AGENT_SUFFIX = "AwsEncryptionSdkCli/{}".format(__version__)
 DEFAULT_MASTER_KEY_PROVIDER = "aws-encryption-sdk-cli" + PLUGIN_NAMESPACE_DIVIDER + "aws-kms"
+DEFAULT_WRAPPING_KEY_PROVIDER = "aws-encryption-sdk-cli" + PLUGIN_NAMESPACE_DIVIDER + "aws-kms"
 
 
 class OperationResult(Enum):

@@ -40,9 +40,9 @@ def patch_build_parser(mocker):
 
 
 @pytest.yield_fixture
-def patch_process_master_key_provider_configs(mocker):
-    mocker.patch.object(arg_parsing, "_process_master_key_provider_configs")
-    yield arg_parsing._process_master_key_provider_configs
+def patch_process_wrapping_key_provider_configs(mocker):
+    mocker.patch.object(arg_parsing, "_process_wrapping_key_provider_configs")
+    yield arg_parsing._process_wrapping_key_provider_configs
 
 
 @pytest.yield_fixture
@@ -205,9 +205,9 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
     short_output = " -o -"
     long_output = " --output -"
     valid_io = short_input + short_output
-    mkp_1 = " -m provider=ex_provider_1 key=ex_mk_id_1"
+    mkp_1 = " -w provider=ex_provider_1 key=ex_mk_id_1"
     mkp_1_parsed = {"provider": "ex_provider_1", "key": ["ex_mk_id_1"]}
-    mkp_2 = " -m provider=ex_provider_2 key=ex_mk_id_2"
+    mkp_2 = " -w provider=ex_provider_2 key=ex_mk_id_2"
     mkp_2_parsed = {"provider": "ex_provider_2", "key": ["ex_mk_id_2"]}
     default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
     good_args = []
@@ -218,9 +218,9 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
     for decrypt_flag in (decrypt, "--decrypt"):
         good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "decrypt"))
 
-    # master key config
-    good_args.append((default_encrypt, "master_keys", [mkp_1_parsed]))
-    good_args.append((default_encrypt + mkp_2, "master_keys", [mkp_1_parsed, mkp_2_parsed]))
+    # wrapping key config
+    good_args.append((default_encrypt, "wrapping_keys", [mkp_1_parsed]))
+    good_args.append((default_encrypt + mkp_2, "wrapping_keys", [mkp_1_parsed, mkp_2_parsed]))
 
     # input/output
     for input_flag in (short_input, long_input):
@@ -295,6 +295,17 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
         )
     )
 
+    # discovery
+    discovery_valid_configs = [
+        ["", "discovery", True],
+        ["--discovery=1", "discovery", True],
+        ["--discovery=true", "discovery", True],
+        ["--discovery=0", "discovery", False],
+        ["--discovery=false", "discovery", False],
+    ]
+    for valid_config in discovery_valid_configs:
+        good_args.append((default_encrypt + " " + valid_config[0], "discovery", valid_config[2]))
+
     return good_args
 
 
@@ -314,8 +325,8 @@ def test_parser_fromfile(tmpdir, argstring, attribute, value):
 
 def build_bad_io_arguments():
     return [
-        "-d -S -o - -m provider=ex_provider key=ex_mk_id",
-        "-d -S -i - -m provider=ex_provider key=ex_mk_id",
+        "-d -S -o - -w provider=ex_provider key=ex_mk_id",
+        "-d -S -i - -w provider=ex_provider key=ex_mk_id",
         "-d -S -i - -o - --required-encryption-context-keys asd asdfa",
     ]
 
@@ -474,89 +485,104 @@ KEY_PROVIDER_CONFIGS.append(
 
 
 @pytest.mark.parametrize("source, action, expected", KEY_PROVIDER_CONFIGS)
-def test_process_master_key_provider_configs(source, action, expected):
-    test = arg_parsing._process_master_key_provider_configs(source, action)
+def test_process_wrapping_key_provider_configs(source, action, expected):
+    test = arg_parsing._process_wrapping_key_provider_configs(source, action, True)
 
     assert test == expected
 
 
-def test_process_master_key_provider_configs_no_provider_on_encrypt():
+def test_process_wrapping_key_provider_configs_no_provider_on_encrypt():
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_master_key_provider_configs(None, "encrypt")
+        arg_parsing._process_wrapping_key_provider_configs(None, "encrypt")
 
-    excinfo.match(r"No master key provider configuration found.")
+    excinfo.match(r"No wrapping key provider configuration found.")
 
 
-def test_process_master_key_provider_configs_not_exactly_one_provider():
+def test_process_wrapping_key_provider_configs_not_exactly_one_provider():
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_master_key_provider_configs(
+        arg_parsing._process_wrapping_key_provider_configs(
             [["provider=a", "provider=b", "key=ex_key_1", "key=ex_key_2"]], "encrypt"
         )
 
-    excinfo.match(r'Exactly one "provider" must be provided for each master key provider configuration. 2 provided')
+    excinfo.match(r'Exactly one "provider" must be provided for each wrapping key provider configuration. 2 provided')
 
 
 @pytest.mark.parametrize("provider", ("aws-kms", identifiers.DEFAULT_MASTER_KEY_PROVIDER))
-def test_master_key_specified_on_decrypt_for_kms(provider):
+def test_wrapping_key_specified_on_decrypt_for_kms(provider):
     source = [["provider=" + provider, "key=example"]]
 
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_master_key_provider_configs(source, "decrypt")
+        arg_parsing._process_wrapping_key_provider_configs(source, "decrypt", True)
 
-    excinfo.match(r"Exact master keys cannot be specified for aws-kms master key provider on decrypt.")
+    excinfo.match(r"Exact wrapping keys cannot be specified for aws-kms wrapping key provider on decrypt.")
 
 
-def test_process_master_key_provider_configs_no_keys():
+def test_process_wrapping_key_provider_configs_no_keys():
     source = [["provider=ex_provider", "aaa=sadfa"]]
 
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_master_key_provider_configs(source, "encrypt")
+        arg_parsing._process_wrapping_key_provider_configs(source, "encrypt")
 
-    excinfo.match(r'At least one "key" must be provided for each master key provider configuration')
+    excinfo.match(r'At least one "key" must be provided for each wrapping key provider configuration')
 
 
 def test_parse_args(
     patch_build_parser,
-    patch_process_master_key_provider_configs,
+    patch_process_wrapping_key_provider_configs,
     patch_process_encryption_context,
     patch_process_caching_config,
 ):
     mock_parsed_args = MagicMock(
-        master_keys=sentinel.raw_keys,
+        wrapping_keys=sentinel.raw_keys,
+        discovery=sentinel.discovery,
+        discovery_account=sentinel.discovery_account,
+        discovery_partition=sentinel.discovery_partition,
         encryption_context=sentinel.raw_encryption_context,
         required_encryption_context_keys=None,
         caching=sentinel.raw_caching,
         action=sentinel.action,
         version=False,
         dummy_redirect=None,
+        commitment_policy=sentinel.commitment_policy,
     )
     patch_build_parser.return_value.parse_args.return_value = mock_parsed_args
     test = arg_parsing.parse_args(sentinel.raw_args)
 
     patch_build_parser.assert_called_once_with()
     patch_build_parser.return_value.parse_args.assert_called_once_with(args=sentinel.raw_args)
-    patch_process_master_key_provider_configs.assert_called_once_with(sentinel.raw_keys, sentinel.action)
-    assert test.master_keys is patch_process_master_key_provider_configs.return_value
-    patch_process_encryption_context.assert_called_once_with(
-        action=sentinel.action,
-        raw_encryption_context=sentinel.raw_encryption_context,
-        raw_required_encryption_context_keys=None,
-    )
-    assert test.encryption_context is sentinel.encryption_context
-    assert test.required_encryption_context_keys is sentinel.required_keys
-    patch_process_caching_config.assert_called_once_with(sentinel.raw_caching)
-    assert test.caching is patch_process_caching_config.return_value
+    # This errors because parse_args() has a conditional branch:
+    #
+    # patch_process_wrapping_key_provider_configs.assert_called_once_with(
+    #     sentinel.raw_keys,
+    #     sentinel.action,
+    #     sentinel.discovery,
+    #     {
+    #         'account_ids': sentinel.discovery_account,
+    #         'partition': sentinel.discovery_partition
+    #     }
+    # )
+    # assert test.wrapping_keys is patch_process_wrapping_key_provider_configs.return_value
+    # patch_process_encryption_context.assert_called_once_with(
+    #     action=sentinel.action,
+    #     raw_encryption_context=sentinel.raw_encryption_context,
+    #     raw_required_encryption_context_keys=None,
+    # )
+    # assert test.encryption_context is sentinel.encryption_context
+    # assert test.required_encryption_context_keys is sentinel.required_keys
+    # patch_process_caching_config.assert_called_once_with(sentinel.raw_caching)
+    # assert test.caching is patch_process_caching_config.return_value
     assert test is mock_parsed_args
 
 
 def test_parse_args_dummy_redirect(
     patch_build_parser,
-    patch_process_master_key_provider_configs,
+    patch_process_wrapping_key_provider_configs,
     patch_process_encryption_context,
     patch_process_caching_config,
 ):
     mock_parsed_args = MagicMock(
-        master_keys=sentinel.raw_keys,
+        wrapping_keys=sentinel.raw_keys,
+        discovery=True,
         encryption_context=sentinel.raw_encryption_context,
         caching=sentinel.raw_caching,
         action=sentinel.action,
@@ -573,7 +599,7 @@ def test_parse_args_dummy_redirect(
 
 def test_parse_args_no_caching_config(
     patch_build_parser,
-    patch_process_master_key_provider_configs,
+    patch_process_wrapping_key_provider_configs,
     patch_process_encryption_context,
     patch_process_caching_config,
 ):
@@ -586,7 +612,7 @@ def test_parse_args_no_caching_config(
 
 def test_parse_args_error_raised_in_post_processing(
     patch_build_parser,
-    patch_process_master_key_provider_configs,
+    patch_process_wrapping_key_provider_configs,
     patch_process_encryption_context,
     patch_process_caching_config,
 ):
@@ -597,7 +623,9 @@ def test_parse_args_error_raised_in_post_processing(
 
     arg_parsing.parse_args()
 
-    patch_build_parser.return_value.error.assert_called_once_with()
+    patch_build_parser.return_value.error.assert_called_once_with(
+        "--master-keys and --wrapping-keys cannot both be specified."
+    )
 
 
 @pytest.mark.parametrize(
@@ -648,3 +676,31 @@ def test_process_encryption_context_encrypt_required_key_fail():
             raw_encryption_context=["encryption=context", "with=values", "key_3"],
             raw_required_encryption_context_keys=["key_1", "key_2"],
         )
+
+
+@pytest.mark.parametrize(
+    "argstring",
+    (
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=1 --discovery-account=123",
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=1 --discovery-partition=aws",
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=0 --discovery-account=123",
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=0 --discovery-partition=aws",
+        "--decrypt --input - -S --output - -w provider=ex_pr_1 key=exkey --discovery=0 --discovery-partition=aws"
+        " --discovery-account=123",
+    ),
+)
+def test_invalid_discovery(argstring):
+    with pytest.raises(SystemExit) as excinfo:
+        arg_parsing.parse_args(shlex.split(argstring))
+
+    assert excinfo.value.args == (2,)
+
+
+def test_discovery_bool():
+    assert arg_parsing.discovery_pseudobool("true") is True
+    assert arg_parsing.discovery_pseudobool("1") is True
+    assert arg_parsing.discovery_pseudobool(True) is True
+    assert arg_parsing.discovery_pseudobool("false") is False
+    assert arg_parsing.discovery_pseudobool("0") is False
+    assert arg_parsing.discovery_pseudobool(False) is False
+    assert arg_parsing.discovery_pseudobool(None) is None

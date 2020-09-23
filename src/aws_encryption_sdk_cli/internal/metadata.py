@@ -36,7 +36,7 @@ except ImportError:  # pragma: no cover
 __all__ = ("MetadataWriter", "unicode_b64_encode", "json_ready_header", "json_ready_header_auth")
 
 
-@attr.s(hash=False, init=False, cmp=True)
+@attr.s(hash=False, init=False, order=True, eq=True)
 class MetadataWriter(object):
     # pylint: disable=too-few-public-methods
     """Writes JSON-encoded metadata to output stream unless suppressed.
@@ -190,6 +190,9 @@ def json_ready_header(header):
         data_key["key_provider"]["provider_id"] = unicode_b64_encode(six.b(data_key["key_provider"]["provider_id"]))
         data_key["key_provider"]["key_info"] = unicode_b64_encode(data_key["key_provider"]["key_info"])
         data_key["encrypted_data_key"] = unicode_b64_encode(data_key["encrypted_data_key"])
+
+    if dict_header["commitment_key"]:
+        dict_header["commitment_key"] = unicode_b64_encode(dict_header["commitment_key"])
 
     return dict_header
 

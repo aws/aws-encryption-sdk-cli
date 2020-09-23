@@ -19,10 +19,11 @@ import traceback
 from argparse import Namespace  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
+from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
 
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
-from aws_encryption_sdk_cli.internal.arg_parsing import parse_args
+from aws_encryption_sdk_cli.internal.arg_parsing import CommitmentPolicyArgs, parse_args
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
 from aws_encryption_sdk_cli.internal.io_handling import IOHandler, output_filename
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME, setup_logger
@@ -164,6 +165,14 @@ def process_cli_request(stream_args, parsed_args):
     )
     _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
+    if not parsed_args.commitment_policy:
+        commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+        commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+    else:
+        _LOGGER.warning("Invalid commitment policy: %s", parsed_args.commitment_policy)
+        commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+
     handler = IOHandler(
         metadata_writer=parsed_args.metadata_output,
         interactive=parsed_args.interactive,
@@ -172,6 +181,7 @@ def process_cli_request(stream_args, parsed_args):
         encode_output=parsed_args.encode,
         required_encryption_context=parsed_args.encryption_context,
         required_encryption_context_keys=parsed_args.required_encryption_context_keys,
+        commitment_policy=commitment_policy,
     )
 
     if parsed_args.input == "-":
@@ -230,6 +240,11 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
         if args.frame_length is not None:
             stream_args["frame_length"] = args.frame_length
 
+    if not args.commitment_policy:
+        stream_args["commitment_policy"] = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+    elif args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+        stream_args["commitment_policy"] = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+
     if args.max_length is not None:
         stream_args["max_body_length"] = args.max_length
     return stream_args
@@ -250,11 +265,17 @@ def cli(raw_args=None):
         _LOGGER.debug("Encryption source: %s", args.input)
         _LOGGER.debug("Encryption destination: %s", args.output)
         _LOGGER.debug("Master key provider configuration: %s", args.master_keys)
+        _LOGGER.debug("Discovery mode: %r", args.discovery)
         _LOGGER.debug("Suffix requested: %s", args.suffix)
 
-        crypto_materials_manager = build_crypto_materials_manager_from_args(
-            key_providers_config=args.master_keys, caching_config=args.caching
-        )
+        if args.wrapping_keys is not None:
+            crypto_materials_manager = build_crypto_materials_manager_from_args(
+                key_providers_config=args.wrapping_keys, caching_config=args.caching
+            )
+        else:
+            crypto_materials_manager = build_crypto_materials_manager_from_args(
+                key_providers_config=args.master_keys, caching_config=args.caching
+            )
 
         stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
 

@@ -18,6 +18,7 @@ import sys
 
 import pytest
 import six
+from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from mock import MagicMock, patch, sentinel
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
@@ -37,11 +38,12 @@ def patch_makedirs(mocker):
 
 @pytest.yield_fixture
 def patch_aws_encryption_sdk_stream(mocker):
-    mocker.patch.object(io_handling.aws_encryption_sdk, "stream")
+    mocker.patch.object(io_handling.aws_encryption_sdk.EncryptionSDKClient, "stream")
     mock_stream = MagicMock()
-    io_handling.aws_encryption_sdk.stream.return_value.__enter__.return_value = mock_stream
+    # io_handling.aws_encryption_sdk.EncryptionSDKClient.stream.return_value.__enter__.return_value = mock_stream
+    io_handling.aws_encryption_sdk.EncryptionSDKClient.stream.return_value = mock_stream
     mock_stream.__iter__ = MagicMock(return_value=iter((sentinel.chunk_1, sentinel.chunk_2)))
-    yield io_handling.aws_encryption_sdk.stream
+    yield io_handling.aws_encryption_sdk.EncryptionSDKClient.stream
 
 
 @pytest.fixture
@@ -102,6 +104,7 @@ GOOD_IOHANDLER_KWARGS = dict(
     encode_output=False,
     required_encryption_context={},
     required_encryption_context_keys=[],
+    commitment_policy=CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT,
 )
 
 
@@ -185,6 +188,7 @@ def test_iohandler_attrs_good():
         dict(encode_output="not a bool"),
         dict(encryption_context="not a dict"),
         dict(required_encryption_context_keys="not a list"),
+        dict(commitment_policy="not a CommitmentPolicy"),
     ),
 )
 def test_iohandler_attrs_fail(kwargs):
