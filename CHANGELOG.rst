@@ -2,6 +2,19 @@
 Changelog
 *********
 
+1.7.0 -- 2020-09-24
+===================
+
+New Features
+------------
+
+* Updates to the AWS Encryption SDK. c2434ba
+
+  This change includes fixes for issues that were reported by Thai Duong from Google's Security
+  team, and for issues that were identified by AWS Cryptography.
+
+  See: `Migration Guide <https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/migration.html>`_
+
 1.1.7 -- 2019-10-15
 ===================
 
