@@ -24,12 +24,7 @@ import aws_encryption_sdk
 import six
 
 from aws_encryption_sdk_cli.exceptions import ParameterParseError
-from aws_encryption_sdk_cli.internal.identifiers import (
-    ALGORITHM_NAMES,
-    DEFAULT_MASTER_KEY_PROVIDER,
-    DEFAULT_WRAPPING_KEY_PROVIDER,
-    __version__,
-)
+from aws_encryption_sdk_cli.internal.identifiers import ALGORITHM_NAMES, DEFAULT_MASTER_KEY_PROVIDER, __version__
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter
 
@@ -43,17 +38,12 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
         MASTER_KEY_PROVIDER_CONFIG,
         PARSED_CONFIG,
         RAW_CONFIG,
-        WRAPPING_KEY_PROVIDER_CONFIG,
     )
 except ImportError:  # pragma: no cover
     cast = lambda typ, val: val  # noqa pylint: disable=invalid-name
     # We only actually need the other imports when running the mypy checks
 
-__all__ = (
-    "parse_args",
-    "CommitmentPolicyArgs",
-    "_process_wrapping_key_provider_configs",
-)
+__all__ = ("parse_args",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
@@ -229,22 +219,6 @@ def _build_parser():
     )
 
     parser.add_argument(
-        "-m",
-        "--master-keys",
-        nargs="+",
-        action="append",
-        required=False,
-        help=(
-            "Identifying information for a master key provider and master keys. Each instance must include "
-            "a master key provider identifier and identifiers for one or more master key supplied by that provider. "
-            "ex: "
-            "--master-keys provider=aws-kms key=$AWS_KMS_KEY_ARN "
-            "The --master-keys argument has been deprecated and will be removed in version 2.0. "
-            "Please use the --wrapping-keys argument instead."
-        ),
-    )
-
-    parser.add_argument(
         "-w",
         "--wrapping-keys",
         nargs="+",
@@ -254,16 +228,16 @@ def _build_parser():
         help=(
             "Identifying information for a wrapping key provider and wrapping keys. Each instance must include "
             "a wrapping key provider identifier and identifiers for one or more wrapping key supplied by that "
-            "provider. ex: "
+            " provider. ex: "
             "--wrapping-keys provider=aws-kms key=$AWS_KMS_KEY_ARN"
         ),
     )
 
     parser.add_argument(
         "--commitment-policy",
-        dest="commitment_policy",
         type=CommitmentPolicyArgs,
         choices=list(CommitmentPolicyArgs),
+        default=CommitmentPolicyArgs.require_encrypt_require_decrypt,
         help=(
             "Specifies the commitment policy for key commitment. "
             "ex: "
@@ -506,70 +480,13 @@ def _process_caching_config(raw_caching_config):
     return caching_config
 
 
-def _process_master_key_provider_configs(
-    raw_keys,  # type: List[RAW_CONFIG]
-    action,  # type: str
-):
-    # type: (...) -> List[MASTER_KEY_PROVIDER_CONFIG]
-    """Applied additional processing to prepare the master key provider configuration.
-
-    :param list raw_keys: List of master key provider configurations
-    :param str action: Action defined in CLI input
-    :param bool discovery: Are we in discovery mode?
-    :param Dict[str, Union[str, List[str]]] discovery_filter: Filter options for discovery mode
-    :returns: List of processed master key provider configurations
-    :rtype: list of dicts
-    :raises ParameterParseError: if exactly one provider value is not provided
-    :raises ParameterParseError: if no key values are provided
-    """
-    if raw_keys is None:
-        if action == "decrypt":
-            # We allow not defining any master key provider configuration if decrypting with aws-kms.
-            _LOGGER.debug(
-                "No master key provider config provided on decrypt request. Using aws-kms with no master keys."
-            )
-            return [{"provider": DEFAULT_MASTER_KEY_PROVIDER, "key": []}]
-        raise ParameterParseError("No master key provider configuration found.")
-
-    _LOGGER.warning(
-        "The --master-keys argument has been deprecated and will be removed in version 2.0. "
-        "Please use the --wrapping-keys argument instead."
-    )
-
-    processed_configs = []  # type: List[MASTER_KEY_PROVIDER_CONFIG]
-    for raw_config in raw_keys:
-        parsed_args = {}  # type: Dict[str, Union[str, List[str], Dict[str, Union[str, List[str]]]]]
-        parsed_args.update(_parse_kwargs(raw_config))
-
-        provider = parsed_args.get("provider", [DEFAULT_MASTER_KEY_PROVIDER])  # If no provider is defined, use aws-kms
-        if len(provider) != 1:
-            raise ParameterParseError(
-                'Exactly one "provider" must be provided for each master key provider configuration. '
-                "{} provided".format(len(provider))
-            )
-        parsed_args["provider"] = provider[0]  # type: ignore
-
-        aws_kms_on_decrypt = parsed_args["provider"] in ("aws-kms", DEFAULT_MASTER_KEY_PROVIDER) and action == "decrypt"
-
-        if aws_kms_on_decrypt:
-            if "key" in parsed_args:
-                raise ParameterParseError(
-                    "Exact master keys cannot be specified for aws-kms master key provider on decrypt."
-                )
-            parsed_args["key"] = []
-        elif "key" not in parsed_args:
-            raise ParameterParseError('At least one "key" must be provided for each master key provider configuration')
-        processed_configs.append(parsed_args)  # type: ignore
-    return processed_configs
-
-
 def _process_wrapping_key_provider_configs(  # noqa: C901
     raw_keys,  # type: List[RAW_CONFIG]
     action,  # type: str
     discovery=None,  # type: bool
     discovery_filter=None,  # type: Dict[str, Union[str, List[str]]]
 ):
-    # type: (...) -> List[WRAPPING_KEY_PROVIDER_CONFIG]
+    # type: (...) -> List[MASTER_KEY_PROVIDER_CONFIG]
     """Applied additional processing to prepare the wrapping key provider configuration.
 
     :param list raw_keys: List of wrapping key provider configurations
@@ -590,15 +507,15 @@ def _process_wrapping_key_provider_configs(  # noqa: C901
             return [{"provider": DEFAULT_MASTER_KEY_PROVIDER, "key": []}]
         raise ParameterParseError("No wrapping key provider configuration found.")
 
-    if discovery is None:
+    if action == "decrypt" and discovery is None:
         discovery = False
 
-    processed_configs = []  # type: List[WRAPPING_KEY_PROVIDER_CONFIG]
+    processed_configs = []  # type: List[MASTER_KEY_PROVIDER_CONFIG]
     for raw_config in raw_keys:
         parsed_args = {}  # type: Dict[str, Union[str, List[str], Dict[str, Union[str, List[str]]]]]
         parsed_args.update(_parse_kwargs(raw_config))
 
-        provider = parsed_args.get("provider", [DEFAULT_WRAPPING_KEY_PROVIDER])
+        provider = parsed_args.get("provider", [DEFAULT_MASTER_KEY_PROVIDER])  # If no provider is defined, use aws-kms
         if len(provider) != 1:
             raise ParameterParseError(
                 'Exactly one "provider" must be provided for each wrapping key provider configuration. '
@@ -606,9 +523,7 @@ def _process_wrapping_key_provider_configs(  # noqa: C901
             )
         parsed_args["provider"] = provider[0]  # type: ignore
 
-        aws_kms_on_decrypt = (
-            parsed_args["provider"] in ("aws-kms", DEFAULT_WRAPPING_KEY_PROVIDER) and action == "decrypt"
-        )
+        aws_kms_on_decrypt = parsed_args["provider"] in ("aws-kms", DEFAULT_MASTER_KEY_PROVIDER) and action == "decrypt"
 
         if aws_kms_on_decrypt:
             if "key" in parsed_args and discovery:
@@ -675,8 +590,8 @@ class CommitmentPolicyArgs(Enum):
     """Defines the possible values for a commitment policy"""
 
     forbid_encrypt_allow_decrypt = "forbid-encrypt-allow-decrypt"
-    # require_encrypt_allow_decrypt = 'require-encrypt-allow-decrypt'
-    # require_encrypt_require_decrypt = 'require-encrypt-require-decrypt'
+    require_encrypt_allow_decrypt = "require-encrypt-allow-decrypt"
+    require_encrypt_require_decrypt = "require-encrypt-require-decrypt"
 
     def str(self):
         """Returns the string value for the commitment policy"""
@@ -700,8 +615,8 @@ def parse_args(raw_args=None):
                 'Found invalid argument "{actual}". Did you mean "-{actual}"?'.format(actual=parsed_args.dummy_redirect)
             )
 
-        if parsed_args.discovery is None:
-            parsed_args.discovery = True
+        if parsed_args.action == "decrypt" and parsed_args.discovery is None:
+            raise ParameterParseError("Discovery must be set to True or False.")
         discovery_filter = _process_discovery_args(parsed_args)
 
         if parsed_args.required_encryption_context_keys is not None:
@@ -710,15 +625,9 @@ def parse_args(raw_args=None):
         if parsed_args.overwrite_metadata:
             parsed_args.metadata_output.force_overwrite()
 
-        if parsed_args.master_keys and parsed_args.wrapping_keys:
-            raise ParameterParseError("--master-keys and --wrapping-keys cannot both be specified.")
-        if parsed_args.wrapping_keys:
-            parsed_args.wrapping_keys = _process_wrapping_key_provider_configs(
-                parsed_args.wrapping_keys, parsed_args.action, parsed_args.discovery, discovery_filter
-            )
-        else:
-            _LOGGER.warning("The --wrapping-keys argument will be mandatory in version 2.0")
-            parsed_args.master_keys = _process_master_key_provider_configs(parsed_args.master_keys, parsed_args.action)
+        parsed_args.wrapping_keys = _process_wrapping_key_provider_configs(
+            parsed_args.wrapping_keys, parsed_args.action, parsed_args.discovery, discovery_filter
+        )
 
         # mypy does not appear to understand nargs="+" behavior
         parsed_args.encryption_context, parsed_args.required_encryption_context_keys = _process_encryption_context(

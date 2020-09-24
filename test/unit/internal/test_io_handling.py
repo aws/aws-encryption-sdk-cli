@@ -40,8 +40,7 @@ def patch_makedirs(mocker):
 def patch_aws_encryption_sdk_stream(mocker):
     mocker.patch.object(io_handling.aws_encryption_sdk.EncryptionSDKClient, "stream")
     mock_stream = MagicMock()
-    # io_handling.aws_encryption_sdk.EncryptionSDKClient.stream.return_value.__enter__.return_value = mock_stream
-    io_handling.aws_encryption_sdk.EncryptionSDKClient.stream.return_value = mock_stream
+    io_handling.aws_encryption_sdk.EncryptionSDKClient.stream.return_value.__enter__.return_value = mock_stream
     mock_stream.__iter__ = MagicMock(return_value=iter((sentinel.chunk_1, sentinel.chunk_2)))
     yield io_handling.aws_encryption_sdk.EncryptionSDKClient.stream
 
@@ -104,7 +103,7 @@ GOOD_IOHANDLER_KWARGS = dict(
     encode_output=False,
     required_encryption_context={},
     required_encryption_context_keys=[],
-    commitment_policy=CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT,
+    commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
 )
 
 

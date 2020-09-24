@@ -58,7 +58,7 @@ def cmk_arn():
 
 
 def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
-    template = "-e -i {source} -o {target} --encryption-context a=b c=d -m key=" + cmk_arn_value()
+    template = "-e -i {source} -o {target} --encryption-context a=b c=d -w key=" + cmk_arn_value()
     if metadata:
         template += " {metadata}"
     else:
@@ -73,7 +73,7 @@ def encrypt_args_template(metadata=False, caching=False, encode=False, decode=Fa
 
 
 def decrypt_args_template(metadata=False, encode=False, decode=False):
-    template = "-d -i {source} -o {target}"
+    template = "-d -i {source} -o {target} --discovery=true"
     if metadata:
         template += " {metadata}"
     else:

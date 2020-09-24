@@ -263,12 +263,11 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
             encode=sentinel.encode_output,
             encryption_context=sentinel.encryption_context,
             required_encryption_context_keys=sentinel.required_keys,
-            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
         ),
     )
 
     patch_iohandler.assert_called_once_with(
-        commitment_policy=CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT,
         metadata_writer=metadata_writer,
         interactive=sentinel.interactive,
         no_overwrite=sentinel.no_overwrite,
@@ -276,6 +275,43 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
         encode_output=sentinel.encode_output,
         required_encryption_context=sentinel.encryption_context,
         required_encryption_context_keys=sentinel.required_keys,
+        commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+    )
+    assert not patch_iohandler.return_value.process_single_operation.called
+    assert not patch_iohandler.return_value.process_dir.called
+    assert not patch_iohandler.return_value.process_single_file.called
+
+
+def test_process_cli_request_no_commitment_policy(tmpdir, patch_iohandler):
+    source = tmpdir.mkdir("source")
+    destination = tmpdir.mkdir("destination")
+    metadata_writer = MetadataWriter(True)()
+    aws_encryption_sdk_cli.process_cli_request(
+        stream_args=sentinel.stream_args,
+        parsed_args=MagicMock(
+            input=str(source),
+            output=str(destination),
+            recursive=False,
+            interactive=sentinel.interactive,
+            no_overwrite=sentinel.no_overwrite,
+            metadata_output=metadata_writer,
+            decode=sentinel.decode_input,
+            encode=sentinel.encode_output,
+            encryption_context=sentinel.encryption_context,
+            required_encryption_context_keys=sentinel.required_keys,
+            commitment_policy=None,
+        ),
+    )
+
+    patch_iohandler.assert_called_once_with(
+        metadata_writer=metadata_writer,
+        interactive=sentinel.interactive,
+        no_overwrite=sentinel.no_overwrite,
+        decode_input=sentinel.decode_input,
+        encode_output=sentinel.encode_output,
+        required_encryption_context=sentinel.encryption_context,
+        required_encryption_context_keys=sentinel.required_keys,
+        commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
     )
     assert not patch_iohandler.return_value.process_single_operation.called
     assert not patch_iohandler.return_value.process_dir.called
@@ -298,7 +334,7 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
             ),
         )
     excinfo.match(r"If operating on a source directory, destination must be an existing directory")
@@ -319,6 +355,7 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_iohandler)
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
+            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
         ),
     )
 
@@ -351,6 +388,7 @@ def test_process_cli_request_source_stdin(tmpdir, patch_iohandler):
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
         metadata_output=MetadataWriter(True)(),
+        commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
     )
     aws_encryption_sdk_cli.process_cli_request(stream_args=sentinel.stream_args, parsed_args=mock_parsed_args)
     assert not patch_iohandler.return_value.process_dir.called
@@ -376,6 +414,7 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_iohandler
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
+            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -403,7 +442,7 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_iohandle
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -429,7 +468,7 @@ def test_process_cli_request_invalid_source(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
             ),
         )
     excinfo.match(r"Invalid source.  Must be a valid pathname pattern or stdin \(-\)")
@@ -449,7 +488,12 @@ def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_i
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={"mode": "encrypt"},
             parsed_args=MagicMock(
-                input=source, output=str(target_file), recursive=False, interactive=False, no_overwrite=False
+                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                input=source,
+                output=str(target_file),
+                recursive=False,
+                interactive=False,
+                no_overwrite=False,
             ),
         )
 
@@ -479,7 +523,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
             encode=False,
             decode=False,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
         ),
     )
 
@@ -607,7 +651,6 @@ def patch_for_cli(mocker):
         version=False,
         verbosity=sentinel.verbosity,
         quiet=sentinel.quiet,
-        master_keys=sentinel.master_keys,
         wrapping_keys=sentinel.wrapping_keys,
         caching=sentinel.caching_config,
         input=sentinel.input,
@@ -621,7 +664,6 @@ def patch_for_cli(mocker):
         discovery_partition=sentinel.discovery_partition,
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
-        commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
     )
     mocker.patch.object(aws_encryption_sdk_cli, "setup_logger")
     mocker.patch.object(aws_encryption_sdk_cli, "build_crypto_materials_manager_from_args")
@@ -684,7 +726,15 @@ def test_cli_unknown_error_capture_stacktrace(patch_process_cli_request, tmpdir,
     patch_process_cli_request.side_effect = Exception(message)
 
     test = aws_encryption_sdk_cli.cli(
-        shlex.split("-Sd -i " + str(plaintext) + " -o " + str(tmpdir.join("ciphertext")) + " " + requested_log_level)
+        shlex.split(
+            "-Sd -i "
+            + str(plaintext)
+            + " -o "
+            + str(tmpdir.join("ciphertext"))
+            + " "
+            + requested_log_level
+            + " --discovery=true"
+        )
     )
 
     all_logs = log_stream.getvalue()

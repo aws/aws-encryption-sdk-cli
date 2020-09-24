@@ -151,7 +151,7 @@ def _catch_bad_metadata_file_requests(metadata_output, source, destination):
         raise BadUserArgumentError("Metadata output file cannot be in the input directory")
 
 
-def process_cli_request(stream_args, parsed_args):
+def process_cli_request(stream_args, parsed_args):  # noqa: C901
     # type: (STREAM_KWARGS, Namespace) -> None
     """Maps the operation request to the appropriate function based on the type of input and output provided.
 
@@ -166,12 +166,15 @@ def process_cli_request(stream_args, parsed_args):
     _catch_bad_stdin_stdout_requests(parsed_args.input, parsed_args.output)
 
     if not parsed_args.commitment_policy:
-        commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+        commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
     elif parsed_args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
         commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.require_encrypt_allow_decrypt:
+        commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_ALLOW_DECRYPT
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.require_encrypt_require_decrypt:
+        commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
     else:
-        _LOGGER.warning("Invalid commitment policy: %s", parsed_args.commitment_policy)
-        commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
+        raise BadUserArgumentError("Invalid commitment policy.")
 
     handler = IOHandler(
         metadata_writer=parsed_args.metadata_output,
@@ -240,9 +243,13 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
         if args.frame_length is not None:
             stream_args["frame_length"] = args.frame_length
 
-    if not args.commitment_policy:
-        stream_args["commitment_policy"] = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
-    elif args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+    if args.commitment_policy is None:
+        stream_args["commitment_policy"] = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
+    elif args.commitment_policy == "require-encrypt-require-decrypt":
+        stream_args["commitment_policy"] = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
+    elif args.commitment_policy == "require-encrypt-allow-decrypt":
+        stream_args["commitment_policy"] = CommitmentPolicy.REQUIRE_ENCRYPT_ALLOW_DECRYPT
+    elif args.commitment_policy == "forbid-encrypt-allow-decrypt":
         stream_args["commitment_policy"] = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
 
     if args.max_length is not None:
@@ -264,18 +271,13 @@ def cli(raw_args=None):
         _LOGGER.debug("Encryption mode: %s", args.action)
         _LOGGER.debug("Encryption source: %s", args.input)
         _LOGGER.debug("Encryption destination: %s", args.output)
-        _LOGGER.debug("Master key provider configuration: %s", args.master_keys)
+        _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)
         _LOGGER.debug("Discovery mode: %r", args.discovery)
         _LOGGER.debug("Suffix requested: %s", args.suffix)
 
-        if args.wrapping_keys is not None:
-            crypto_materials_manager = build_crypto_materials_manager_from_args(
-                key_providers_config=args.wrapping_keys, caching_config=args.caching
-            )
-        else:
-            crypto_materials_manager = build_crypto_materials_manager_from_args(
-                key_providers_config=args.master_keys, caching_config=args.caching
-            )
+        crypto_materials_manager = build_crypto_materials_manager_from_args(
+            key_providers_config=args.wrapping_keys, caching_config=args.caching
+        )
 
         stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
 
