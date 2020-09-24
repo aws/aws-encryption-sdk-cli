@@ -17,6 +17,7 @@ import shlex
 
 import aws_encryption_sdk
 import pytest
+from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from mock import MagicMock, sentinel
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
@@ -210,13 +211,15 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
     mkp_2 = " -w provider=ex_provider_2 key=ex_mk_id_2"
     mkp_2_parsed = {"provider": "ex_provider_2", "key": ["ex_mk_id_2"]}
     default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
+    default_discovery = " --discovery=true"
+    default_decrypt = decrypt + suppress_metadata + valid_io + mkp_1 + default_discovery
     good_args = []
 
     # encrypt/decrypt
     for encrypt_flag in (encrypt, "--encrypt"):
         good_args.append((encrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "encrypt"))
     for decrypt_flag in (decrypt, "--decrypt"):
-        good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "decrypt"))
+        good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1 + default_discovery, "action", "decrypt"))
 
     # wrapping key config
     good_args.append((default_encrypt, "wrapping_keys", [mkp_1_parsed]))
@@ -297,14 +300,15 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
 
     # discovery
     discovery_valid_configs = [
-        ["", "discovery", True],
         ["--discovery=1", "discovery", True],
         ["--discovery=true", "discovery", True],
         ["--discovery=0", "discovery", False],
         ["--discovery=false", "discovery", False],
     ]
     for valid_config in discovery_valid_configs:
-        good_args.append((default_encrypt + " " + valid_config[0], "discovery", valid_config[2]))
+        good_args.append(
+            (default_decrypt.replace(default_discovery, " " + valid_config[0]), "discovery", valid_config[2])
+        )
 
     return good_args
 
@@ -318,6 +322,8 @@ def test_parser_from_shell(argstring, attribute, value):
 @pytest.mark.parametrize("argstring, attribute, value", build_expected_good_args(from_file=True))
 def test_parser_fromfile(tmpdir, argstring, attribute, value):
     argfile = tmpdir.join("argfile")
+    if not "--discovery" in argstring:
+        argstring += " --discovery=true"
     argfile.write(argstring)
     parsed = arg_parsing.parse_args(["@{}".format(argfile)])
     assert getattr(parsed, attribute) == value
@@ -493,7 +499,7 @@ def test_process_wrapping_key_provider_configs(source, action, expected):
 
 def test_process_wrapping_key_provider_configs_no_provider_on_encrypt():
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_wrapping_key_provider_configs(None, "encrypt")
+        arg_parsing._process_wrapping_key_provider_configs(None, "encrypt", True)
 
     excinfo.match(r"No wrapping key provider configuration found.")
 
@@ -501,7 +507,7 @@ def test_process_wrapping_key_provider_configs_no_provider_on_encrypt():
 def test_process_wrapping_key_provider_configs_not_exactly_one_provider():
     with pytest.raises(ParameterParseError) as excinfo:
         arg_parsing._process_wrapping_key_provider_configs(
-            [["provider=a", "provider=b", "key=ex_key_1", "key=ex_key_2"]], "encrypt"
+            [["provider=a", "provider=b", "key=ex_key_1", "key=ex_key_2"]], "encrypt", False
         )
 
     excinfo.match(r'Exactly one "provider" must be provided for each wrapping key provider configuration. 2 provided')
@@ -521,7 +527,7 @@ def test_process_wrapping_key_provider_configs_no_keys():
     source = [["provider=ex_provider", "aaa=sadfa"]]
 
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_wrapping_key_provider_configs(source, "encrypt")
+        arg_parsing._process_wrapping_key_provider_configs(source, "encrypt", False)
 
     excinfo.match(r'At least one "key" must be provided for each wrapping key provider configuration')
 
@@ -543,34 +549,29 @@ def test_parse_args(
         action=sentinel.action,
         version=False,
         dummy_redirect=None,
-        commitment_policy=sentinel.commitment_policy,
+        commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
     )
     patch_build_parser.return_value.parse_args.return_value = mock_parsed_args
     test = arg_parsing.parse_args(sentinel.raw_args)
 
     patch_build_parser.assert_called_once_with()
     patch_build_parser.return_value.parse_args.assert_called_once_with(args=sentinel.raw_args)
-    # This errors because parse_args() has a conditional branch:
-    #
-    # patch_process_wrapping_key_provider_configs.assert_called_once_with(
-    #     sentinel.raw_keys,
-    #     sentinel.action,
-    #     sentinel.discovery,
-    #     {
-    #         'account_ids': sentinel.discovery_account,
-    #         'partition': sentinel.discovery_partition
-    #     }
-    # )
-    # assert test.wrapping_keys is patch_process_wrapping_key_provider_configs.return_value
-    # patch_process_encryption_context.assert_called_once_with(
-    #     action=sentinel.action,
-    #     raw_encryption_context=sentinel.raw_encryption_context,
-    #     raw_required_encryption_context_keys=None,
-    # )
-    # assert test.encryption_context is sentinel.encryption_context
-    # assert test.required_encryption_context_keys is sentinel.required_keys
-    # patch_process_caching_config.assert_called_once_with(sentinel.raw_caching)
-    # assert test.caching is patch_process_caching_config.return_value
+    patch_process_wrapping_key_provider_configs.assert_called_once_with(
+        sentinel.raw_keys,
+        sentinel.action,
+        sentinel.discovery,
+        {"account_ids": sentinel.discovery_account, "partition": sentinel.discovery_partition},
+    )
+    assert test.wrapping_keys is patch_process_wrapping_key_provider_configs.return_value
+    patch_process_encryption_context.assert_called_once_with(
+        action=sentinel.action,
+        raw_encryption_context=sentinel.raw_encryption_context,
+        raw_required_encryption_context_keys=None,
+    )
+    assert test.encryption_context is sentinel.encryption_context
+    assert test.required_encryption_context_keys is sentinel.required_keys
+    patch_process_caching_config.assert_called_once_with(sentinel.raw_caching)
+    assert test.caching is patch_process_caching_config.return_value
     assert test is mock_parsed_args
 
 
@@ -623,9 +624,7 @@ def test_parse_args_error_raised_in_post_processing(
 
     arg_parsing.parse_args()
 
-    patch_build_parser.return_value.error.assert_called_once_with(
-        "--master-keys and --wrapping-keys cannot both be specified."
-    )
+    patch_build_parser.return_value.error.assert_called_once_with()
 
 
 @pytest.mark.parametrize(
@@ -681,6 +680,7 @@ def test_process_encryption_context_encrypt_required_key_fail():
 @pytest.mark.parametrize(
     "argstring",
     (
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey",  # V2 requires discovery
         "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=1 --discovery-account=123",
         "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=1 --discovery-partition=aws",
         "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=0 --discovery-account=123",

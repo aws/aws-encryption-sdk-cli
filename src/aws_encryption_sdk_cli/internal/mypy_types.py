@@ -35,7 +35,6 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     CACHING_CONFIG = Dict[str, Union[str, int, float]]
     RAW_MASTER_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str], Union[str, List[str]]]]
     MASTER_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str]]]
-    WRAPPING_KEY_PROVIDER_CONFIG = Dict[str, Union[str, List[str]]]
     RAW_CONFIG = List[str]
     PARSED_CONFIG = Dict[str, List[str]]
     COLLAPSED_CONFIG = Dict[str, str]
