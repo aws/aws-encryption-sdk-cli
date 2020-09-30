@@ -322,7 +322,7 @@ def test_parser_from_shell(argstring, attribute, value):
 @pytest.mark.parametrize("argstring, attribute, value", build_expected_good_args(from_file=True))
 def test_parser_fromfile(tmpdir, argstring, attribute, value):
     argfile = tmpdir.join("argfile")
-    if not "--discovery" in argstring:
+    if "--discovery" not in argstring:
         argstring += " --discovery=true"
     argfile.write(argstring)
     parsed = arg_parsing.parse_args(["@{}".format(argfile)])
