@@ -177,6 +177,10 @@ def _parse_master_key_providers_from_args(*key_providers_info):
         info = copy.deepcopy(provider_info)
         provider = str(info.pop("provider"))
         key_ids = [str(key_id) for key_id in info.pop("key")]
+
+        # Some implementations require a key_ids parameter as part of the kwargs, so explicitly set it here.
+        info["key_ids"] = key_ids
+
         key_providers.append(_build_master_key_provider(provider=provider, key=key_ids, **info))
 
     return _assemble_master_key_providers(*key_providers)  # pylint: disable=no-value-for-parameter

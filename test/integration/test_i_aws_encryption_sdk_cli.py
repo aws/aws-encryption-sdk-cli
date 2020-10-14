@@ -26,6 +26,7 @@ import aws_encryption_sdk_cli
 from .integration_test_utils import (
     WINDOWS_SKIP_MESSAGE,
     aws_encryption_cli_is_findable,
+    cmk_arn_value,
     decrypt_args_template,
     encrypt_args_template,
     is_windows,
@@ -128,6 +129,253 @@ def test_cycle_with_metadata_output_append(tmpdir):
     assert output_metadata[1]["input"] == str(ciphertext)
     assert output_metadata[1]["output"] == str(decrypted)
     assert "header_auth" in output_metadata[1]
+
+
+def test_cycle_explicit_discovery_true_no_filter(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args += " -w provider=aws-kms discovery=true"
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert output_metadata[1]["mode"] == "decrypt"
+    assert output_metadata[1]["input"] == str(ciphertext)
+    assert output_metadata[1]["output"] == str(decrypted)
+    assert "header_auth" in output_metadata[1]
+
+
+def test_cycle_discovery_true_filter_wrong_account(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args += " -w discovery=true discovery-account=1234 discovery-partition=aws"
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    message = aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert not decrypted.isfile()
+    assert "not allowed by this Master Key Provider" in message
+
+
+def test_cycle_discovery_true_filter_wrong_partition(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    arn = cmk_arn_value()
+    account = arn.split(":")[4]
+    decrypt_args += " -w discovery=true discovery-account={account} discovery-partition=aws-gov".format(account=account)
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    message = aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert not decrypted.isfile()
+    assert "not allowed by this Master Key Provider" in message
+
+
+def test_cycle_discovery_true_filter_correct(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    arn = cmk_arn_value().split(":")
+    account = arn[4]
+    partition = arn[1]
+    decrypt_args += " -w discovery=true discovery-account={account} discovery-partition={partition}".format(
+        account=account, partition=partition
+    )
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert output_metadata[1]["mode"] == "decrypt"
+    assert output_metadata[1]["input"] == str(ciphertext)
+    assert output_metadata[1]["output"] == str(decrypted)
+    assert "header_auth" in output_metadata[1]
+
+
+def test_cycle_discovery_true_filter_multiple_accounts_correct(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    arn = cmk_arn_value().split(":")
+    account = arn[4]
+    partition = arn[1]
+    decrypt_args += (
+        " -w discovery=true discovery-account=123 discovery-account={account} discovery-partition={partition}".format(
+            account=account, partition=partition
+        )
+    )
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert output_metadata[1]["mode"] == "decrypt"
+    assert output_metadata[1]["input"] == str(ciphertext)
+    assert output_metadata[1]["output"] == str(decrypted)
+    assert "header_auth" in output_metadata[1]
+
+
+def test_cycle_discovery_false(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args += " -w discovery=false key=" + cmk_arn_value()
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert output_metadata[1]["mode"] == "decrypt"
+    assert output_metadata[1]["input"] == str(ciphertext)
+    assert output_metadata[1]["output"] == str(decrypted)
+    assert "header_auth" in output_metadata[1]
+
+
+def test_cycle_discovery_false_wrong_key_id(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    decrypt_args = decrypt_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+    wrong_key = cmk_arn_value()[:-1]
+    decrypt_args += " -w discovery=false key=" + wrong_key
+    decrypt_args += " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    message = aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert not decrypted.isfile()
+    assert "Unable to decrypt any data key" in message
 
 
 @pytest.mark.parametrize("required_encryption_context", ("a", "c", "a c", "a=b", "a=b c", "c=d", "a c=d", "a=b c=d"))
