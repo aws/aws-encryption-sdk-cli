@@ -1,4 +1,4 @@
 base64io>=1.0.1
 aws-encryption-sdk>=2.0.0
 setuptools
-attrs>=17.1.0
+attrs>=20.1.0
