@@ -265,7 +265,6 @@ def cli(raw_args=None):
         _LOGGER.debug("Encryption source: %s", args.input)
         _LOGGER.debug("Encryption destination: %s", args.output)
         _LOGGER.debug("Master key provider configuration: %s", args.master_keys)
-        _LOGGER.debug("Discovery mode: %r", args.discovery)
         _LOGGER.debug("Suffix requested: %s", args.suffix)
 
         if args.wrapping_keys is not None:

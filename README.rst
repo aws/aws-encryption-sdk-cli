@@ -197,17 +197,18 @@ Information for configuring a master key provider must be provided.
 
 Parameters may be provided using `Parameter Values`_.
 
-Required parameters:
+These parameters are common to all master key providers:
 
 * **provider** *(default: aws-encryption-sdk-cli::aws-kms)* : Indicator of the master key
   provider to use.
 
     * See `Advanced Configuration`_ for more information on using other master key providers.
 
-* **key** *(at least one required, many allowed)* : Identifier for a master key to be used.
-  Must be an identifier understood by the specified master key provider.
+* **key** *(on encrypt: at least one required, many allowed; on decrypt: one of key or discovery is required)* :
+  Identifier for a wrapping key to be used in the operation. Must be an identifier understood by the specified master
+  key provider. ``The discovery`` attribute is only available if you are using an ``aws-kms`` provider.
 
-    * If using ``aws-kms`` to decrypt, `you must not specify a key`_.
+    * If using ``aws-kms`` to decrypt, `you must specify either a key or discovery with a value of true`_.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
@@ -222,8 +223,8 @@ If multiple master key providers are defined, the first one is treated as the pr
 If multiple master keys are defined in the primary master key provider, the first one is treated
 as the primary. The primary master key is used to generate the data key.
 
-The below logic is used to construct all master key providers. We use
-``DiscoveryAwsKmsMasterKeyProvider`` as an example.
+The following logic is used to construct all master key providers. We use
+``StrictAwsKmsMasterKeyProvider`` as an example.
 
 .. code-block:: python
 
@@ -231,9 +232,7 @@ The below logic is used to construct all master key providers. We use
    --wrapping-keys provider=aws-kms key=$KEY_1 key=$KEY_2
 
    # KMSMasterKeyProvider is called as:
-   key_provider = DiscoveryAwsKmsMasterKeyProvider()
-   key_provider.add_master_key($KEY_1)
-   key_provider.add_master_key($KEY_2)
+   key_provider = StrictAwsKmsMasterKeyProvider(key_ids=[$KEY_1, $KEY_2])
 
 .. code-block:: sh
 
@@ -259,6 +258,14 @@ There are some configuration options which are unique to the ``aws-kms`` master 
 
 * **profile** : Providing this configuration value will use the specified `named profile`_
   credentials.
+* **discovery** *(default: false; one of key or discovery with a value of true is required)* :
+  Indicates whether this provider should be in "discovery" mode. If true (enabled), the AWS Encryption CLI will attempt
+  to decrypt ciphertexts encrypted with any AWS KMS CMK. If false (disabled), the AWS Encryption CLI will only attempt
+  to decrypt ciphertexts encrypted with the keys specified in the **key** attribute.
+* **discovery-account** *(optional; available only when discovery=true and discovery-partition is also provided)* :
+  If discovery is enabled, limits decryption to AWS KMS CMKs in the specified accounts.
+* **discovery-partition** *(optional; available only when discovery=true and discovery-account is also provided)* :
+  If discovery is enabled, limits decryption to AWS KMS CMKs in the specified partition, e.g. "aws" or "aws-gov".
 * **region** : This allows you to specify the target region.
 
 The logic for determining which region to use is shown in the pseudocode below:
@@ -473,105 +480,6 @@ Be aware, however, that if you target multiple files either through a path expan
 targetting a directory, the requested decoding/encoding will be applied to all files.
 
 
-Execution
-=========
-
-.. code-block:: sh
-
-   usage: aws-encryption-cli [-h] [--version] [-e] [-d] [-S]
-                     [--metadata-output METADATA_OUTPUT] [--overwrite-metadata]
-                     [-m MASTER_KEYS [MASTER_KEYS ...]]
-                     [--caching CACHING [CACHING ...]] -i INPUT -o OUTPUT
-                     [--encode] [--decode]
-                     [-c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]]
-                     [--algorithm {
-                        AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
-                        AES_192_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
-                        AES_128_GCM_IV12_TAG16_HKDF_SHA256_ECDSA_P256,
-                        AES_256_GCM_IV12_TAG16_HKDF_SHA256,
-                        AES_192_GCM_IV12_TAG16_HKDF_SHA256,
-                        AES_128_GCM_IV12_TAG16_HKDF_SHA256,
-                        AES_256_GCM_IV12_TAG16,
-                        AES_192_GCM_IV12_TAG16,
-                        AES_128_GCM_IV12_TAG16
-                     }]
-                     [--frame-length FRAME_LENGTH] [--max-length MAX_LENGTH]
-                     [--suffix [SUFFIX]] [--interactive] [--no-overwrite] [-r]
-                     [-v] [-q]
-
-   Encrypt or decrypt data using the AWS Encryption SDK
-
-   optional arguments:
-     -h, --help            show this help message and exit
-     --version             show program's version number and exit
-     -e, --encrypt         Encrypt data
-     -d, --decrypt         Decrypt data
-     -S, --suppress-metadata
-                           Suppress metadata output.
-     --metadata-output METADATA_OUTPUT
-                           File to which to write metadata records
-     --overwrite-metadata  Force metadata output to overwrite contents of file
-                           rather than appending to file
-     -m MASTER_KEYS [MASTER_KEYS ...], --master-keys MASTER_KEYS [MASTER_KEYS ...]
-                           Identifying information for a master key provider and
-                           master keys. Each instance must include a master key
-                           provider identifier and identifiers for one or more
-                           master key supplied by that provider. ex: --master-
-                           keys provider=aws-kms key=$AWS_KMS_KEY_ARN
-     -w WRAPPING_KEYS [WRAPPING_KEYS ...], --wrapping-keys WRAPPING_KEYS [WRAPPING_KEYS ...]
-                           Identifying information for a master key provider and
-                           master keys. Each instance must include a master key
-                           provider identifier and identifiers for one or more
-                           master key supplied by that provider. ex: --wrapping-
-                           keys provider=aws-kms key=$AWS_KMS_KEY_ARN
-     --caching CACHING [CACHING ...]
-                           Configuration options for a caching cryptographic
-                           materials manager and local cryptographic materials
-                           cache. Must consist of "key=value" pairs. If caching,
-                           at least "capacity" and "max_age" must be defined. ex:
-                           --caching capacity=10 max_age=100.0
-     -i INPUT, --input INPUT
-                           Input file or directory for encrypt/decrypt operation,
-                           or "-" for stdin.
-     -o OUTPUT, --output OUTPUT
-                           Output file or directory for encrypt/decrypt
-                           operation, or - for stdout.
-     --encode              Base64-encode output after processing
-     --decode              Base64-decode input before processing
-     -c ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...], --encryption-context ENCRYPTION_CONTEXT [ENCRYPTION_CONTEXT ...]
-                           key-value pair encryption context values (encryption
-                           only). Must a set of "key=value" pairs. ex: -c
-                           key1=value1 key2=value2
-     --algorithm {
-            AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
-            AES_192_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384,
-            AES_128_GCM_IV12_TAG16_HKDF_SHA256_ECDSA_P256,
-            AES_256_GCM_IV12_TAG16_HKDF_SHA256,
-            AES_192_GCM_IV12_TAG16_HKDF_SHA256,
-            AES_128_GCM_IV12_TAG16_HKDF_SHA256,
-            AES_256_GCM_IV12_TAG16,
-            AES_192_GCM_IV12_TAG16,
-            AES_128_GCM_IV12_TAG16
-         }
-                           Algorithm name (encryption only)
-     --frame-length FRAME_LENGTH
-                           Frame length in bytes (encryption only)
-     --max-length MAX_LENGTH
-                           Maximum frame length (for framed messages) or content
-                           length (for non-framed messages) (decryption only)
-     --suffix [SUFFIX]     Custom suffix to use when target filename is not
-                           specified (empty if specified but no value provided)
-     --interactive         Force aws-encryption-cli to prompt you for verification before
-                           overwriting existing files
-     --no-overwrite        Never overwrite existing files
-     -r, -R, --recursive   Allow operation on directories as input
-     -v                    Enables logging and sets detail level. Multiple -v
-                           options increases verbosity (max: 4).
-     -q, --quiet           Suppresses most warning and diagnostic messages
-
-   For more usage instructions and examples, see: http://aws-encryption-sdk-cli.readthedocs.io/en/latest/
-
-
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
 .. _message header data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-structure
 .. _message header authentication data: http://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/message-format.html#header-authentication
@@ -585,5 +493,5 @@ Execution
 .. _argparse file support: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 .. _named profile: http://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
-.. _you must not specify a key: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
+.. _you must specify either a key or discovery with a value of true: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
 .. _Security issue notifications: https://github.com/aws/aws-encryption-sdk-cli/tree/master/CONTRIBUTING.md#security-issue-notifications

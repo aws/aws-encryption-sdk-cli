@@ -12,6 +12,7 @@
 # language governing permissions and limitations under the License.
 """Unit test suite for ``aws_encryption_sdk_cli.key_providers``."""
 import pytest
+from aws_encryption_sdk.key_providers.kms import DiscoveryFilter
 from mock import sentinel
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
@@ -36,15 +37,22 @@ def patch_botocore_session(mocker):
 
 
 @pytest.yield_fixture
-def patch_kms_master_key_provider(mocker):
+def patch_discovery_master_key_provider(mocker):
     mocker.patch.object(key_providers, "DiscoveryAwsKmsMasterKeyProvider")
     yield key_providers.DiscoveryAwsKmsMasterKeyProvider
+
+
+@pytest.yield_fixture
+def patch_strict_master_key_provider(mocker):
+    mocker.patch.object(key_providers, "StrictAwsKmsMasterKeyProvider")
+    yield key_providers.StrictAwsKmsMasterKeyProvider
 
 
 @pytest.mark.parametrize(
     "source, expected",
     (
         ({}, {"botocore_session": sentinel.botocore_session}),  # empty baseline
+        ({"discovery": True}, {"botocore_session": sentinel.botocore_session}),  # explicit discovery
         (  # arbitrary non-empty baseline
             {"a": "a thing", "b": "another thing"},
             {"a": "a thing", "b": "another thing", "botocore_session": sentinel.botocore_session},
@@ -69,25 +77,49 @@ def patch_kms_master_key_provider(mocker):
             {"a": "a thing", "profile": [sentinel.profile_name]},
             {"a": "a thing", "botocore_session": sentinel.botocore_session},
         ),
+        (  # with discovery filter
+            {"discovery": True, "discovery-account": ["123"], "discovery-partition": "aws"},
+            {
+                "botocore_session": sentinel.botocore_session,
+                "discovery_filter": DiscoveryFilter(account_ids=["123"], partition="aws"),
+            },
+        ),
     ),
 )
-def test_kms_master_key_provider_post_processing(
-    patch_botocore_session, patch_kms_master_key_provider, source, expected
+def test_discovery_master_key_provider_post_processing(
+    patch_botocore_session, patch_discovery_master_key_provider, source, expected
 ):
     test = key_providers.aws_kms_master_key_provider(**source)
 
-    patch_kms_master_key_provider.assert_called_once_with(**expected)
-    assert test is patch_kms_master_key_provider.return_value
+    patch_discovery_master_key_provider.assert_called_once_with(**expected)
+    assert test is patch_discovery_master_key_provider.return_value
 
 
-def test_kms_master_key_provider_post_processing_named_profile(patch_botocore_session, patch_kms_master_key_provider):
+@pytest.mark.parametrize(
+    "source, expected",
+    (({"discovery": False, "key_ids": ["foo"]}, {"botocore_session": sentinel.botocore_session, "key_ids": ["foo"]}),),
+)
+def test_strict_master_key_provider_post_processing(
+    patch_botocore_session, patch_strict_master_key_provider, source, expected
+):
+    test = key_providers.aws_kms_master_key_provider(**source)
+
+    patch_strict_master_key_provider.assert_called_once_with(**expected)
+    assert test is patch_strict_master_key_provider.return_value
+
+
+def test_kms_master_key_provider_post_processing_named_profile(
+    patch_botocore_session, patch_discovery_master_key_provider
+):
     key_providers.aws_kms_master_key_provider(profile=["a profile name"])
 
     patch_botocore_session.assert_called_once_with(profile="a profile name")
     assert patch_botocore_session.return_value.user_agent_extra == USER_AGENT_SUFFIX
 
 
-def test_kms_master_key_provider_post_processing_default_profile(patch_botocore_session, patch_kms_master_key_provider):
+def test_kms_master_key_provider_post_processing_default_profile(
+    patch_botocore_session, patch_discovery_master_key_provider
+):
     key_providers.aws_kms_master_key_provider()
 
     patch_botocore_session.assert_called_once_with(profile=None)
