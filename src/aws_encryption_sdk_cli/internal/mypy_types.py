@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Complex type constructions for use with mypy annotations."""
-# mypy types confuse pylint: disable=invalid-name
+# mypy types confuse pylint: disable=invalid-name, unsubscriptable-object
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     import sys
     from typing import IO, Dict, List, Text, Union
