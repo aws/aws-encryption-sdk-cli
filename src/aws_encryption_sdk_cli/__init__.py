@@ -272,7 +272,6 @@ def cli(raw_args=None):
         _LOGGER.debug("Encryption source: %s", args.input)
         _LOGGER.debug("Encryption destination: %s", args.output)
         _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)
-        _LOGGER.debug("Discovery mode: %r", args.discovery)
         _LOGGER.debug("Suffix requested: %s", args.suffix)
 
         crypto_materials_manager = build_crypto_materials_manager_from_args(

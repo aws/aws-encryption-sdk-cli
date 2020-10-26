@@ -72,8 +72,8 @@ def encrypt_args_template(metadata=False, caching=False, encode=False, decode=Fa
     return template
 
 
-def decrypt_args_template(metadata=False, encode=False, decode=False):
-    template = "-d -i {source} -o {target} --discovery=true"
+def decrypt_args_template(metadata=False, encode=False, decode=False, discovery=True):
+    template = "-d -i {source} -o {target} "
     if metadata:
         template += " {metadata}"
     else:
@@ -82,6 +82,8 @@ def decrypt_args_template(metadata=False, encode=False, decode=False):
         template += " --encode"
     if decode:
         template += " --decode"
+    if discovery:
+        template += " --wrapping-keys discovery=true"
     return template
 
 

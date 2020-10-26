@@ -224,7 +224,7 @@ def _build_parser():
         nargs="+",
         dest="wrapping_keys",
         action="append",
-        required=False,
+        required=True,
         help=(
             "Identifying information for a wrapping key provider and wrapping keys. Each instance must include "
             "a wrapping key provider identifier and identifiers for one or more wrapping key supplied by that "
@@ -295,33 +295,6 @@ def _build_parser():
 
     parser.add_argument(
         "--algorithm", action=UniqueStoreAction, help="Algorithm name (encryption only)", choices=ALGORITHM_NAMES
-    )
-
-    parser.add_argument(
-        "--discovery",
-        type=discovery_pseudobool,
-        dest="discovery",
-        required=False,
-        help="Enable or disable discovery mode (decryption only)",
-    )
-
-    parser.add_argument(
-        "--discovery-account",
-        nargs="+",
-        dest="discovery_account",
-        action="append",
-        required=False,
-        help="AWS Account IDs used for key discovery (only with --discovery=true)",
-    )
-
-    parser.add_argument(
-        "--discovery-partition",
-        dest="discovery_partition",
-        action=UniqueStoreAction,
-        required=False,
-        help=(
-            "AWS Partition used for key discovery (only with --discovery=true)" "ex: " "--discovery-partition=aws-gov"
-        ),
     )
 
     parser.add_argument(
@@ -480,35 +453,68 @@ def _process_caching_config(raw_caching_config):
     return caching_config
 
 
+def _process_non_kms_key_config(parsed_args):
+    """Processes a single key provider configuration for a non-KMS wrapping key
+
+    :param dict parsed_args: The parsed kwargs for the key provider
+    """
+    if "discovery" in parsed_args or "discovery-account" in parsed_args or "discovery-partition" in parsed_args:
+        raise ParameterParseError("Discovery attributes are supported only for AWS KMS wrapping keys")
+
+    if "key" not in parsed_args:
+        raise ParameterParseError('At least one "key" must be provided for each wrapping key provider configuration')
+
+    return parsed_args
+
+
+def _process_kms_key_config(parsed_args, action):
+    """Processes a single key provider configuration for a KMS wrapping key
+
+    :param dict parsed_args: The parsed kwargs for the key provider
+    :param action: The action being taken (encrypt or decrypt)
+    """
+    args_include_discovery = (
+        "discovery" in parsed_args or "discovery-account" in parsed_args or "discovery-partition" in parsed_args
+    )
+
+    if action == "encrypt" and args_include_discovery:
+        raise ParameterParseError("Discovery attributes are supported only on decryption for AWS KMS keys")
+
+    if "key" not in parsed_args and action == "encrypt":
+        raise ParameterParseError('At least one "key" must be provided for each wrapping key provider configuration')
+
+    _process_discovery_args(parsed_args)
+
+    discovery = parsed_args["discovery"]
+    if "key" in parsed_args and discovery:
+        # Decrypt MUST fail without attempting any decryption if discovery mode is enabled
+        # and at least one key=<Key ARN> parameter value is provided
+        raise ParameterParseError("If discovery is true (enabled), you cannot specify wrapping keys")
+    if "key" not in parsed_args:
+        if not discovery:
+            # Decrypt MUST fail without attempting any decryption if discovery mode is disabled
+            # and no key=<Key ARN> parameter value is provided
+            raise ParameterParseError("When discovery is false (disabled), you must specify at least one wrapping key")
+        parsed_args["key"] = []
+    return parsed_args
+
+
 def _process_wrapping_key_provider_configs(  # noqa: C901
     raw_keys,  # type: List[RAW_CONFIG]
     action,  # type: str
-    discovery=None,  # type: bool
-    discovery_filter=None,  # type: Dict[str, Union[str, List[str]]]
 ):
     # type: (...) -> List[MASTER_KEY_PROVIDER_CONFIG]
     """Applied additional processing to prepare the wrapping key provider configuration.
 
     :param list raw_keys: List of wrapping key provider configurations
     :param str action: Action defined in CLI input
-    :param bool discovery: Are we in discovery mode?
-    :param Dict[str, Union[str, List[str]]] discovery_filter: Filter options for discovery mode
     :returns: List of processed wrapping key provider configurations
     :rtype: list of dicts
     :raises ParameterParseError: if exactly one provider value is not provided
     :raises ParameterParseError: if no key values are provided
     """
     if raw_keys is None:
-        if action == "decrypt":
-            # We allow not defining any wrapping key provider configuration if decrypting with aws-kms.
-            _LOGGER.debug(
-                "No wrapping key provider config provided on decrypt request. Using aws-kms with no wrapping keys."
-            )
-            return [{"provider": DEFAULT_MASTER_KEY_PROVIDER, "key": []}]
-        raise ParameterParseError("No wrapping key provider configuration found.")
-
-    if action == "decrypt" and discovery is None:
-        discovery = False
+        raise ParameterParseError("No wrapping key provider configuration found")
 
     processed_configs = []  # type: List[MASTER_KEY_PROVIDER_CONFIG]
     for raw_config in raw_keys:
@@ -518,60 +524,62 @@ def _process_wrapping_key_provider_configs(  # noqa: C901
         provider = parsed_args.get("provider", [DEFAULT_MASTER_KEY_PROVIDER])  # If no provider is defined, use aws-kms
         if len(provider) != 1:
             raise ParameterParseError(
-                'Exactly one "provider" must be provided for each wrapping key provider configuration. '
+                'You must provide exactly one "provider" for each wrapping key provider configuration. '
                 "{} provided".format(len(provider))
             )
         parsed_args["provider"] = provider[0]  # type: ignore
 
-        aws_kms_on_decrypt = parsed_args["provider"] in ("aws-kms", DEFAULT_MASTER_KEY_PROVIDER) and action == "decrypt"
+        provider_is_kms = parsed_args["provider"] in ("aws-kms", DEFAULT_MASTER_KEY_PROVIDER)
 
-        if aws_kms_on_decrypt:
-            if "key" in parsed_args and discovery:
-                # Decrypt MUST fail without attempting any decryption if discovery mode is enabled
-                # and at least one key=<Key ARN> parameter value is provided
-                raise ParameterParseError(
-                    "Exact wrapping keys cannot be specified for aws-kms wrapping key provider on decrypt "
-                    "in discovery mode."
-                )
-            if "key" not in parsed_args and not discovery:
-                # Decrypt MUST fail without attempting any decryption if discovery mode is disabled
-                # and no key=<Key ARN> parameter value is provided
-                raise ParameterParseError(
-                    "At least one key must be specified for aws-kms wrapping key provider on decrypt "
-                    "when discovery mode is disabled."
-                )
-            parsed_args["key"] = []
-        elif "key" not in parsed_args:
-            raise ParameterParseError(
-                'At least one "key" must be provided for each wrapping key provider configuration'
-            )
-        if discovery and discovery_filter:
-            parsed_args["discovery_filter"] = discovery_filter
-        processed_configs.append(parsed_args)  # type: ignore
+        if not provider_is_kms:
+            processed_configs.append(_process_non_kms_key_config(parsed_args))
+        else:
+            processed_configs.append(_process_kms_key_config(parsed_args, action))  # type: ignore
     return processed_configs
 
 
-def _process_discovery_args(parsed_args):
-    """
-    Process rules for discovery filters on Account ID and Partition ID
-    :param parsed_args:
-    :return: Dict[str, Union[str, List[str]]]
+def _process_discovery_args(key_config):  # noqa: C901
+    """Process rules for discovery filters on Account ID and Partition ID
+    :param key_config: The key configuration being parsed
     :raises: ParameterParseError
     """
-    if parsed_args.discovery is False:
-        if parsed_args.discovery_account:
-            raise ParameterParseError("Error: --discovery-account is only available if discovery is enabled")
-        if parsed_args.discovery_partition:
-            raise ParameterParseError("Error: --discovery-partition is only available if discovery is enabled")
-        return None
-    if not parsed_args.discovery_partition and not parsed_args.discovery_account:
-        return None
-    if parsed_args.discovery_partition and not parsed_args.discovery_account:
-        raise ParameterParseError("Error: --discovery-partition requires at least one --discovery-account")
-    if parsed_args.discovery_account and not parsed_args.discovery_partition:
-        raise ParameterParseError("Error: --discovery-account requires at least one --discovery-partition")
+    if "discovery" not in key_config:
+        if "discovery-account" in key_config or "discovery-partition" in key_config:
+            raise ParameterParseError(
+                "Discovery-account and discovery-partition are valid only when the discovery attribute is set to true"
+            )
 
-    return {"account_ids": parsed_args.discovery_account, "partition": parsed_args.discovery_partition}
+        key_config["discovery"] = False
+        return
+
+    # Translate the raw value of 'discovery' as passed by customer into a bool we can work with
+    discovery = discovery_pseudobool(key_config.pop("discovery")[0])
+    key_config["discovery"] = discovery
+
+    accounts = key_config.get("discovery-account", None)
+    partition = key_config.get("discovery-partition", None)
+
+    if not discovery:
+        if accounts or partition:
+            raise ParameterParseError(
+                "Discovery-account and discovery-partition are valid only when the discovery attribute is set to true"
+            )
+    else:
+        if accounts and not partition:
+            raise ParameterParseError("When specifying discovery-account, you must also specify discovery-partition")
+        if partition and not accounts:
+            raise ParameterParseError("When specifying discovery-partition, you must also specify discovery-account")
+
+        if accounts and partition:
+            for account in accounts:
+                if len(account) == 0:
+                    raise ParameterParseError("Value passed to discovery-account cannot be empty")
+            if len(partition) != 1:
+                raise ParameterParseError("You can only specify discovery-partition once")
+            if not partition[0]:
+                raise ParameterParseError("Value passed to discovery-partition cannot be empty")
+
+            key_config["discovery-partition"] = partition[0]
 
 
 def discovery_pseudobool(value):
@@ -583,7 +591,7 @@ def discovery_pseudobool(value):
             return False
         if value.lower() in {"true", "t", "1", "yes", "y"}:
             return True
-    return None
+    raise ParameterParseError("Value {} could not be parsed as true or false".format(value))
 
 
 class CommitmentPolicyArgs(Enum):
@@ -615,18 +623,16 @@ def parse_args(raw_args=None):
                 'Found invalid argument "{actual}". Did you mean "-{actual}"?'.format(actual=parsed_args.dummy_redirect)
             )
 
-        if parsed_args.action == "decrypt" and parsed_args.discovery is None:
-            raise ParameterParseError("Discovery must be set to True or False.")
-        discovery_filter = _process_discovery_args(parsed_args)
-
+        # We add the 'required_encryption_context_keys' to arg parse, even though it is not
+        # meant to be used by customers, so that we can  pass the parsed arguments around internally
         if parsed_args.required_encryption_context_keys is not None:
-            raise ParameterParseError("--required-encryption-context-keys cannot be manually provided.")
+            raise ParameterParseError("--required-encryption-context-keys cannot be manually provided")
 
         if parsed_args.overwrite_metadata:
             parsed_args.metadata_output.force_overwrite()
 
         parsed_args.wrapping_keys = _process_wrapping_key_provider_configs(
-            parsed_args.wrapping_keys, parsed_args.action, parsed_args.discovery, discovery_filter
+            parsed_args.wrapping_keys, parsed_args.action
         )
 
         # mypy does not appear to understand nargs="+" behavior

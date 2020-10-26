@@ -15,6 +15,7 @@ import copy
 
 import botocore.session
 from aws_encryption_sdk import DiscoveryAwsKmsMasterKeyProvider, StrictAwsKmsMasterKeyProvider
+from aws_encryption_sdk.key_providers.kms import DiscoveryFilter
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
@@ -68,5 +69,11 @@ def aws_kms_master_key_provider(discovery=True, **kwargs):
     except KeyError:
         pass
     if discovery:
+        accounts = kwargs.pop("discovery-account", None)
+        partition = kwargs.pop("discovery-partition", None)
+        if accounts and partition:
+            discovery_filter = DiscoveryFilter(account_ids=accounts, partition=partition)
+            kwargs["discovery_filter"] = discovery_filter  # type: ignore
+
         return DiscoveryAwsKmsMasterKeyProvider(**kwargs)
     return StrictAwsKmsMasterKeyProvider(**kwargs)

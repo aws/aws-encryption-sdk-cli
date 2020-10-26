@@ -13,6 +13,7 @@
 """Unit testing suite for ``aws_encryption_sdk_cli.internal.arg_parsing``."""
 import os
 import platform
+import re
 import shlex
 
 import aws_encryption_sdk
@@ -211,15 +212,13 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
     mkp_2 = " -w provider=ex_provider_2 key=ex_mk_id_2"
     mkp_2_parsed = {"provider": "ex_provider_2", "key": ["ex_mk_id_2"]}
     default_encrypt = encrypt + suppress_metadata + valid_io + mkp_1
-    default_discovery = " --discovery=true"
-    default_decrypt = decrypt + suppress_metadata + valid_io + mkp_1 + default_discovery
     good_args = []
 
     # encrypt/decrypt
     for encrypt_flag in (encrypt, "--encrypt"):
         good_args.append((encrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "encrypt"))
     for decrypt_flag in (decrypt, "--decrypt"):
-        good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1 + default_discovery, "action", "decrypt"))
+        good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "decrypt"))
 
     # wrapping key config
     good_args.append((default_encrypt, "wrapping_keys", [mkp_1_parsed]))
@@ -298,18 +297,6 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
         )
     )
 
-    # discovery
-    discovery_valid_configs = [
-        ["--discovery=1", "discovery", True],
-        ["--discovery=true", "discovery", True],
-        ["--discovery=0", "discovery", False],
-        ["--discovery=false", "discovery", False],
-    ]
-    for valid_config in discovery_valid_configs:
-        good_args.append(
-            (default_decrypt.replace(default_discovery, " " + valid_config[0]), "discovery", valid_config[2])
-        )
-
     return good_args
 
 
@@ -322,8 +309,6 @@ def test_parser_from_shell(argstring, attribute, value):
 @pytest.mark.parametrize("argstring, attribute, value", build_expected_good_args(from_file=True))
 def test_parser_fromfile(tmpdir, argstring, attribute, value):
     argfile = tmpdir.join("argfile")
-    if "--discovery" not in argstring:
-        argstring += " --discovery=true"
     argfile.write(argstring)
     parsed = arg_parsing.parse_args(["@{}".format(argfile)])
     assert getattr(parsed, attribute) == value
@@ -384,6 +369,15 @@ def test_dummy_arguments_covered():
     "args", build_bad_io_arguments() + build_bad_multiple_arguments() + build_bad_dummy_arguments()
 )
 def test_parse_args_fail(args):
+    with pytest.raises(SystemExit) as excinfo:
+        arg_parsing.parse_args(shlex.split(args))
+
+    assert excinfo.value.args == (2,)
+
+
+def test_parse_args_wrapping_keys_required():
+    args = "-d -S -o - -i -"
+
     with pytest.raises(SystemExit) as excinfo:
         arg_parsing.parse_args(shlex.split(args))
 
@@ -462,72 +456,147 @@ def test_process_caching_config_required_parameters_missing(source):
 
 
 KEY_PROVIDER_CONFIGS = [
-    ([["provider=ex_provider", "key=ex_key"]], "encrypt", [{"provider": "ex_provider", "key": ["ex_key"]}]),
-    (
+    (  # single key, encrypt
+        [["provider=ex_provider", "key=ex_key"]],
+        "encrypt",
+        [{"provider": "ex_provider", "key": ["ex_key"]}],
+    ),
+    (  # multiple keys
         [["provider=ex_provider", "key=ex_key_1", "key=ex_key_2"]],
         "encrypt",
         [{"provider": "ex_provider", "key": ["ex_key_1", "ex_key_2"]}],
     ),
-    (
+    (  # unknown parameters
         [["provider=ex_provider", "key=ex_key_1", "key=ex_key_2", "a=b", "asdf=4"]],
         "encrypt",
         [{"provider": "ex_provider", "key": ["ex_key_1", "ex_key_2"], "a": ["b"], "asdf": ["4"]}],
     ),
-]
-ALL_CONFIG = ([i[0][0] for i in KEY_PROVIDER_CONFIGS], "encrypt", [i[-1][0] for i in KEY_PROVIDER_CONFIGS])
-KEY_PROVIDER_CONFIGS.append(ALL_CONFIG)
-KEY_PROVIDER_CONFIGS.append((None, "decrypt", [{"provider": identifiers.DEFAULT_MASTER_KEY_PROVIDER, "key": []}]))
-KEY_PROVIDER_CONFIGS.append(([["provider=aws-kms"]], "decrypt", [{"provider": "aws-kms", "key": []}]))
-KEY_PROVIDER_CONFIGS.append(
-    (
-        [["provider=" + identifiers.DEFAULT_MASTER_KEY_PROVIDER]],
+    (  # decrypt, with keys, no discovery
+        [["provider=ex_provider", "key=ex_key_1"]],
         "decrypt",
-        [{"provider": identifiers.DEFAULT_MASTER_KEY_PROVIDER, "key": []}],
-    )
-)
-KEY_PROVIDER_CONFIGS.append(
-    ([["key=ex_key_1"]], "encrypt", [{"provider": identifiers.DEFAULT_MASTER_KEY_PROVIDER, "key": ["ex_key_1"]}])
-)
+        [{"provider": "ex_provider", "key": ["ex_key_1"]}],
+    ),
+    (  # decrypt, aws-kms, with keys, no discovery
+        [["provider=aws-kms", "key=ex_key"]],
+        "decrypt",
+        [{"provider": "aws-kms", "key": ["ex_key"], "discovery": False}],
+    ),
+    (  # decrypt, explicit discovery true, no filter
+        [["provider=aws-kms", "discovery=true"]],
+        "decrypt",
+        [{"provider": "aws-kms", "key": [], "discovery": True}],
+    ),
+    (  # decrypt, explicit discovery false, no filter
+        [["provider=aws-kms", "discovery=false", "key=ex_key_1"]],
+        "decrypt",
+        [{"provider": "aws-kms", "key": ["ex_key_1"], "discovery": False}],
+    ),
+    (  # decrypt, explicit discovery, filter
+        [["provider=aws-kms", "discovery=true", "discovery-account=123", "discovery-partition=aws"]],
+        "decrypt",
+        [
+            {
+                "provider": "aws-kms",
+                "key": [],
+                "discovery": True,
+                "discovery-account": ["123"],
+                "discovery-partition": "aws",
+            }
+        ],
+    ),
+    (  # decrypt, explicit discovery, filter multiple accounts
+        [
+            [
+                "provider=aws-kms",
+                "discovery=true",
+                "discovery-account=123",
+                "discovery-account=456",
+                "discovery-partition=aws",
+            ]
+        ],
+        "decrypt",
+        [
+            {
+                "provider": "aws-kms",
+                "key": [],
+                "discovery": True,
+                "discovery-account": ["123", "456"],
+                "discovery-partition": "aws",
+            }
+        ],
+    ),
+    ([["provider=aws-kms", "discovery=true"]], "decrypt", [{"provider": "aws-kms", "key": [], "discovery": True}]),
+    (
+        [["provider=" + identifiers.DEFAULT_MASTER_KEY_PROVIDER, "discovery=true"]],
+        "decrypt",
+        [{"provider": identifiers.DEFAULT_MASTER_KEY_PROVIDER, "key": [], "discovery": True}],
+    ),
+    (
+        [["key=ex_key_1"]],
+        "encrypt",
+        [{"provider": identifiers.DEFAULT_MASTER_KEY_PROVIDER, "key": ["ex_key_1"], "discovery": False}],
+    ),
+]
 
 
 @pytest.mark.parametrize("source, action, expected", KEY_PROVIDER_CONFIGS)
 def test_process_wrapping_key_provider_configs(source, action, expected):
-    test = arg_parsing._process_wrapping_key_provider_configs(source, action, True)
+    test = arg_parsing._process_wrapping_key_provider_configs(source, action)
 
     assert test == expected
 
 
 def test_process_wrapping_key_provider_configs_no_provider_on_encrypt():
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_wrapping_key_provider_configs(None, "encrypt", True)
+        arg_parsing._process_wrapping_key_provider_configs(None, "encrypt")
 
-    excinfo.match(r"No wrapping key provider configuration found.")
+    excinfo.match(r"No wrapping key provider configuration found")
+
+
+def test_process_wrapping_key_provider_configs_encrypt_with_discovery():
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_wrapping_key_provider_configs([["discovery=true"]], "encrypt")
+
+    excinfo.match(r"Discovery attributes are supported only on decryption for AWS KMS keys")
+
+
+def test_process_wrapping_key_provider_configs_decrypt_without_discovery():
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_wrapping_key_provider_configs([["provider=aws-kms"]], "decrypt")
+
+    excinfo.match(re.escape("When discovery is false (disabled), you must specify at least one wrapping key"))
+
+
+def test_process_wrapping_key_provider_configs_multiple_discovery_partition():
+    args = [["discovery=true", "discovery-account=123", "discovery-partition=aws", "discovery-partition=aws-gov"]]
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_wrapping_key_provider_configs(args, "decrypt")
+
+    excinfo.match(r"You can only specify discovery-partition once")
 
 
 def test_process_wrapping_key_provider_configs_not_exactly_one_provider():
     with pytest.raises(ParameterParseError) as excinfo:
         arg_parsing._process_wrapping_key_provider_configs(
-            [["provider=a", "provider=b", "key=ex_key_1", "key=ex_key_2"]], "encrypt", False
+            [["provider=a", "provider=b", "key=ex_key_1", "key=ex_key_2"]], "encrypt"
         )
 
-    excinfo.match(r'Exactly one "provider" must be provided for each wrapping key provider configuration. 2 provided')
+    excinfo.match(r'You must provide exactly one "provider" for each wrapping key provider configuration. 2 provided')
 
 
-@pytest.mark.parametrize("provider", ("aws-kms", identifiers.DEFAULT_MASTER_KEY_PROVIDER))
-def test_wrapping_key_specified_on_decrypt_for_kms(provider):
-    source = [["provider=" + provider, "key=example"]]
-
+@pytest.mark.parametrize("args", ["discovery=true", "discovery-account=123", "discovery-partition=aws"])
+def test_process_wrapping_key_provider_configs_discovery_with_nonkms_provider(args):
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_wrapping_key_provider_configs(source, "decrypt", True)
+        arg_parsing._process_wrapping_key_provider_configs([["provider=notkms", args]], "decrypt")
 
-    excinfo.match(r"Exact wrapping keys cannot be specified for aws-kms wrapping key provider on decrypt.")
+    excinfo.match(r"Discovery attributes are supported only for AWS KMS wrapping keys")
 
 
 def test_process_wrapping_key_provider_configs_no_keys():
     source = [["provider=ex_provider", "aaa=sadfa"]]
 
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_wrapping_key_provider_configs(source, "encrypt", False)
+        arg_parsing._process_wrapping_key_provider_configs(source, "encrypt")
 
     excinfo.match(r'At least one "key" must be provided for each wrapping key provider configuration')
 
@@ -538,10 +607,11 @@ def test_parse_args(
     patch_process_encryption_context,
     patch_process_caching_config,
 ):
+    mock_discovery_account = [[123]]
     mock_parsed_args = MagicMock(
         wrapping_keys=sentinel.raw_keys,
         discovery=sentinel.discovery,
-        discovery_account=sentinel.discovery_account,
+        discovery_account=mock_discovery_account,
         discovery_partition=sentinel.discovery_partition,
         encryption_context=sentinel.raw_encryption_context,
         required_encryption_context_keys=None,
@@ -559,8 +629,6 @@ def test_parse_args(
     patch_process_wrapping_key_provider_configs.assert_called_once_with(
         sentinel.raw_keys,
         sentinel.action,
-        sentinel.discovery,
-        {"account_ids": sentinel.discovery_account, "partition": sentinel.discovery_partition},
     )
     assert test.wrapping_keys is patch_process_wrapping_key_provider_configs.return_value
     patch_process_encryption_context.assert_called_once_with(
@@ -680,12 +748,11 @@ def test_process_encryption_context_encrypt_required_key_fail():
 @pytest.mark.parametrize(
     "argstring",
     (
-        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey",  # V2 requires discovery
-        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=1 --discovery-account=123",
-        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=1 --discovery-partition=aws",
-        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=0 --discovery-account=123",
-        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey --discovery=0 --discovery-partition=aws",
-        "--decrypt --input - -S --output - -w provider=ex_pr_1 key=exkey --discovery=0 --discovery-partition=aws"
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey discovery=1 discovery-account=123",
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey discovery=1 discovery-partition=aws",
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey discovery=0 discovery-account=123",
+        "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey discovery=0 discovery-partition=aws",
+        "--decrypt --input - -S --output - -w provider=ex_pr_1 key=exkey discovery=0 discovery-partition=aws"
         " --discovery-account=123",
     ),
 )
@@ -703,4 +770,86 @@ def test_discovery_bool():
     assert arg_parsing.discovery_pseudobool("false") is False
     assert arg_parsing.discovery_pseudobool("0") is False
     assert arg_parsing.discovery_pseudobool(False) is False
-    assert arg_parsing.discovery_pseudobool(None) is None
+
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing.discovery_pseudobool(None)
+    excinfo.match("Value .* could not be parsed as true or false")
+
+
+@pytest.mark.parametrize(
+    "parsed_args",
+    [
+        {"discovery-account": ["123"]},
+        {"discovery-partition": "aws"},
+        {"discovery-account": ["123"], "discovery-partition": "aws"},
+        {"discovery": "false", "discovery-account": ["123"]},
+        {"discovery": "false", "discovery-partition": "aws"},
+        {"discovery": "false", "discovery-account": ["123"], "discovery-partition": "aws"},
+        {"discovery": "true", "discovery-account": ["123"]},
+        {"discovery": "true", "discovery-partition": "aws"},
+    ],
+)
+def test_process_discovery_args_invalid(parsed_args):
+    with pytest.raises(ParameterParseError):
+        arg_parsing._process_discovery_args(parsed_args)
+
+
+def test_process_discovery_args_no_discovery_encrypt():
+    parsed_args = {"key": ["foo"]}
+    arg_parsing._process_discovery_args(parsed_args)
+    assert not parsed_args["discovery"]
+
+
+def test_process_discovery_args_discovery_true_no_filter():
+    parsed_args = {"provider": "aws-kms", "discovery": "true"}
+    arg_parsing._process_discovery_args(parsed_args)
+    assert parsed_args["discovery"]
+
+
+def test_process_discovery_args_discovery_true_with_filter():
+    parsed_args = {
+        "provider": "aws-kms",
+        "discovery": "true",
+        "discovery-account": ["123"],
+        "discovery-partition": ["aws"],
+    }
+    arg_parsing._process_discovery_args(parsed_args)
+    assert parsed_args["discovery"]
+    assert parsed_args["discovery-account"] == ["123"]
+    assert parsed_args["discovery-partition"] == "aws"
+
+
+def test_process_discovery_args_discovery_empty_accounts_list():
+    parsed_args = {
+        "provider": "aws-kms",
+        "discovery": "true",
+        "discovery-account": [],
+        "discovery-partition": ["aws"],
+    }
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_discovery_args(parsed_args)
+    excinfo.match(r"When specifying discovery-partition, you must also specify discovery-account")
+
+
+def test_process_discovery_args_discovery_empty_account():
+    parsed_args = {
+        "provider": "aws-kms",
+        "discovery": "true",
+        "discovery-account": ["123", ""],
+        "discovery-partition": ["aws"],
+    }
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_discovery_args(parsed_args)
+    excinfo.match(r"Value passed to discovery-account cannot be empty")
+
+
+def test_process_discovery_args_discovery_empty_partition():
+    parsed_args = {
+        "provider": "aws-kms",
+        "discovery": "true",
+        "discovery-account": ["123"],
+        "discovery-partition": [""],
+    }
+    with pytest.raises(ParameterParseError) as excinfo:
+        arg_parsing._process_discovery_args(parsed_args)
+    excinfo.match(r"Value passed to discovery-partition cannot be empty")

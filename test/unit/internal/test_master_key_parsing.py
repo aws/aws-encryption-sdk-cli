@@ -220,8 +220,8 @@ def test_parse_master_key_providers_from_args(patch_build_master_key_provider, p
     )
     patch_build_master_key_provider.assert_has_calls(
         calls=(
-            call(provider="provider_1_a", key=["provider_info_1_b"]),
-            call(provider="provider_2_a", key=["provider_info_2_b"], z="additional_z"),
+            call(provider="provider_1_a", key=["provider_info_1_b"], key_ids=["provider_info_1_b"]),
+            call(provider="provider_2_a", key=["provider_info_2_b"], z="additional_z", key_ids=["provider_info_2_b"]),
         ),
         any_order=False,
     )
