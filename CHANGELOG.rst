@@ -2,6 +2,18 @@
 Changelog
 *********
 
+2.1.0 -- 2020-10-27
+===================
+
+Bugfixes
+--------
+* Fix for enabling or disabling discovery mode in the CLI
+
+Breaking Changes
+----------------
+* The ``--discovery`` parameter is removed. It is replaced by a ``discovery`` attribute of the
+  ``--wrapping-keys`` parameter.
+
 2.0.0 -- 2020-09-24
 ===================
 
