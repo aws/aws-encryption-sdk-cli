@@ -20,3 +20,4 @@ test/integration/integration_tests.conf
 # PyCharm
 .idea/
 venv/
+/.history

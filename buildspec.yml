@@ -1,0 +1,15 @@
+version: 0.2
+
+batch:
+  fast-fail: false
+  build-list:
+    - identifier: python_27
+      buildspec: codebuild/python_27.yml
+    - identifier: python_35
+      buildspec: codebuild/python_35.yml
+    - identifier: python_36
+      buildspec: codebuild/python_36.yml
+    - identifier: python_37
+      buildspec: codebuild/python_37.yml
+    - identifier: python_38
+      buildspec: codebuild/python_38.yml
