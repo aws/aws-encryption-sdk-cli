@@ -477,7 +477,7 @@ In order to address these scenarios, we provide two optional arguments:
 These can be used independently or together, on any valid input or output.
 
 Be aware, however, that if you target multiple files either through a path expansion or by
-targetting a directory, the requested decoding/encoding will be applied to all files.
+targeting a directory, the requested decoding/encoding will be applied to all files.
 
 
 .. _AWS Encryption SDK: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/introduction.html
