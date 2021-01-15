@@ -204,7 +204,7 @@ These parameters are common to all master key providers:
   Identifier for a wrapping key to be used in the operation. Must be an identifier understood by the specified master
   key provider. ``The discovery`` attribute is only available if you are using an ``aws-kms`` provider.
 
-    * If using ``aws-kms`` to decrypt, `you must specify either a key with or discovery with a value of true`_.
+    * If using ``aws-kms`` to decrypt, `you must specify either a key or discovery with a value of true`_.
     * If using ``aws-kms`` to decrypt and specifying a key, decryption will only be attempted for keys identified with
       a key ARN.
 
