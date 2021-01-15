@@ -204,7 +204,9 @@ These parameters are common to all master key providers:
   Identifier for a wrapping key to be used in the operation. Must be an identifier understood by the specified master
   key provider. ``The discovery`` attribute is only available if you are using an ``aws-kms`` provider.
 
-    * If using ``aws-kms`` to decrypt, `you must specify either a key or discovery with a value of true`_.
+    * If using ``aws-kms`` to decrypt, `you must specify either a key with or discovery with a value of true`_.
+    * If using ``aws-kms`` to decrypt and specifying a key, decryption will only be attempted for keys identified with
+      a key ARN.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
@@ -257,7 +259,9 @@ There are some configuration options which are unique to the ``aws-kms`` master 
 * **discovery** *(default: false; one of key or discovery with a value of true is required)* :
   Indicates whether this provider should be in "discovery" mode. If true (enabled), the AWS Encryption CLI will attempt
   to decrypt ciphertexts encrypted with any AWS KMS CMK. If false (disabled), the AWS Encryption CLI will only attempt
-  to decrypt ciphertexts encrypted with the keys specified in the **key** attribute.
+  to decrypt ciphertexts encrypted with the key ARNs specified in the **key** attribute.
+  Any key specified in the **key** attribute that is a KMS CMK Identier other than a key ARN will not
+  be used for decryption.
 * **discovery-account** *(optional; available only when discovery=true and discovery-partition is also provided)* :
   If discovery is enabled, limits decryption to AWS KMS CMKs in the specified accounts.
 * **discovery-partition** *(optional; available only when discovery=true and discovery-account is also provided)* :
