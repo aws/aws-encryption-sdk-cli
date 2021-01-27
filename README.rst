@@ -205,7 +205,8 @@ These parameters are common to all master key providers:
   key provider. ``The discovery`` attribute is only available if you are using an ``aws-kms`` provider.
 
     * If using ``aws-kms`` to decrypt, `you must specify either a key or discovery with a value of true`_.
-    * If using ``aws-kms`` to decrypt and specifying a key, you must use a key ARN; key ids, alias names, and alias ARNs are not supported.
+    * If using ``aws-kms`` to decrypt and specifying a key, you must use a key ARN; key ids, alias names, and alias
+      ARNs are not supported.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
