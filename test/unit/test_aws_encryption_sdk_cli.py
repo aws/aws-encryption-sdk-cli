@@ -263,7 +263,7 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
             encode=sentinel.encode_output,
             encryption_context=sentinel.encryption_context,
             required_encryption_context_keys=sentinel.required_keys,
-            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+            commitment_policy=CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT,
         ),
     )
 
@@ -298,7 +298,7 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+                commitment_policy=CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT,
             ),
         )
     excinfo.match(r"If operating on a source directory, destination must be an existing directory")
@@ -403,7 +403,7 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_iohandle
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+            commitment_policy=CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -429,7 +429,7 @@ def test_process_cli_request_invalid_source(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+                commitment_policy=CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT,
             ),
         )
     excinfo.match(r"Invalid source.  Must be a valid pathname pattern or stdin \(-\)")
@@ -479,7 +479,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
             encode=False,
             decode=False,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+            commitment_policy=CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT,
         ),
     )
 
