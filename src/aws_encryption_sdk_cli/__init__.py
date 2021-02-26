@@ -167,11 +167,11 @@ def process_cli_request(stream_args, parsed_args):  # noqa: C901
 
     if not parsed_args.commitment_policy:
         commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT:
         commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.require_encrypt_allow_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.REQUIRE_ENCRYPT_ALLOW_DECRYPT:
         commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_ALLOW_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.require_encrypt_require_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT:
         commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
     else:
         raise BadUserArgumentError("Invalid commitment policy.")
