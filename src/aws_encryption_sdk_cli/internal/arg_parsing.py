@@ -237,7 +237,7 @@ def _build_parser():
         "--commitment-policy",
         type=CommitmentPolicyArgs,
         choices=list(CommitmentPolicyArgs),
-        default=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+        default=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         help=(
             "Specifies the commitment policy for key commitment. "
             "ex: "
@@ -597,9 +597,9 @@ def discovery_pseudobool(value):
 class CommitmentPolicyArgs(Enum):
     """Defines the possible values for a commitment policy"""
 
-    forbid_encrypt_allow_decrypt = "forbid-encrypt-allow-decrypt"
-    require_encrypt_allow_decrypt = "require-encrypt-allow-decrypt"
-    require_encrypt_require_decrypt = "require-encrypt-require-decrypt"
+    FORBID_ENCRYPT_ALLOW_DECRYPT = "forbid-encrypt-allow-decrypt"
+    REQUIRE_ENCRYPT_ALLOW_DECRYPT = "require-encrypt-allow-decrypt"
+    REQUIRE_ENCRYPT_REQUIRE_DECRYPT = "require-encrypt-require-decrypt"
 
     def str(self):
         """Returns the string value for the commitment policy"""

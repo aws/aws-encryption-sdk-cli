@@ -263,7 +263,7 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
             encode=sentinel.encode_output,
             encryption_context=sentinel.encryption_context,
             required_encryption_context_keys=sentinel.required_keys,
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         ),
     )
 
@@ -334,7 +334,7 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
             ),
         )
     excinfo.match(r"If operating on a source directory, destination must be an existing directory")
@@ -355,7 +355,7 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_iohandler)
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         ),
     )
 
@@ -388,7 +388,7 @@ def test_process_cli_request_source_stdin(tmpdir, patch_iohandler):
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
         metadata_output=MetadataWriter(True)(),
-        commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+        commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
     )
     aws_encryption_sdk_cli.process_cli_request(stream_args=sentinel.stream_args, parsed_args=mock_parsed_args)
     assert not patch_iohandler.return_value.process_dir.called
@@ -414,7 +414,7 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_iohandler
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -442,7 +442,7 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_iohandle
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -468,7 +468,7 @@ def test_process_cli_request_invalid_source(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
             ),
         )
     excinfo.match(r"Invalid source.  Must be a valid pathname pattern or stdin \(-\)")
@@ -488,7 +488,7 @@ def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_i
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={"mode": "encrypt"},
             parsed_args=MagicMock(
-                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
                 input=source,
                 output=str(target_file),
                 recursive=False,
@@ -523,7 +523,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
             encode=False,
             decode=False,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         ),
     )
 
