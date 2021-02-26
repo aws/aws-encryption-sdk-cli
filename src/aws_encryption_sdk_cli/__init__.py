@@ -167,7 +167,7 @@ def process_cli_request(stream_args, parsed_args):
 
     if not parsed_args.commitment_policy:
         commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT:
         commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
     else:
         _LOGGER.warning("Invalid commitment policy: %s", parsed_args.commitment_policy)
