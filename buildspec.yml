@@ -13,3 +13,6 @@ batch:
       buildspec: codebuild/python_37.yml
     - identifier: python_38
       buildspec: codebuild/python_38.yml
+
+    - identifier: code_coverage
+      buildspec: codebuild/coverage.yml
