@@ -242,7 +242,7 @@ def stream_kwargs_from_args(args, crypto_materials_manager):
 
     if not args.commitment_policy:
         stream_args["commitment_policy"] = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
-    elif args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+    elif args.commitment_policy == CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT:
         stream_args["commitment_policy"] = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
 
     if args.max_length is not None:
