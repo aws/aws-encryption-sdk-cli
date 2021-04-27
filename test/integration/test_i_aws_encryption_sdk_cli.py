@@ -591,9 +591,13 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
         source=str(ciphertext_file), target="-"
     )
 
+    # For each use of Popen in tests: it only supports use as a resource in `with` statements as of Python 3.4,
+    # so we can't use that unconditionally yet.
+    # pylint: disable=consider-using-with
     proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     _stdout, _stderr = proc.communicate(input=base64.b64encode(plaintext))
 
+    # pylint: disable=consider-using-with
     proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate()
 
@@ -610,8 +614,10 @@ def test_stdin_stdout_stdin_stdout_cycle():
     decrypt_args = "aws-encryption-cli " + decrypt_args_template(decode=True, encode=True).format(
         source="-", target="-"
     )
+    # pylint: disable=consider-using-with
     proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     ciphertext, _stderr = proc.communicate(input=base64.b64encode(plaintext))
+    # pylint: disable=consider-using-with
     proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
 
@@ -637,6 +643,7 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
     )
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    # pylint: disable=consider-using-with
     proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_output, stderr = proc.communicate()
 
