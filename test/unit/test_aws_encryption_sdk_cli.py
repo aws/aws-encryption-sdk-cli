@@ -621,7 +621,7 @@ def patch_for_cli(mocker):
         discovery_partition=sentinel.discovery_partition,
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
-        commitment_policy=CommitmentPolicyArgs.forbid_encrypt_allow_decrypt,
+        commitment_policy=CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT,
     )
     mocker.patch.object(aws_encryption_sdk_cli, "setup_logger")
     mocker.patch.object(aws_encryption_sdk_cli, "build_crypto_materials_manager_from_args")
