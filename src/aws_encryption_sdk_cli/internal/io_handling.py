@@ -265,6 +265,7 @@ class IOHandler(object):
             if not self._should_write_file(destination):
                 return OperationResult.SKIPPED
             _ensure_dir_exists(destination)
+            # pylint: disable=consider-using-with
             destination_writer = open(os.path.abspath(destination), "wb")
 
         if source == "-":

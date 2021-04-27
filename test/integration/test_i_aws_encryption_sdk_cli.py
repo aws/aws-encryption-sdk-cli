@@ -583,11 +583,11 @@ def test_stdin_to_file_to_stdout_cycle(tmpdir):
         source=str(ciphertext_file), target="-"
     )
 
-    proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    _stdout, _stderr = proc.communicate(input=base64.b64encode(plaintext))
+    with Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE) as proc:
+        _stdout, _stderr = proc.communicate(input=base64.b64encode(plaintext))
 
-    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    decrypted_stdout, _stderr = proc.communicate()
+    with Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE) as proc:
+        decrypted_stdout, _stderr = proc.communicate()
 
     assert base64.b64decode(decrypted_stdout) == plaintext
 
@@ -602,10 +602,10 @@ def test_stdin_stdout_stdin_stdout_cycle():
     decrypt_args = "aws-encryption-cli " + decrypt_args_template(decode=True, encode=True).format(
         source="-", target="-"
     )
-    proc = Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    ciphertext, _stderr = proc.communicate(input=base64.b64encode(plaintext))
-    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
+    with Popen(shlex.split(encrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE) as proc:
+        ciphertext, _stderr = proc.communicate(input=base64.b64encode(plaintext))
+    with Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE) as proc:
+        decrypted_stdout, _stderr = proc.communicate(input=ciphertext)
 
     assert base64.b64decode(decrypted_stdout) == plaintext
 
@@ -629,8 +629,8 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
     )
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
-    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    decrypted_output, stderr = proc.communicate()
+    with Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE) as proc:
+        decrypted_output, stderr = proc.communicate()
 
     # Verify that no output was written
     assert decrypted_output == b""
