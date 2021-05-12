@@ -14,4 +14,4 @@ phases:
       - cd aws-encryption-sdk-cli/api_compatibility_tests
   build:
     commands:
-      - AWSES_CLI_VERSION=$VERSION tox -e py38-awses_cli
+      - AWSES_CLI_VERSION=${VERSION} tox -e py38-awses_cli
