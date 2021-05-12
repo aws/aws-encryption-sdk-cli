@@ -11,7 +11,7 @@ phases:
       - git clone https://github.com/aws/aws-encryption-sdk-cli.git
       # TODO: Temporary
       - git checkout release-using-codebuild
-      - cd aws_encryption_sdk_cli/api_compatibility_tests
+      - cd aws-encryption-sdk-cli/api_compatibility_tests
   build:
     commands:
       - AWSES_CLI_VERSION=$VERSION tox -e py38-awses_cli
