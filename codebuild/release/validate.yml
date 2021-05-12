@@ -8,7 +8,9 @@ phases:
       python: latest
   pre_build:
     commands:
-      - git clone https://github.com/aws/aws_encryption_sdk_cli.git
+      - git clone https://github.com/aws/aws-encryption-sdk-cli.git
+      # TODO: Temporary
+      - git checkout release-using-codebuild
       - cd aws_encryption_sdk_cli/api_compatibility_tests
   build:
     commands:
