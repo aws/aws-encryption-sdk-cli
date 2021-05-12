@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - pip install tox
+    runtime-versions:
+      python: latest
+  pre_build:
+    commands:
+      - git clone https://github.com/aws/aws_encryption_sdk_cli.git
+      - cd aws_encryption_sdk_cli/api_compatibility_tests
+  build:
+    commands:
+      - AWSES_CLI_VERSION=$VERSION tox -e py38-awses_cli
