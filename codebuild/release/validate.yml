@@ -13,10 +13,7 @@ phases:
       python: latest
   pre_build:
     commands:
-      - git clone https://github.com/aws/aws-encryption-sdk-cli.git
-      - cd aws-encryption-sdk-cli/api_compatibility_tests
-      # TODO: Temporary
-      - git checkout release-using-codebuild
+      - cd api_compatibility_tests
   build:
     commands:
       - tox -e py38-awses_cli_${VERSION}
