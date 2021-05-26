@@ -1,0 +1,19 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID: >-
+      arn:aws:kms:us-west-2:658956600833:key/b3537ef1-d8dc-4780-9f5a-55776cbb2f7f
+
+phases:
+  install:
+    commands:
+      - pip install tox
+    runtime-versions:
+      python: latest
+  pre_build:
+    commands:
+      - cd api_compatibility_tests
+  build:
+    commands:
+      - tox -e py38-awses_cli_${VERSION}
