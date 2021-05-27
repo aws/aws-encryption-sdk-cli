@@ -185,6 +185,8 @@ def process_cli_request(stream_args, parsed_args):  # noqa: C901
         required_encryption_context=parsed_args.encryption_context,
         required_encryption_context_keys=parsed_args.required_encryption_context_keys,
         commitment_policy=commitment_policy,
+        buffer_output=parsed_args.buffer,
+        max_encrypted_data_keys=parsed_args.max_encrypted_data_keys,
     )
 
     if parsed_args.input == "-":

@@ -24,6 +24,7 @@ import six
 from aws_encryption_sdk.materials_managers import CommitmentPolicy  # noqa pylint: disable=unused-import
 from base64io import Base64IO
 
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import OUTPUT_SUFFIX, OperationResult
 from aws_encryption_sdk_cli.internal.logging_utils import LOGGER_NAME
 from aws_encryption_sdk_cli.internal.metadata import MetadataWriter, json_ready_header, json_ready_header_auth
@@ -142,6 +143,21 @@ def _output_dir(source_root, destination_root, source_dir):
     return os.path.join(destination_root, suffix)
 
 
+def _is_decrypt_mode(mode):
+    # type: (str) -> bool
+    """
+    Determines whether the provided mode does decryption
+
+    :param str filepath: Full file path to file in question
+    :rtype: bool
+    """
+    if mode in ("decrypt", "decrypt-unsigned"):
+        return True
+    if mode == "encrypt":
+        return False
+    raise BadUserArgumentError("Mode {mode} has not been implemented".format(mode=mode))
+
+
 @attr.s(hash=False, init=False)
 class IOHandler(object):
     """Common handler for all IO operations. Holds common configuration values used for all
@@ -153,6 +169,7 @@ class IOHandler(object):
     :param bool no_overwrite: Should never overwrite existing files
     :param bool decode_input: Should input be base64 decoded before operation
     :param bool encode_output: Should output be base64 encoded after operation
+    :param bool buffer_output: Should buffer entire output before releasing to destination
     :param dict required_encryption_context: Encryption context key-value pairs to require
     :param list required_encryption_context_keys: Encryption context keys to require
     """
@@ -162,12 +179,13 @@ class IOHandler(object):
     no_overwrite = attr.ib(validator=attr.validators.instance_of(bool))
     decode_input = attr.ib(validator=attr.validators.instance_of(bool))
     encode_output = attr.ib(validator=attr.validators.instance_of(bool))
+    buffer_output = attr.ib(validator=attr.validators.instance_of(bool))
     required_encryption_context = attr.ib(validator=attr.validators.instance_of(dict))
     required_encryption_context_keys = attr.ib(
         validator=attr.validators.instance_of(list)
     )  # noqa pylint: disable=invalid-name
 
-    def __init__(
+    def __init__(  # noqa pylint: disable=too-many-arguments
         self,
         metadata_writer,  # type: MetadataWriter
         interactive,  # type: bool
@@ -177,6 +195,8 @@ class IOHandler(object):
         required_encryption_context,  # type: Dict[str, str]
         required_encryption_context_keys,  # type: List[str]
         commitment_policy,  # type: CommitmentPolicy
+        buffer_output,
+        max_encrypted_data_keys,  # type: Union[None, int]
     ):
         # type: (...) -> None
         """Workaround pending resolution of attrs/mypy interaction.
@@ -190,7 +210,11 @@ class IOHandler(object):
         self.encode_output = encode_output
         self.required_encryption_context = required_encryption_context
         self.required_encryption_context_keys = required_encryption_context_keys  # pylint: disable=invalid-name
-        self.client = aws_encryption_sdk.EncryptionSDKClient(commitment_policy=commitment_policy)
+        self.buffer_output = buffer_output
+        self.client = aws_encryption_sdk.EncryptionSDKClient(
+            commitment_policy=commitment_policy,
+            max_encrypted_data_keys=max_encrypted_data_keys,
+        )
         attr.validate(self)
 
     def _single_io_write(self, stream_args, source, destination_writer):
@@ -223,7 +247,7 @@ class IOHandler(object):
                 else:
                     metadata_kwargs["header_auth"] = json_ready_header_auth(header_auth)
 
-                if stream_args["mode"] == "decrypt":
+                if _is_decrypt_mode(str(stream_args["mode"])):
                     discovered_ec = handler.header.encryption_context
                     missing_keys = set(self.required_encryption_context_keys).difference(set(discovered_ec.keys()))
                     missing_pairs = set(self.required_encryption_context.items()).difference(set(discovered_ec.items()))
@@ -243,9 +267,12 @@ class IOHandler(object):
                         return OperationResult.FAILED_VALIDATION
 
                 metadata.write_metadata(**metadata_kwargs)
-                for chunk in handler:
-                    _destination.write(chunk)
-                    _destination.flush()
+                if self.buffer_output:
+                    _destination.write(handler.read())
+                else:
+                    for chunk in handler:
+                        _destination.write(chunk)
+                        _destination.flush()
         return OperationResult.SUCCESS
 
     def process_single_operation(self, stream_args, source, destination):
