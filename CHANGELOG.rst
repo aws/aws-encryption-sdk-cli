@@ -2,6 +2,15 @@
 Changelog
 *********
 
+1.9.0 -- 2021-05-27
+===================
+
+Features
+--------
+* Improvements to the message decryption process
+
+  See https://github.com/aws/aws-encryption-sdk-cli/security/advisories/GHSA-89v2-g37m-g3ff.
+
 1.8.0 -- 2020-10-27
 ===================
 
