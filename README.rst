@@ -43,7 +43,7 @@ Required Prerequisites
 ======================
 
 * Python 2.7+ or 3.4+
-* aws-encryption-sdk >= 2.0.0
+* aws-encryption-sdk >= 2.2.0
 
 Installation
 ============
@@ -168,7 +168,7 @@ Metadata Contents
 `````````````````
 The metadata JSON contains the following fields:
 
-* ``"mode"`` : ``"encrypt"``/``"decrypt"``
+* ``"mode"`` : ``"encrypt"``/``"decrypt"``/``"decrypt-unsigned"``
 * ``"input"`` : Full path to input file (or ``"<stdin>"`` if stdin)
 * ``"output"`` : Full path to output file (or ``"<stdout>"`` if stdout)
 * ``"header"`` : JSON representation of `message header data`_
@@ -341,7 +341,6 @@ Allowed parameters:
 * **max_age** *(required)* :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_messages_encrypted** :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can encrypt.
-
 
 Logging and Verbosity
 ---------------------

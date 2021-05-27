@@ -192,6 +192,14 @@ def _build_parser():
         "-d", "--decrypt", dest="action", action="store_const", const="decrypt", help="Decrypt data"
     )
     parser.add_dummy_redirect_argument("--decrypt")
+    operating_action.add_argument(
+        "--decrypt-unsigned",
+        dest="action",
+        action="store_const",
+        const="decrypt-unsigned",
+        help="Decrypt data and enforce messages are unsigned during decryption.",
+    )
+    parser.add_dummy_redirect_argument("--decrypt-unsigned")
 
     # For each argument added to this group, a dummy redirect argument must
     # be added to the parent parser for each long form option string.
@@ -259,6 +267,10 @@ def _build_parser():
     )
 
     parser.add_argument(
+        "-b", "--buffer", action="store_true", help="Buffer result in memory before releasing to output"
+    )
+
+    parser.add_argument(
         "-i",
         "--input",
         required=True,
@@ -313,6 +325,13 @@ def _build_parser():
             "Maximum frame length (for framed messages) or content length (for "
             "non-framed messages) (decryption only)"
         ),
+    )
+
+    parser.add_argument(
+        "--max-encrypted-data-keys",
+        type=int,
+        action=UniqueStoreAction,
+        help="Maximum number of encrypted data keys to wrap (during encryption) or to unwrap (during decryption)",
     )
 
     parser.add_argument(
