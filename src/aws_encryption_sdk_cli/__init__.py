@@ -173,6 +173,10 @@ def process_cli_request(stream_args, parsed_args):
         _LOGGER.warning("Invalid commitment policy: %s", parsed_args.commitment_policy)
         commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
 
+    # We don't want commitment policy to percolate through to be passed directly to the ESDK, since it is set
+    # via the ESDK Client object instead
+    stream_args.pop("commitment_policy", None)
+
     handler = IOHandler(
         metadata_writer=parsed_args.metadata_output,
         interactive=parsed_args.interactive,
@@ -182,6 +186,8 @@ def process_cli_request(stream_args, parsed_args):
         required_encryption_context=parsed_args.encryption_context,
         required_encryption_context_keys=parsed_args.required_encryption_context_keys,
         commitment_policy=commitment_policy,
+        buffer_output=parsed_args.buffer,
+        max_encrypted_data_keys=parsed_args.max_encrypted_data_keys,
     )
 
     if parsed_args.input == "-":
@@ -277,7 +283,6 @@ def cli(raw_args=None):
             )
 
         stream_args = stream_kwargs_from_args(args, crypto_materials_manager)
-
         process_cli_request(stream_args, args)
 
         return None

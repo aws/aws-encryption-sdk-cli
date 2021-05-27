@@ -59,6 +59,20 @@ def cmk_arn():
 
 def encrypt_args_template(metadata=False, caching=False, encode=False, decode=False):
     template = "-e -i {source} -o {target} --encryption-context a=b c=d -m key=" + cmk_arn_value()
+    return _encrypt_args_modify_template(template, metadata, caching, encode, decode)
+
+
+def encrypt_args_template_wrapping(metadata=False, caching=False, encode=False, decode=False, append_commitment=False):
+    template_wrapping = "-e -i {source} -o {target} --encryption-context a=b c=d -w key=" + cmk_arn_value()
+    template_wrapping = _encrypt_args_modify_template(template_wrapping, metadata, caching, encode, decode)
+    if append_commitment:
+        template_wrapping += (
+            " --commitment-policy forbid-encrypt-allow-decrypt"  # required in 1.8 when using --wrapping-keys
+        )
+    return template_wrapping
+
+
+def _encrypt_args_modify_template(template, metadata=False, caching=False, encode=False, decode=False):
     if metadata:
         template += " {metadata}"
     else:
@@ -72,7 +86,7 @@ def encrypt_args_template(metadata=False, caching=False, encode=False, decode=Fa
     return template
 
 
-def decrypt_args_template(metadata=False, encode=False, decode=False):
+def decrypt_args_template(metadata=False, encode=False, decode=False, buffer=False):
     template = "-d -i {source} -o {target}"
     if metadata:
         template += " {metadata}"
@@ -82,6 +96,17 @@ def decrypt_args_template(metadata=False, encode=False, decode=False):
         template += " --encode"
     if decode:
         template += " --decode"
+    if buffer:
+        template += " --buffer"
+    return template
+
+
+def decrypt_unsigned_args_template(metadata=False):
+    template = "--decrypt-unsigned -i {source} -o {target}"
+    if metadata:
+        template += " {metadata}"
+    else:
+        template += " -S"
     return template
 
 

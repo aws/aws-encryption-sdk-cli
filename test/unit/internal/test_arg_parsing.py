@@ -33,32 +33,32 @@ def patch_platform_win32_ver(mocker):
     return arg_parsing.platform.win32_ver
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_build_parser(mocker):
     mocker.patch.object(arg_parsing, "_build_parser")
     yield arg_parsing._build_parser
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_wrapping_key_provider_configs(mocker):
     mocker.patch.object(arg_parsing, "_process_wrapping_key_provider_configs")
     yield arg_parsing._process_wrapping_key_provider_configs
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_parse_and_collapse_config(mocker):
     mocker.patch.object(arg_parsing, "_parse_and_collapse_config")
     yield arg_parsing._parse_and_collapse_config
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_encryption_context(mocker):
     mocker.patch.object(arg_parsing, "_process_encryption_context")
     arg_parsing._process_encryption_context.return_value = sentinel.encryption_context, sentinel.required_keys
     yield arg_parsing._process_encryption_context
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_caching_config(mocker):
     mocker.patch.object(arg_parsing, "_process_caching_config")
     yield arg_parsing._process_caching_config
@@ -196,7 +196,7 @@ def test_unique_store_action_second_call():
     mock_parser.error.assert_called_once_with("SPECIAL_ATTRIBUTE argument may not be specified more than once")
 
 
-def build_expected_good_args(from_file=False):  # pylint: disable=too-many-locals
+def build_expected_good_args(from_file=False):  # pylint: disable=too-many-locals,too-many-statements
     encrypt = "-e"
     decrypt = "-d"
     suppress_metadata = " -S"
@@ -217,6 +217,7 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
         good_args.append((encrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "encrypt"))
     for decrypt_flag in (decrypt, "--decrypt"):
         good_args.append((decrypt_flag + suppress_metadata + valid_io + mkp_1, "action", "decrypt"))
+    good_args.append(("--decrypt-unsigned" + suppress_metadata + valid_io + mkp_1, "action", "decrypt-unsigned"))
 
     # wrapping key config
     good_args.append((default_encrypt, "wrapping_keys", [mkp_1_parsed]))
@@ -263,6 +264,10 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
     good_args.append((default_encrypt, "max_length", None))
     good_args.append((default_encrypt + " --max-length 99", "max_length", 99))
 
+    # max encrypted data keys
+    good_args.append((default_encrypt, "max_encrypted_data_keys", None))
+    good_args.append((default_encrypt + " --max-encrypted-data-keys 99", "max_encrypted_data_keys", 99))
+
     # interactive
     good_args.append((default_encrypt, "interactive", False))
     good_args.append((default_encrypt + " --interactive", "interactive", True))
@@ -294,6 +299,11 @@ def build_expected_good_args(from_file=False):  # pylint: disable=too-many-local
             metadata.MetadataWriter(suppress_output=False)(output_file="-"),
         )
     )
+
+    # buffer
+    good_args.append((default_encrypt, "buffer", False))
+    for recursive_flag in (" -b", " --buffer"):
+        good_args.append((default_encrypt + recursive_flag, "buffer", True))
 
     return good_args
 
@@ -343,6 +353,7 @@ def build_bad_dummy_arguments():
     partial_patterns = {
         "-decrypt": "{arg} -i - -o - -S",
         "-encrypt": "{arg} -i - -o - -S",
+        "-decrypt-unsigned": "{arg} -i - -o - -S",
         "-input": "-d {arg} - -o - -S",
         "-output": "-d -i - {arg} - -S",
     }
@@ -526,6 +537,55 @@ KEY_PROVIDER_CONFIGS = [
         "encrypt",
         [{"provider": identifiers.DEFAULT_MASTER_KEY_PROVIDER, "key": ["ex_key_1"], "discovery": False}],
     ),
+    (  # decrypt-unsigned, with keys, no discovery
+        [["provider=ex_provider", "key=ex_key_1"]],
+        "decrypt-unsigned",
+        [{"provider": "ex_provider", "key": ["ex_key_1"], "discovery": False}],
+    ),
+    (  # decrypt-unsigned, explicit discovery true, no filter
+        [["provider=aws-kms", "discovery=true"]],
+        "decrypt-unsigned",
+        [{"provider": "aws-kms", "key": [], "discovery": True}],
+    ),
+    (  # decrypt-unsigned, explicit discovery false, no filter
+        [["provider=aws-kms", "discovery=false", "key=ex_key_1"]],
+        "decrypt-unsigned",
+        [{"provider": "aws-kms", "key": ["ex_key_1"], "discovery": False}],
+    ),
+    (  # decrypt-unsigned, explicit discovery, filter
+        [["provider=aws-kms", "discovery=true", "discovery-account=123", "discovery-partition=aws"]],
+        "decrypt-unsigned",
+        [
+            {
+                "provider": "aws-kms",
+                "key": [],
+                "discovery": True,
+                "discovery-account": ["123"],
+                "discovery-partition": "aws",
+            }
+        ],
+    ),
+    (  # decrypt-unsigned, explicit discovery, filter multiple accounts
+        [
+            [
+                "provider=aws-kms",
+                "discovery=true",
+                "discovery-account=123",
+                "discovery-account=456",
+                "discovery-partition=aws",
+            ]
+        ],
+        "decrypt-unsigned",
+        [
+            {
+                "provider": "aws-kms",
+                "key": [],
+                "discovery": True,
+                "discovery-account": ["123", "456"],
+                "discovery-partition": "aws",
+            }
+        ],
+    ),
 ]
 
 
@@ -568,10 +628,11 @@ def test_process_wrapping_key_provider_configs_not_exactly_one_provider():
     excinfo.match(r'Exactly one "provider" must be provided for each wrapping key provider configuration. 2 provided')
 
 
+@pytest.mark.parametrize("decrypt_mode", ("decrypt", "decrypt-unsigned"))
 @pytest.mark.parametrize("args", ["discovery=true", "discovery-account=123", "discovery-partition=aws"])
-def test_process_wrapping_key_provider_configs_discovery_with_nonkms_provider(args):
+def test_process_wrapping_key_provider_configs_discovery_with_nonkms_provider(args, decrypt_mode):
     with pytest.raises(ParameterParseError) as excinfo:
-        arg_parsing._process_wrapping_key_provider_configs([["provider=notkms", args]], "decrypt")
+        arg_parsing._process_wrapping_key_provider_configs([["provider=notkms", args]], decrypt_mode)
 
     excinfo.match(r"Discovery attributes are supported only for AWS KMS wrapping keys")
 
@@ -604,6 +665,7 @@ def test_parse_args(
         version=False,
         dummy_redirect=None,
         commitment_policy=sentinel.commitment_policy,
+        buffer=sentinel.buffer_output,
     )
     patch_build_parser.return_value.parse_args.return_value = mock_parsed_args
     test = arg_parsing.parse_args(sentinel.raw_args)
@@ -746,8 +808,16 @@ def test_parse_args_with_commitment_policy_master_keys_parameter_succeeds(patch_
     (
         ("encrypt", None, None, {}, []),
         ("decrypt", None, None, {}, []),
+        ("decrypt-unsigned", None, None, {}, []),
         ("encrypt", ["encryption=context", "with=values"], None, {"encryption": "context", "with": "values"}, []),
         ("decrypt", ["encryption=context", "with=values"], None, {"encryption": "context", "with": "values"}, []),
+        (
+            "decrypt-unsigned",
+            ["encryption=context", "with=values"],
+            None,
+            {"encryption": "context", "with": "values"},
+            [],
+        ),
         (
             "encrypt",
             ["encryption=context", "with=values"],
@@ -764,6 +834,20 @@ def test_parse_args_with_commitment_policy_master_keys_parameter_succeeds(patch_
         ),
         (
             "decrypt",
+            ["encryption=context", "with=values", "key_3"],
+            ["key_1", "key_2"],
+            {"encryption": "context", "with": "values"},
+            ["key_1", "key_2", "key_3"],
+        ),
+        (
+            "decrypt-unsigned",
+            ["encryption=context", "with=values"],
+            ["key_1", "key_2"],
+            {"encryption": "context", "with": "values"},
+            ["key_1", "key_2"],
+        ),
+        (
+            "decrypt-unsigned",
             ["encryption=context", "with=values", "key_3"],
             ["key_1", "key_2"],
             {"encryption": "context", "with": "values"},
@@ -800,6 +884,11 @@ def test_process_encryption_context_encrypt_required_key_fail():
         "--decrypt --input - -S --output - -w provider=ex_p_1 key=exkey discovery=0 discovery-partition=aws",
         "--decrypt --input - -S --output - -w provider=ex_pr_1 key=exkey discovery=0 discovery-partition=aws"
         " discovery-account=123",
+        "--decrypt-unsigned --input - -S --output - -w provider=ex_p_1 key=exkey discovery=1 discovery-account=123",
+        "--decrypt-unsigned --input - -S --output - -w provider=ex_p_1 key=exkey discovery=1 discovery-partition=aws",
+        "--decrypt-unsigned --input - -S --output - -w provider=ex_p_1 key=exkey discovery=0 discovery-account=123",
+        "--decrypt-unsigned --input - -S --output - -w provider=ex_p_1 key=exkey discovery=0 discovery-partition=aws",
+        "--decrypt-unsigned --input - -S --output - -w provider=ex_pr_1 key=exkey discovery=0 discovery-partition=aws",
     ),
 )
 def test_invalid_discovery(argstring):
