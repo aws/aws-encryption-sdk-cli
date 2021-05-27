@@ -23,7 +23,7 @@ from enum import Enum
 import aws_encryption_sdk
 import six
 
-from aws_encryption_sdk_cli.exceptions import ParameterParseError
+from aws_encryption_sdk_cli.exceptions import BadUserArgumentError, ParameterParseError
 from aws_encryption_sdk_cli.internal.identifiers import (
     ALGORITHM_NAMES,
     DEFAULT_MASTER_KEY_PROVIDER,
@@ -55,6 +55,21 @@ __all__ = (
     "_process_wrapping_key_provider_configs",
 )
 _LOGGER = logging.getLogger(LOGGER_NAME)
+
+
+def _is_decrypt_mode(mode):
+    # type: (str) -> bool
+    """
+    Determines whether the provided mode does decryption
+
+    :param str filepath: Full file path to file in question
+    :rtype: bool
+    """
+    if mode in ("decrypt", "decrypt-unsigned"):
+        return True
+    if mode == "encrypt":
+        return False
+    raise BadUserArgumentError("Mode {mode} has not been implemented".format(mode=mode))
 
 
 class CommentIgnoringArgumentParser(argparse.ArgumentParser):
@@ -202,6 +217,14 @@ def _build_parser():
         "-d", "--decrypt", dest="action", action="store_const", const="decrypt", help="Decrypt data"
     )
     parser.add_dummy_redirect_argument("--decrypt")
+    operating_action.add_argument(
+        "--decrypt-unsigned",
+        dest="action",
+        action="store_const",
+        const="decrypt-unsigned",
+        help="Decrypt data and enforce messages are unsigned during decryption.",
+    )
+    parser.add_dummy_redirect_argument("--decrypt-unsigned")
 
     # For each argument added to this group, a dummy redirect argument must
     # be added to the parent parser for each long form option string.
@@ -285,6 +308,10 @@ def _build_parser():
     )
 
     parser.add_argument(
+        "-b", "--buffer", action="store_true", help="Buffer result in memory before releasing to output"
+    )
+
+    parser.add_argument(
         "-i",
         "--input",
         required=True,
@@ -339,6 +366,13 @@ def _build_parser():
             "Maximum frame length (for framed messages) or content length (for "
             "non-framed messages) (decryption only)"
         ),
+    )
+
+    parser.add_argument(
+        "--max-encrypted-data-keys",
+        type=int,
+        action=UniqueStoreAction,
+        help="Maximum number of encrypted data keys to wrap (during encryption) or to unwrap (during decryption)",
     )
 
     parser.add_argument(
@@ -496,7 +530,7 @@ def _process_master_key_provider_configs(
     :raises ParameterParseError: if no key values are provided
     """
     if raw_keys is None:
-        if action == "decrypt":
+        if _is_decrypt_mode(action):
             # We allow not defining any master key provider configuration if decrypting with aws-kms.
             _LOGGER.debug(
                 "No master key provider config provided on decrypt request. Using aws-kms with no master keys."
@@ -529,7 +563,9 @@ def _process_master_key_provider_configs(
             )
         parsed_args["provider"] = provider[0]  # type: ignore
 
-        aws_kms_on_decrypt = parsed_args["provider"] in ("aws-kms", DEFAULT_MASTER_KEY_PROVIDER) and action == "decrypt"
+        aws_kms_on_decrypt = parsed_args["provider"] in ("aws-kms", DEFAULT_MASTER_KEY_PROVIDER) and _is_decrypt_mode(
+            action
+        )
 
         if aws_kms_on_decrypt:
             if "key" in parsed_args:
@@ -559,7 +595,7 @@ def _process_wrapping_key_provider_configs(  # noqa: C901
     :raises ParameterParseError: if no key values are provided
     """
     if raw_keys is None:
-        if action == "decrypt":
+        if _is_decrypt_mode(action):
             # We allow not defining any wrapping key provider configuration if decrypting with aws-kms.
             _LOGGER.debug(
                 "No wrapping key provider config provided on decrypt request. Using aws-kms with no wrapping keys."
@@ -592,7 +628,7 @@ def _process_wrapping_key_provider_configs(  # noqa: C901
         _process_discovery_args(parsed_args)
 
         discovery = parsed_args["discovery"]
-        if provider_is_kms and action == "decrypt":
+        if provider_is_kms and _is_decrypt_mode(action):
             if "key" in parsed_args and discovery:
                 # Decrypt MUST fail without attempting any decryption if discovery mode is enabled
                 # and at least one key=<Key ARN> parameter value is provided
@@ -713,7 +749,7 @@ def parse_args(raw_args=None):  # noqa
             raise ParameterParseError("You cannot specify both the --master-keys and --wrapping-keys parameters")
         if parsed_args.wrapping_keys:
             if not parsed_args.commitment_policy:
-                raise ParameterParseError('Commitment policy is required when specifying the --wrapping-keys parameter')
+                raise ParameterParseError("Commitment policy is required when specifying the --wrapping-keys parameter")
 
             parsed_args.wrapping_keys = _process_wrapping_key_provider_configs(
                 parsed_args.wrapping_keys, parsed_args.action
@@ -721,7 +757,7 @@ def parse_args(raw_args=None):  # noqa
         else:
             if parsed_args.commitment_policy:
                 raise ParameterParseError(
-                    'Commitment policy is only supported when using the --wrapping-keys parameter'
+                    "Commitment policy is only supported when using the --wrapping-keys parameter"
                 )
 
             _LOGGER.warning(

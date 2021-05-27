@@ -26,39 +26,39 @@ from aws_encryption_sdk_cli.key_providers import aws_kms_master_key_provider
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_load_master_key_provider(mocker):
     mocker.patch.object(master_key_parsing, "_load_master_key_provider")
     yield master_key_parsing._load_master_key_provider
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_build_master_key_provider(mocker):
     mocker.patch.object(master_key_parsing, "_build_master_key_provider")
     master_key_parsing._build_master_key_provider.side_effect = (sentinel.key_provider_1, sentinel.key_provider_2)
     yield master_key_parsing._build_master_key_provider
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_assemble_master_key_providers(mocker):
     mocker.patch.object(master_key_parsing, "_assemble_master_key_providers")
     master_key_parsing._assemble_master_key_providers.return_value = sentinel.assembled_key_providers
     yield master_key_parsing._assemble_master_key_providers
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_parse_master_key_providers(mocker):
     mocker.patch.object(master_key_parsing, "_parse_master_key_providers_from_args")
     yield master_key_parsing._parse_master_key_providers_from_args
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_aws_encryption_sdk(mocker):
     mocker.patch.object(master_key_parsing, "aws_encryption_sdk")
     yield master_key_parsing.aws_encryption_sdk
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_iter_entry_points(mocker):
     mocker.patch.object(master_key_parsing.pkg_resources, "iter_entry_points")
     yield master_key_parsing.pkg_resources.iter_entry_points
@@ -76,7 +76,7 @@ def logger_stream():
     return output_stream
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def entry_points_cleaner():
     master_key_parsing._ENTRY_POINTS = defaultdict(dict)
     yield

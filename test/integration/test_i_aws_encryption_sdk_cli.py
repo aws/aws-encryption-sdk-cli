@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """Integration testing suite for AWS Encryption SDK CLI."""
+# pylint: disable=too-many-lines
 import base64
 import filecmp
 import json
@@ -28,7 +29,9 @@ from .integration_test_utils import (
     aws_encryption_cli_is_findable,
     cmk_arn_value,
     decrypt_args_template,
+    decrypt_unsigned_args_template,
     encrypt_args_template,
+    encrypt_args_template_wrapping,
     is_windows,
 )
 
@@ -90,6 +93,8 @@ def test_encrypt_with_metadata_output_write_to_stdout(tmpdir, capsys):
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
 
+    # NOTE: this check relies on no additional logging output; if you enable a higher level of verbosity or add
+    # print statements, you may see failures here
     out, _err = capsys.readouterr()
     output_metadata = json.loads(out)
     for key, value in (("a", "b"), ("c", "d")):
@@ -378,6 +383,164 @@ def test_cycle_discovery_false_wrong_key_id(tmpdir):
     assert "Unable to decrypt any data key" in message
 
 
+def test_cycle_decrypt_unsigned_success(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    # Use an unsigned algorithm for encryption
+    encrypt_args += " --algorithm AES_256_GCM_IV12_TAG16_HKDF_SHA256"
+    decrypt_args = decrypt_unsigned_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert output_metadata[1]["mode"] == "decrypt-unsigned"
+    assert output_metadata[1]["input"] == str(ciphertext)
+    assert output_metadata[1]["output"] == str(decrypted)
+    assert "header_auth" in output_metadata[1]
+
+
+def test_cycle_decrypt_unsigned_fails_on_signed_message(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    metadata = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template(metadata=True).format(
+        source=str(plaintext), target=str(ciphertext), metadata="--metadata-output " + str(metadata)
+    )
+    # Use a signed algorithm for encryption
+    encrypt_args += " --algorithm AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384"
+    decrypt_args = decrypt_unsigned_args_template(metadata=True).format(
+        source=str(ciphertext), target=str(decrypted), metadata="--metadata-output " + str(metadata)
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    message = aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    output_metadata = [json.loads(line) for line in metadata.readlines()]
+    for line in output_metadata:
+        for key, value in (("a", "b"), ("c", "d")):
+            assert line["header"]["encryption_context"][key] == value
+
+    assert output_metadata[0]["mode"] == "encrypt"
+    assert output_metadata[0]["input"] == str(plaintext)
+    assert output_metadata[0]["output"] == str(ciphertext)
+    assert "header_auth" not in output_metadata[0]
+    assert not decrypted.isfile()
+    assert "Cannot decrypt signed message in decrypt-unsigned mode" in message
+
+
+@pytest.mark.parametrize(
+    "max_encrypted_data_keys, is_valid",
+    (
+        (1, True),
+        (10, True),
+        (2 ** 16 - 1, True),
+        (2 ** 16, True),
+        (0, False),
+        (-1, False),
+    ),
+)
+def test_max_encrypted_data_key_valid_values(tmpdir, max_encrypted_data_keys, is_valid):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
+    encrypt_args += " --max-encrypted-data-keys {}".format(max_encrypted_data_keys)
+    message = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    if is_valid:
+        assert message is None
+    else:
+        assert "max_encrypted_data_keys cannot be less than 1" in message
+
+
+@pytest.mark.parametrize("num_keys", (2, 3))
+def test_cycle_within_max_encrypted_data_keys(tmpdir, num_keys):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+
+    extra_key_arg = " -w key={}".format(cmk_arn_value())
+    max_edks_arg = " --max-encrypted-data-keys {}".format(3)
+
+    encrypt_args = encrypt_args_template_wrapping(append_commitment=True).format(
+        source=str(plaintext), target=str(ciphertext)
+    )
+    encrypt_args += max_edks_arg
+    encrypt_args += extra_key_arg * (num_keys - 1)
+    message = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    assert message is None
+
+    decrypt_args = decrypt_args_template().format(source=str(ciphertext), target=str(decrypted))
+    decrypt_args += max_edks_arg
+    message = aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+    assert message is None
+
+
+def test_encrypt_over_max_encrypted_data_keys(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+
+    extra_key_arg = " -w key={}".format(cmk_arn_value())
+    max_edks_arg = " --max-encrypted-data-keys {}".format(3)
+
+    encrypt_args = encrypt_args_template_wrapping(append_commitment=True).format(
+        source=str(plaintext), target=str(ciphertext)
+    )
+    encrypt_args += max_edks_arg
+    encrypt_args += extra_key_arg * 3
+    message = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    assert message is not None
+    assert "MaxEncryptedDataKeysExceeded" in message
+    assert "Number of encrypted data keys found larger than configured value" in message
+
+
+def test_decrypt_over_max_encrypted_data_keys(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+
+    extra_key_arg = " -w key={}".format(cmk_arn_value())
+    max_edks_arg = " --max-encrypted-data-keys {}".format(3)
+
+    encrypt_args = encrypt_args_template_wrapping(append_commitment=True).format(
+        source=str(plaintext), target=str(ciphertext)
+    )
+    encrypt_args += extra_key_arg * 3
+    message = aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    assert message is None
+
+    decrypt_args = decrypt_args_template().format(source=str(ciphertext), target=str(decrypted))
+    decrypt_args += max_edks_arg
+    message = aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+    assert message is not None
+    assert "MaxEncryptedDataKeysExceeded" in message
+    assert "Number of encrypted data keys found larger than configured value" in message
+
+
 @pytest.mark.parametrize("required_encryption_context", ("a", "c", "a c", "a=b", "a=b c", "c=d", "a c=d", "a=b c=d"))
 def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, required_encryption_context):
     plaintext = tmpdir.join("source_plaintext")
@@ -389,6 +552,29 @@ def test_file_to_file_decrypt_required_encryption_context_success(tmpdir, requir
     encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
     decrypt_args = (
         decrypt_args_template().format(source=str(ciphertext), target=str(decrypted))
+        + " --encryption-context "
+        + required_encryption_context
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    assert filecmp.cmp(str(plaintext), str(decrypted))
+
+
+@pytest.mark.parametrize("required_encryption_context", ("a", "c", "a c", "a=b", "a=b c", "c=d", "a c=d", "a=b c=d"))
+def test_file_to_file_decrypt_unsigned_required_encryption_context_success(tmpdir, required_encryption_context):
+    plaintext = tmpdir.join("source_plaintext")
+    ciphertext = tmpdir.join("ciphertext")
+    decrypted = tmpdir.join("decrypted")
+    with open(str(plaintext), "wb") as f:
+        f.write(os.urandom(1024))
+
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
+    # Use an unsigned algorithm for encryption
+    encrypt_args += " --algorithm AES_256_GCM_IV12_TAG16_HKDF_SHA256"
+    decrypt_args = (
+        decrypt_unsigned_args_template().format(source=str(ciphertext), target=str(decrypted))
         + " --encryption-context "
         + required_encryption_context
     )
@@ -426,6 +612,35 @@ def test_file_to_file_decrypt_required_encryption_context_fail(tmpdir, required_
     assert parsed_metadata["reason"] == "Missing encryption context key or value"
 
 
+@pytest.mark.parametrize("required_encryption_context", ("a=VALUE_NOT_FOUND", "KEY_NOT_FOUND"))
+def test_file_to_file_decrypt_unsigned_required_encryption_context_fail(tmpdir, required_encryption_context):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    metadata_file = tmpdir.join("metadata")
+    decrypted = tmpdir.join("decrypted")
+
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
+    # Use an unsigned algorithm for encryption
+    encrypt_args += " --algorithm AES_256_GCM_IV12_TAG16_HKDF_SHA256"
+    decrypt_args = (
+        decrypt_unsigned_args_template(metadata=True).format(
+            source=str(ciphertext), target=str(decrypted), metadata=" --metadata-output " + str(metadata_file)
+        )
+        + " --encryption-context "
+        + required_encryption_context
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+    aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
+
+    assert not decrypted.isfile()
+    raw_metadata = metadata_file.read()
+    parsed_metadata = json.loads(raw_metadata)
+    assert parsed_metadata["skipped"]
+    assert parsed_metadata["reason"] == "Missing encryption context key or value"
+
+
 def test_file_to_file_cycle(tmpdir):
     plaintext = tmpdir.join("source_plaintext")
     ciphertext = tmpdir.join("ciphertext")
@@ -440,6 +655,72 @@ def test_file_to_file_cycle(tmpdir):
     aws_encryption_sdk_cli.cli(shlex.split(decrypt_args, posix=not is_windows()))
 
     assert filecmp.cmp(str(plaintext), str(decrypted))
+
+
+# This test may result in a false positive if the input is not large enough
+# Note that test_file_to_stdout_decrypt_buffer_output_with_failure helps confirm this is not a false positive
+@pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason="aws-encryption-cli executable could not be found.")
+def test_file_to_stdout_decrypt_buffer_output_with_failure(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    # Use an input large enough that results in processing in several chunks
+    plaintext.write_binary(os.urandom(16384))
+    ciphertext = tmpdir.join("ciphertext")
+
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
+    decrypt_args = "aws-encryption-cli " + decrypt_args_template(buffer=True).format(source=str(ciphertext), target="-")
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+
+    # Tamper with encryption result to get an error on decrypt
+    with open(str(ciphertext), "rb+") as f:
+        f.seek(-1, os.SEEK_END)
+        f.truncate()
+
+    # pylint: disable=consider-using-with
+    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    decrypted_output, stderr = proc.communicate()
+
+    # Verify that no output was written
+    assert decrypted_output == b""
+    assert b"Encountered unexpected error" in stderr
+    # Verify the no exception was raised trying to delete verifiable non-existant "-" file,
+    # to verify that we did not attempt to do that
+    assert b"OSError" not in stderr  # Python 2
+    assert b"FileNotFoundError" not in stderr  # Python 3
+
+
+# This test may result in a false negative if the input is not large enough
+# Note that this test helps confirm that test_file_to_stdout_decrypt_buffer_output_with_failure is not a false positive
+@pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason="aws-encryption-cli executable could not be found.")
+def test_file_to_stdout_decrypt_no_buffering_with_failure(tmpdir):
+    plaintext = tmpdir.join("source_plaintext")
+    # Use an input large enough that results in processing in several chunks
+    plaintext.write_binary(os.urandom(16384))
+    ciphertext = tmpdir.join("ciphertext")
+
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
+    decrypt_args = "aws-encryption-cli " + decrypt_args_template(buffer=False).format(
+        source=str(ciphertext), target="-"
+    )
+
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
+
+    # Tamper with encryption result to get an error on decrypt
+    with open(str(ciphertext), "rb+") as f:
+        f.seek(-1, os.SEEK_END)
+        f.truncate()
+
+    # pylint: disable=consider-using-with
+    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    decrypted_output, stderr = proc.communicate()
+
+    # Verify that output was not buffered and some output was written to stout
+    assert len(decrypted_output) > 0
+    assert b"Encountered unexpected error" in stderr
+    # Verify the no exception was raised trying to delete verifiable non-existant "-" file,
+    # to verify that we did not attempt to do that
+    assert b"OSError" not in stderr  # Python 2
+    assert b"FileNotFoundError" not in stderr  # Python 3
 
 
 @pytest.mark.skipif(is_windows(), reason=WINDOWS_SKIP_MESSAGE)
@@ -644,6 +925,44 @@ def test_file_to_stdout_decrypt_required_encryption_context_fail(tmpdir, require
 
     aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
     # pylint: disable=consider-using-with
+    proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    decrypted_output, stderr = proc.communicate()
+
+    # Verify that no output was written
+    assert decrypted_output == b""
+    # Verify the no exception was raised trying to delete verifiable non-existant "-" file,
+    # to verify that we did not attempt to do that
+    assert b"OSError" not in stderr  # Python 2
+    assert b"FileNotFoundError" not in stderr  # Python 3
+    raw_metadata = metadata_file.read()
+    parsed_metadata = json.loads(raw_metadata)
+    assert parsed_metadata["output"] == "<stdout>"
+    assert parsed_metadata["skipped"]
+    assert parsed_metadata["reason"] == "Missing encryption context key or value"
+
+
+@pytest.mark.skipif(not aws_encryption_cli_is_findable(), reason="aws-encryption-cli executable could not be found.")
+@pytest.mark.parametrize("required_encryption_context", ("a=VALUE_NOT_FOUND", "KEY_NOT_FOUND"))
+def test_file_to_stdout_decrypt_unsigned_required_encryption_context_fail(tmpdir, required_encryption_context):
+    plaintext = tmpdir.join("source_plaintext")
+    plaintext.write_binary(os.urandom(1024))
+    ciphertext = tmpdir.join("ciphertext")
+    metadata_file = tmpdir.join("metadata")
+
+    encrypt_args = encrypt_args_template().format(source=str(plaintext), target=str(ciphertext))
+    # Use an unsigned algorithm for encryption
+    encrypt_args += " --algorithm AES_256_GCM_IV12_TAG16_HKDF_SHA256"
+    decrypt_args = (
+        "aws-encryption-cli "
+        + decrypt_unsigned_args_template(metadata=True).format(
+            source=str(ciphertext), target="-", metadata=" --metadata-output " + str(metadata_file)
+        )
+        + " --encryption-context "
+        + required_encryption_context
+    )
+
+    # pylint: disable=consider-using-with
+    aws_encryption_sdk_cli.cli(shlex.split(encrypt_args, posix=not is_windows()))
     proc = Popen(shlex.split(decrypt_args, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_output, stderr = proc.communicate()
 

@@ -19,9 +19,10 @@ import sys
 import pytest
 import six
 from aws_encryption_sdk.materials_managers import CommitmentPolicy
-from mock import MagicMock, patch, sentinel
+from mock import MagicMock, call, patch, sentinel
 from pytest_mock import mocker  # noqa pylint: disable=unused-import
 
+from aws_encryption_sdk_cli import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import identifiers, io_handling, metadata
 
 from ..unit_test_utils import WINDOWS_SKIP_MESSAGE, is_windows
@@ -30,13 +31,13 @@ pytestmark = [pytest.mark.unit, pytest.mark.local]
 DATA = b"aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98"
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_makedirs(mocker):
     mocker.patch.object(io_handling.os, "makedirs")
     yield io_handling.os.makedirs
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_aws_encryption_sdk_stream(mocker):
     mocker.patch.object(io_handling.aws_encryption_sdk.EncryptionSDKClient, "stream")
     mock_stream = MagicMock()
@@ -65,19 +66,19 @@ def patch_for_process_single_operation(mocker, patch_single_io_write):
     mocker.patch.object(io_handling, "_ensure_dir_exists")
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_input(mocker):
     mocker.patch.object(io_handling.six.moves, "input")
     yield io_handling.six.moves.input
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_single_operation(mocker):
     mocker.patch.object(io_handling.IOHandler, "process_single_operation")
     yield io_handling.IOHandler.process_single_operation
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_should_write_file(mocker):
     mocker.patch.object(io_handling.IOHandler, "_should_write_file")
     io_handling.IOHandler._should_write_file.return_value = True
@@ -105,6 +106,8 @@ GOOD_IOHANDLER_KWARGS = dict(
     required_encryption_context={},
     required_encryption_context_keys=[],
     commitment_policy=CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT,
+    buffer_output=False,
+    max_encrypted_data_keys=None,
 )
 
 
@@ -174,6 +177,19 @@ def test_encoder(mocker, should_base64):
         assert test is sentinel.stream
 
 
+@pytest.mark.parametrize("mode, expected", (("decrypt", True), ("decrypt-unsigned", True), ("encrypt", False)))
+def test_is_decrypt_mode(mode, expected):
+    assert io_handling._is_decrypt_mode(mode) == expected
+
+
+@pytest.mark.parametrize("invalid_mode", ("not-a-mode", "dedecrypt", "decrypt-signed", "encrypt-unsigned", "crypt"))
+def test_is_decrypt_mode_exception(invalid_mode):
+    with pytest.raises(BadUserArgumentError) as excinfo:
+        io_handling._is_decrypt_mode(invalid_mode)
+
+    excinfo.match(r"Mode {mode} has not been implemented".format(mode=invalid_mode))
+
+
 def test_iohandler_attrs_good():
     io_handling.IOHandler(**GOOD_IOHANDLER_KWARGS)
 
@@ -189,6 +205,7 @@ def test_iohandler_attrs_good():
         dict(encryption_context="not a dict"),
         dict(required_encryption_context_keys="not a list"),
         dict(commitment_policy="not a CommitmentPolicy"),
+        dict(buffer_output="not a bool"),
     ),
 )
 def test_iohandler_attrs_fail(kwargs):
@@ -253,6 +270,31 @@ def test_single_io_write_stream_decrypt(
     )
 
 
+def test_single_io_write_stream_decrypt_unsigned(
+    tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, patch_json_ready_header_auth, standard_handler
+):
+    patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
+    patch_aws_encryption_sdk_stream.return_value.header = MagicMock()
+    patch_aws_encryption_sdk_stream.return_value.header_auth = MagicMock()
+    target_file = tmpdir.join("target")
+    mock_source = MagicMock()
+    standard_handler.metadata_writer = MagicMock()
+    with open(str(target_file), "wb") as destination_writer:
+        standard_handler._single_io_write(
+            stream_args={"mode": "decrypt-unsigned", "a": sentinel.a, "b": sentinel.b},
+            source=mock_source,
+            destination_writer=destination_writer,
+        )
+    patch_json_ready_header_auth.assert_called_once_with(patch_aws_encryption_sdk_stream.return_value.header_auth)
+    standard_handler.metadata_writer.__enter__.return_value.write_metadata.assert_called_once_with(
+        mode="decrypt-unsigned",
+        input=mock_source.name,
+        output=destination_writer.name,
+        header=patch_json_ready_header.return_value,
+        header_auth=patch_json_ready_header_auth.return_value,
+    )
+
+
 def test_single_io_write_stream_encode_output(
     tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, patch_json_ready_header_auth
 ):
@@ -271,6 +313,48 @@ def test_single_io_write_stream_encode_output(
         )
 
     assert target_file.read("rb") == base64.b64encode(DATA)
+
+
+def test_single_io_write_stream_buffer_output(
+    tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, patch_json_ready_header_auth
+):
+    mock_source = MagicMock()
+    mock_destination = MagicMock()
+    kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    kwargs["buffer_output"] = True
+    handler = io_handling.IOHandler(**kwargs)
+
+    handler._single_io_write(
+        stream_args={"mode": "encrypt", "a": sentinel.a, "b": sentinel.b},
+        source=mock_source,
+        destination_writer=mock_destination,
+    )
+
+    patch_aws_encryption_sdk_stream.return_value.__enter__.return_value.read.assert_called_once()
+    mock_destination.__enter__.return_value.write.assert_called_once()
+
+
+def test_single_io_write_stream_no_buffering(
+    tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, patch_json_ready_header_auth
+):
+    patch_aws_encryption_sdk_stream.return_value.__enter__.return_value.__iter__ = MagicMock(
+        return_value=iter((sentinel.chunk_1, sentinel.chunk_2))
+    )
+
+    mock_source = MagicMock()
+    mock_destination = MagicMock()
+    kwargs = GOOD_IOHANDLER_KWARGS.copy()
+    kwargs["buffer_output"] = False
+    handler = io_handling.IOHandler(**kwargs)
+
+    handler._single_io_write(
+        stream_args={"mode": "encrypt", "a": sentinel.a, "b": sentinel.b},
+        source=mock_source,
+        destination_writer=mock_destination,
+    )
+
+    patch_aws_encryption_sdk_stream.return_value.__enter__.return_value.__iter__.assert_called_once()
+    mock_destination.__enter__.return_value.write.assert_has_calls([call(sentinel.chunk_1), call(sentinel.chunk_2)])
 
 
 def test_process_single_operation_stdout(patch_for_process_single_operation, patch_should_write_file, standard_handler):
@@ -374,6 +458,10 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         ("decrypt", True, False, 0.75),
         ("decrypt", False, True, 1.0),
         ("decrypt", True, True, 1.0),
+        ("decrypt-unsigned", False, False, 1.0),
+        ("decrypt-unsigned", True, False, 0.75),
+        ("decrypt-unsigned", False, True, 1.0),
+        ("decrypt-unsigned", True, True, 1.0),
     ),
 )
 def test_process_single_file(
@@ -490,6 +578,20 @@ def test_process_single_file_failed_and_destination_does_not_exist(
         (
             os.path.join("source_dir", "source_filename"),
             "destination_dir",
+            "decrypt-unsigned",
+            None,
+            os.path.join("destination_dir", "source_filename.decrypted"),
+        ),
+        (
+            os.path.join("source_dir", "source_filename.encrypted"),
+            "destination_dir",
+            "decrypt-unsigned",
+            None,
+            os.path.join("destination_dir", "source_filename.encrypted.decrypted"),
+        ),
+        (
+            os.path.join("source_dir", "source_filename"),
+            "destination_dir",
             "encrypt",
             "CUSTOM_SUFFIX",
             os.path.join("destination_dir", "source_filenameCUSTOM_SUFFIX"),
@@ -498,6 +600,13 @@ def test_process_single_file_failed_and_destination_does_not_exist(
             os.path.join("source_dir", "source_filename"),
             "destination_dir",
             "decrypt",
+            "CUSTOM_SUFFIX",
+            os.path.join("destination_dir", "source_filenameCUSTOM_SUFFIX"),
+        ),
+        (
+            os.path.join("source_dir", "source_filename"),
+            "destination_dir",
+            "decrypt-unsigned",
             "CUSTOM_SUFFIX",
             os.path.join("destination_dir", "source_filenameCUSTOM_SUFFIX"),
         ),
