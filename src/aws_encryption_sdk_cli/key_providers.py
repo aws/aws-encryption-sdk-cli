@@ -14,8 +14,11 @@
 import copy
 
 import botocore.session
-from aws_encryption_sdk import DiscoveryAwsKmsMasterKeyProvider, StrictAwsKmsMasterKeyProvider
-from aws_encryption_sdk.key_providers.kms import DiscoveryFilter
+from aws_encryption_sdk.key_providers.kms import (
+    DiscoveryFilter,
+    MRKAwareDiscoveryAwsKmsMasterKeyProvider,
+    MRKAwareStrictAwsKmsMasterKeyProvider,
+)
 
 from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
@@ -29,13 +32,16 @@ except ImportError:  # pragma: no cover
 __all__ = ("aws_kms_master_key_provider",)
 
 
-def aws_kms_master_key_provider(discovery=True, **kwargs):
-    # type: (bool, **List[Union[Text, str]]) -> Union[DiscoveryAwsKmsMasterKeyProvider, StrictAwsKmsMasterKeyProvider]
+def aws_kms_master_key_provider(
+    discovery=True,  # type: bool
+    **kwargs  # type: List[Union[Text, str]]
+):
+    # type: (...) -> Union[MRKAwareDiscoveryAwsKmsMasterKeyProvider, MRKAwareStrictAwsKmsMasterKeyProvider]
     """Apply post-processing to transform ``KMSMasterKeyProvider``-specific values from CLI
-    arguments to valid ``KMSMasterKeyProvider`` parameters, then call ``KMSMasterKeyprovider``
+    arguments to valid ``KMSMasterKeyProvider`` parameters, then call ``KMSMasterKeyProvider``
     with those parameters.
 
-    :param bool discovery: Return a DiscoveryAwsKmsMasterKeyProvider
+    :param bool discovery: Return a MRKAwareDiscoveryAwsKmsMasterKeyProvider
     :param dict kwargs: Named parameters collected from CLI arguments as prepared
         in aws_encryption_sdk_cli.internal.master_key_parsing._parse_master_key_providers_from_args
     :rtype: aws_encryption_sdk.key_providers.kms.BaseKMSMasterKeyProvider
@@ -75,5 +81,5 @@ def aws_kms_master_key_provider(discovery=True, **kwargs):
             discovery_filter = DiscoveryFilter(account_ids=accounts, partition=partition)
             kwargs["discovery_filter"] = discovery_filter  # type: ignore
 
-        return DiscoveryAwsKmsMasterKeyProvider(**kwargs)
-    return StrictAwsKmsMasterKeyProvider(**kwargs)
+        return MRKAwareDiscoveryAwsKmsMasterKeyProvider(**kwargs)
+    return MRKAwareStrictAwsKmsMasterKeyProvider(**kwargs)

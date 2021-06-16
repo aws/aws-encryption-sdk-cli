@@ -2,6 +2,24 @@
 Changelog
 *********
 
+3.0.0 -- 2021-06-16
+===================
+
+Features
+--------
+* AWS KMS multi-Region Key support
+
+  CLI now supports Multi-Region Keys (MRKs).
+  Usage of MRKs is identical to the usage of non-MRK KMS Keys.
+  Though a KMS Key does not have to be a MRK key for it to be used.
+
+  See https://docs.aws.amazon.com/kms/latest/developerguide/multi-region-keys-overview.html
+  for more details about AWS KMS multi-Region Keys.
+
+  See https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/configure.html#config-mrks
+  for more details about how the AWS Encryption SDK interoperates
+  with AWS KMS multi-Region keys.
+
 2.2.0 -- 2021-05-27
 ===================
 
