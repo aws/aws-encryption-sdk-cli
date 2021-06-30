@@ -268,13 +268,13 @@ def cli(raw_args=None):
     try:
         args = parse_args(raw_args)
 
-        setup_logger(args.verbosity, args.quiet)
+        setup_logger(args.verbosity, args.quiet)  # pylint: disable=no-member
 
-        _LOGGER.debug("Encryption mode: %s", args.action)
-        _LOGGER.debug("Encryption source: %s", args.input)
-        _LOGGER.debug("Encryption destination: %s", args.output)
-        _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)
-        _LOGGER.debug("Suffix requested: %s", args.suffix)
+        _LOGGER.debug("Encryption mode: %s", args.action)  # pylint: disable=no-member
+        _LOGGER.debug("Encryption source: %s", args.input)  # pylint: disable=no-member
+        _LOGGER.debug("Encryption destination: %s", args.output)  # pylint: disable=no-member
+        _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)  # pylint: disable=no-member
+        _LOGGER.debug("Suffix requested: %s", args.suffix)  # pylint: disable=no-member
 
         crypto_materials_manager = build_crypto_materials_manager_from_args(
             key_providers_config=args.wrapping_keys, caching_config=args.caching
