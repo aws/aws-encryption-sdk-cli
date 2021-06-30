@@ -781,7 +781,7 @@ def test_cli_unknown_error_capture_stacktrace(patch_process_cli_request, tmpdir,
             + str(tmpdir.join("ciphertext"))
             + " "
             + requested_log_level
-            + " -w discovery=true"
+            + " -w discovery=true region=us-west-2"
         )
     )
 

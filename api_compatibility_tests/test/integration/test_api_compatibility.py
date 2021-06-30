@@ -84,7 +84,7 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
             {
                 "==1.7.0|~=1.8": SUCCESS,
                 "==2.0.0      ": 'error: Discovery must be set to True or False',
-                "~=2.1        ": 'error: the following arguments are required: -w/--wrapping-keys'
+                "~=2.1|~=3.0  ": 'error: the following arguments are required: -w/--wrapping-keys'
             }
         ),
         (
@@ -93,7 +93,7 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
                 "==1.7.0": SHOULD_HAVE_BEEN_AN_ERROR,
                 "~=1.8  ": 'error: Commitment policy is only supported when using the --wrapping-keys parameter',
                 "==2.0.0": 'error: Discovery must be set to True or False',
-                "~=2.1  ": 'error: the following arguments are required: -w/--wrapping-keys'
+                "~=2.1|~=3.0": 'error: the following arguments are required: -w/--wrapping-keys'
             }
         ),
         (
@@ -101,7 +101,7 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
             {
                 "==1.7.0|==2.0.0": SHOULD_HAVE_BEEN_AN_ERROR,
                 "~=1.8          ": 'unrecognized arguments: --discovery',
-                "~=2.1          ": 'error: the following arguments are required: -w/--wrapping-keys'
+                "~=2.1|~=3.0    ": 'error: the following arguments are required: -w/--wrapping-keys'
             }
         ),
         # discovery-related parameters accidentally implemented in 1.7 and 2.0, removed in 1.8 and 2.1
@@ -109,7 +109,7 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
             "--commitment-policy forbid-encrypt-allow-decrypt  --discovery true --wrapping-keys discovery=true", 
             {
                 "==1.7.0|==2.0.0": SHOULD_HAVE_BEEN_AN_ERROR,
-                "~=1.8  |~=2.1  ": "unrecognized arguments: --discovery"
+                "~=1.8|~=2.1|~=3.0": "unrecognized arguments: --discovery"
             }
         ),
         # discovery filter was also configured through top level parameters and hit an internal error when used :(
@@ -117,7 +117,7 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
             "--commitment-policy forbid-encrypt-allow-decrypt --discovery true --discovery-partition aws --discovery-account 111222333444 --wrapping-keys discovery=true", 
             {
                 "==1.7.0|==2.0.0": "TypeError(\"'discovery_filter' must be <class",
-                "~=1.8  |~=2.1  ": "unrecognized arguments: --discovery"
+                "~=1.8|~=2.1|~=3.0": "unrecognized arguments: --discovery"
             }
         ),
         # Disabling discovery on wrapping keys was accepted but non-functional in 1.7 and 2.0, fixed in 1.8 and 2.1
@@ -126,14 +126,14 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
             {
                 "==1.7.0    ": 'error: Exact wrapping keys cannot be specified for aws-kms wrapping key provider on decrypt in discovery mode',
                 "==2.0.0    ": 'error: Discovery must be set to True or False',
-                "~=1.8|~=2.1": 'DecryptKeyError("Unable to decrypt any data key")'
+                "~=1.8|~=2.1|~=3.0": 'DecryptKeyError("Unable to decrypt any data key")'
             }
         ),
         (
             "--commitment-policy forbid-encrypt-allow-decrypt --discovery false --wrapping-keys key=" + OTHER_CMK_ARN_VALUE, 
             {
                 "==1.7.0|==2.0.0": SHOULD_HAVE_BEEN_AN_ERROR,
-                "~=1.8  |~=2.1": 'unrecognized arguments: --discovery'
+                "~=1.8  |~=2.1|~=3.0": 'unrecognized arguments: --discovery'
             }
         ),
         # --commitment-policy should have been required in 1.7 when using --wrapping-keys, fixed in 1.8
@@ -143,7 +143,7 @@ SHOULD_HAVE_BEEN_AN_ERROR = None
                 "==1.7.0": SHOULD_HAVE_BEEN_AN_ERROR,
                 "~=1.8  ": 'error: Commitment policy is required when specifying the --wrapping-keys parameter',
                 "==2.0.0": 'error: Discovery must be set to True or False',
-                "~=2.1  ": 'Cannot decrypt due to CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT requiring only committed messages'
+                "~=2.1|~=3.0": 'Cannot decrypt due to CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT requiring only committed messages'
             }
         ),
     ]
