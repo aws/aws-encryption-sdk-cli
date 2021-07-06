@@ -35,6 +35,8 @@ Find us on `GitHub`_.
 
 `Security issue notifications`_
 
+See `Support Policy`_ for details on the current support status of all major versions of this library.
+
 ***************
 Getting Started
 ***************
@@ -494,3 +496,4 @@ targetting a directory, the requested decoding/encoding will be applied to all f
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 .. _you must specify either a key or discovery with a value of true: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
 .. _Security issue notifications: https://github.com/aws/aws-encryption-sdk-cli/tree/master/CONTRIBUTING.md#security-issue-notifications
+.. _Support Policy: ./SUPPORT_POLICY.rst
