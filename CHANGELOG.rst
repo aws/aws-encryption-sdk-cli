@@ -2,6 +2,22 @@
 Changelog
 *********
 
+3.1.0 -- 2021-07-08
+===================
+
+Deprecation Announcement
+------------------------
+The AWS Encryption SDK CLI is discontinuing support for Python 2. Future major versions
+of this library will drop support for Python 2 and begin to adopt changes that are known
+to break Python 2.
+
+Support for Python 3.4 will be removed at the same time. Moving forward, we will support
+Python 3.5+.
+
+Security updates will still be available for the AWS Encryption SDK CLI 3.x line for
+the next 12 months, in accordance with our `Support Policy <https://github.com/aws/aws-encryption-sdk-cli/blob/master/SUPPORT_POLICY.rst>`__.
+
+
 3.0.0 -- 2021-06-16
 ===================
 
