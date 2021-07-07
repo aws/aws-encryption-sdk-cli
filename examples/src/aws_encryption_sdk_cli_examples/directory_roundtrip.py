@@ -24,9 +24,9 @@ def run(tmpdir):
     cmk = cmk_arn()
 
     # Create directories that will store plaintext, ciphertexts,
-    plaintext_directory = os.path.join(tmpdir, "plaintext")
-    encrypt_directory = os.path.join(tmpdir, "encrypted")
-    decrypt_directory = os.path.join(tmpdir, "decrypted")
+    plaintext_directory = os.path.join(str(tmpdir), "plaintext")
+    encrypt_directory = os.path.join(str(tmpdir), "encrypted")
+    decrypt_directory = os.path.join(str(tmpdir), "decrypted")
     os.mkdir(plaintext_directory)
     os.mkdir(encrypt_directory)
     os.mkdir(decrypt_directory)
@@ -34,14 +34,14 @@ def run(tmpdir):
     original_files = setup_files(plaintext_directory, 10)
 
     # Call the encrypt CLI command and ensure that it passes
-    encrypt_command = f"encrypt_directory.sh {plaintext_directory} {cmk} {encrypt_directory}"
+    encrypt_command = "encrypt_directory.sh {} {} {}".format(plaintext_directory, cmk, encrypt_directory)
     proc = Popen(shlex.split(encrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     encrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:
         raise AssertionError("Failed to encrypt", stderr)
 
     # Call the decrypt CLI command and ensure that it passes
-    decrypt_command = f"decrypt_directory.sh {encrypt_directory} {cmk} {decrypt_directory}"
+    decrypt_command = "decrypt_directory.sh {} {} {}".format(encrypt_directory, cmk, decrypt_directory)
     proc = Popen(shlex.split(decrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:

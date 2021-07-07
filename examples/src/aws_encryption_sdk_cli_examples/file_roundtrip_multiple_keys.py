@@ -26,7 +26,7 @@ def run(tmpdir):
     cmk2 = second_cmk_arn()
 
     # Call the encrypt CLI command and ensure that it passes
-    encrypt_command = f"encrypt_file_multiple_keys.sh {filename} {cmk1} {cmk2} {tmpdir}"
+    encrypt_command = "encrypt_file_multiple_keys.sh {} {} {} {}".format(filename, cmk1, cmk2, tmpdir)
     proc = Popen(shlex.split(encrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     encrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:
@@ -34,7 +34,7 @@ def run(tmpdir):
 
     # Call the decrypt CLI command and ensure that it passes
     ciphertext_file = filename + ".encrypted"
-    decrypt_command = f"decrypt_file_multiple_keys.sh {ciphertext_file} {cmk1} {cmk2} {tmpdir}"
+    decrypt_command = "decrypt_file_multiple_keys.sh {} {} {} {}".format(ciphertext_file, cmk1, cmk2, tmpdir)
     proc = Popen(shlex.split(decrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:

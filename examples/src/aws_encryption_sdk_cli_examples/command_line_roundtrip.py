@@ -23,7 +23,7 @@ def run():
     cmk = cmk_arn()
 
     # Call the encrypt CLI command and ensure that it passes
-    encrypt_command = f"encrypt_command_line.sh '{expected_plaintext}' {cmk}"
+    encrypt_command = "encrypt_command_line.sh '{}' {}".format(expected_plaintext, cmk)
     proc = Popen(shlex.split(encrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     encrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:
@@ -31,7 +31,7 @@ def run():
     ciphertext_string = encrypted_stdout.decode("utf-8")
 
     # Call the decrypt CLI command and ensure that it passes
-    decrypt_command = f"decrypt_command_line.sh {ciphertext_string} {cmk}"
+    decrypt_command = "decrypt_command_line.sh {} {}".format(ciphertext_string, cmk)
     proc = Popen(shlex.split(decrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:

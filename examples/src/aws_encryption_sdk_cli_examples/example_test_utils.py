@@ -38,7 +38,7 @@ def setup_file(tmpdir, plaintext):
     """Creates a file in the given tmpdir containing the provided plaintext."""
     filename = ''.join(random.choice(string.ascii_lowercase) for i in range(10))
 
-    full_path = os.path.join(tmpdir, filename)
+    full_path = os.path.join(str(tmpdir), filename)
     with open(full_path, "w") as f:
         f.write(plaintext)
     return full_path
