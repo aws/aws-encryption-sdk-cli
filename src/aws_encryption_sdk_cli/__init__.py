@@ -280,7 +280,6 @@ def cli(raw_args=None):
     :returns: Execution return value intended for ``sys.exit()``
     """
     try:
-        raise Exception("Testing123")
         args = parse_args(raw_args)
 
         setup_logger(args.verbosity, args.quiet)  # pylint: disable=no-member
