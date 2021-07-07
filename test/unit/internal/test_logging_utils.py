@@ -21,25 +21,25 @@ from aws_encryption_sdk_cli.internal import logging_utils
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_logging_levels(mocker):
     mocker.patch.object(logging_utils, "_logging_levels")
     yield logging_utils._logging_levels
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_logging(mocker):
     mocker.patch.object(logging_utils, "logging")
     yield logging_utils.logging
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_blacklist_filter(mocker):
     mocker.patch.object(logging_utils, "_BlacklistFilter")
     yield logging_utils._BlacklistFilter
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_kms_key_redacting_formatter(mocker):
     mocker.patch.object(logging_utils, "_KMSKeyRedactingFormatter")
     yield logging_utils._KMSKeyRedactingFormatter
