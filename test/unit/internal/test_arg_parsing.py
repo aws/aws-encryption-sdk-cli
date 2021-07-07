@@ -35,32 +35,32 @@ def patch_platform_win32_ver(mocker):
     return arg_parsing.platform.win32_ver
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_build_parser(mocker):
     mocker.patch.object(arg_parsing, "_build_parser")
     yield arg_parsing._build_parser
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_wrapping_key_provider_configs(mocker):
     mocker.patch.object(arg_parsing, "_process_wrapping_key_provider_configs")
     yield arg_parsing._process_wrapping_key_provider_configs
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_parse_and_collapse_config(mocker):
     mocker.patch.object(arg_parsing, "_parse_and_collapse_config")
     yield arg_parsing._parse_and_collapse_config
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_encryption_context(mocker):
     mocker.patch.object(arg_parsing, "_process_encryption_context")
     arg_parsing._process_encryption_context.return_value = sentinel.encryption_context, sentinel.required_keys
     yield arg_parsing._process_encryption_context
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_caching_config(mocker):
     mocker.patch.object(arg_parsing, "_process_caching_config")
     yield arg_parsing._process_caching_config

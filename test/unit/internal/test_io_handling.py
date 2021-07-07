@@ -31,13 +31,13 @@ pytestmark = [pytest.mark.unit, pytest.mark.local]
 DATA = b"aosidhjf9aiwhj3f98wiaj49c8a3hj49f8uwa0edifja9w843hj98"
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_makedirs(mocker):
     mocker.patch.object(io_handling.os, "makedirs")
     yield io_handling.os.makedirs
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_aws_encryption_sdk_stream(mocker):
     mocker.patch.object(io_handling.aws_encryption_sdk.EncryptionSDKClient, "stream")
     mock_stream = MagicMock()
@@ -65,19 +65,19 @@ def patch_for_process_single_operation(mocker, patch_single_io_write):
     mocker.patch.object(io_handling, "_ensure_dir_exists")
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_input(mocker):
     mocker.patch.object(io_handling.six.moves, "input")
     yield io_handling.six.moves.input
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_process_single_operation(mocker):
     mocker.patch.object(io_handling.IOHandler, "process_single_operation")
     yield io_handling.IOHandler.process_single_operation
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_should_write_file(mocker):
     mocker.patch.object(io_handling.IOHandler, "_should_write_file")
     io_handling.IOHandler._should_write_file.return_value = True
