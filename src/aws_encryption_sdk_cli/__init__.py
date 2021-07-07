@@ -15,7 +15,9 @@ import copy
 import glob
 import logging
 import os
+import sys
 import traceback
+import warnings
 from argparse import Namespace  # noqa pylint: disable=unused-import
 
 import aws_encryption_sdk
@@ -40,6 +42,18 @@ except ImportError:  # pragma: no cover
 
 __all__ = ("cli", "process_cli_request", "stream_kwargs_from_args")
 _LOGGER = logging.getLogger(LOGGER_NAME)
+
+
+def _check_python_version():
+    """Checks that we are on a supported version of Python.
+
+    Emits a deprecation warning if we are on Python 2.
+    """
+    if sys.version_info.major < 3:
+        warnings.warn(
+            "Python 2 support will be removed in a future release. Please upgrade to Python 3.5 or higher.",
+            DeprecationWarning,
+        )
 
 
 def _expand_sources(source):
@@ -275,6 +289,8 @@ def cli(raw_args=None):
         _LOGGER.debug("Encryption destination: %s", args.output)  # pylint: disable=no-member
         _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)  # pylint: disable=no-member
         _LOGGER.debug("Suffix requested: %s", args.suffix)  # pylint: disable=no-member
+
+        _check_python_version()
 
         crypto_materials_manager = build_crypto_materials_manager_from_args(
             key_providers_config=args.wrapping_keys, caching_config=args.caching
