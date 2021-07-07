@@ -25,7 +25,7 @@ def run(tmpdir):
     cmk = cmk_arn()
 
     # Call the encrypt CLI command and ensure that it passes
-    encrypt_command = f"bin/encrypt_file.sh {filename} {cmk} {tmpdir}"
+    encrypt_command = f"encrypt_file.sh {filename} {cmk} {tmpdir}"
     proc = Popen(shlex.split(encrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     encrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:
@@ -33,7 +33,7 @@ def run(tmpdir):
     ciphertext_file = filename + ".encrypted"
 
     # Call the decrypt CLI command and ensure that it passes
-    decrypt_command = f"bin/decrypt_file.sh {ciphertext_file} {cmk} {tmpdir}"
+    decrypt_command = f"decrypt_file.sh {ciphertext_file} {cmk} {tmpdir}"
     proc = Popen(shlex.split(decrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:

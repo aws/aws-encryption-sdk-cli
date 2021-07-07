@@ -34,14 +34,14 @@ def run(tmpdir):
     original_files = setup_files(plaintext_directory, 10)
 
     # Call the encrypt CLI command and ensure that it passes
-    encrypt_command = f"bin/encrypt_directory.sh {plaintext_directory} {cmk} {encrypt_directory}"
+    encrypt_command = f"encrypt_directory.sh {plaintext_directory} {cmk} {encrypt_directory}"
     proc = Popen(shlex.split(encrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     encrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:
         raise AssertionError("Failed to encrypt", stderr)
 
     # Call the decrypt CLI command and ensure that it passes
-    decrypt_command = f"bin/decrypt_directory.sh {encrypt_directory} {cmk} {decrypt_directory}"
+    decrypt_command = f"decrypt_directory.sh {encrypt_directory} {cmk} {decrypt_directory}"
     proc = Popen(shlex.split(decrypt_command, posix=not is_windows()), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     decrypted_stdout, stderr = proc.communicate()
     if proc.returncode != 0:
