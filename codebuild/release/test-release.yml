@@ -33,10 +33,18 @@ batch:
   fast-fail: true
   build-graph:
     - identifier: release_to_staging
-    - identifier: validate_staging_release
+    - identifier: validate_staging_release_api_compatibility
       depend-on:
         - release_to_staging
-      buildspec: codebuild/release/validate.yml
+      buildspec: codebuild/release/validate-api-compatibility.yml
+      env:
+        variables:
+          PIP_INDEX_URL: https://test.pypi.org/simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.python.org/simple/
+    - identifier: validate_staging_release_examples
+      depend-on:
+        - release_to_staging
+      buildspec: codebuild/release/validate-examples.yml
       env:
         variables:
           PIP_INDEX_URL: https://test.pypi.org/simple/
