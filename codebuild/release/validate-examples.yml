@@ -1,0 +1,38 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID: >-
+      arn:aws:kms:us-west-2:658956600833:key/b3537ef1-d8dc-4780-9f5a-55776cbb2f7f
+    AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID_2: >-
+      arn:aws:kms:eu-central-1:658956600833:key/75414c93-5285-4b57-99c9-30c1cf0a22c2
+
+phases:
+  install:
+    commands:
+      - pip install tox
+    runtime-versions:
+      python: latest
+  pre_build:
+    commands:
+      - cd examples
+      - sed -i "s/aws-encryption-sdk-cli/aws-encryption-sdk-cli==$VERSION/" test/requirements.txt
+  build:
+    commands:
+      - NUM_RETRIES=3
+      - |
+        while [ $NUM_RETRIES -gt 0 ]
+        do
+          tox -e py38-examples
+          if [ $? -eq 0 ]; then
+            break
+          fi
+          NUM_RETRIES=$((NUM_RETRIES-1))
+          if [ $NUM_RETRIES -eq 0 ]; then
+            echo "All validation attempts failed, stopping"
+            exit 1;
+          else
+            echo "Validation failed, retrying in 60 seconds; will retry $NUM_RETRIES more times" && sleep 60
+          fi
+        done
+
