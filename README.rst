@@ -44,13 +44,8 @@ Getting Started
 Required Prerequisites
 ======================
 
-* Python 2.7+ or 3.4+
-
-  **NOTE: 2.x is the last major version of this library that will
-  support Python 2. Future major versions will begin to adopt changes
-  known to break Python 2. Python 3.4 support will also be removed
-  in future major versions; Python 3.5+ will be required.**
-* aws-encryption-sdk >= 2.3.0
+* Python 3.5+
+* aws-encryption-sdk >= 3.0.0
 
 Installation
 ============
