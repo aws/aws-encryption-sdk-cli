@@ -620,7 +620,7 @@ class CommitmentPolicyArgs(Enum):
     REQUIRE_ENCRYPT_ALLOW_DECRYPT = "require-encrypt-allow-decrypt"
     REQUIRE_ENCRYPT_REQUIRE_DECRYPT = "require-encrypt-require-decrypt"
 
-    def str(self):
+    def __str__(self):
         """Returns the string value for the commitment policy"""
         return self.value
 
