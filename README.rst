@@ -329,6 +329,22 @@ group.
 If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``, the
 CLI will present the raised error message to the user to indicate bad user input.
 
+Commitment Policy
+-----------------
+The commitment policy controls which algorithms can be used in encryption and decryption.
+Versions 2.0.x and later of the AWS Encryption CLI use a default commitment policy of
+``require-encrypt-require-decrypt``, which ensures that only algorithms which provide `key commitment`_ can be used
+on both encryption and decryption. If you want to use a different commitment policy, you can do so
+with the ``--commitment-policy`` parameter.
+
+For more details, see the `Commitment Policy`_ documentation.
+
+.. code-block:: sh
+
+   # Use a commitment policy that requires an algorithm which provides key commitment
+   # on both encryption and decryption
+   --commitment-policy require-encrypt-require-decrypt
+
 Data Key Caching
 ----------------
 Data key caching is optional, but if used then the parameters noted as required must
@@ -497,3 +513,5 @@ targetting a directory, the requested decoding/encoding will be applied to all f
 .. _you must specify either a key or discovery with a value of true: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
 .. _Security issue notifications: https://github.com/aws/aws-encryption-sdk-cli/tree/master/CONTRIBUTING.md#security-issue-notifications
 .. _Support Policy: ./SUPPORT_POLICY.rst
+.. _key commitment: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/concepts.html#key-commitment
+.. _Commitment Policy: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/migrate-commitment-policy.html
