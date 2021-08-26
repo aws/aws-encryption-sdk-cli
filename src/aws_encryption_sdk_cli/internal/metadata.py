@@ -95,6 +95,16 @@ class MetadataWriter(object):
         """Force the output to overwrite the target metadata file."""
         self._output_mode = "wb"
 
+    def get_encoding(self):
+        # type: () -> Optional[str]
+        """Returns the encoding to use for opening files based on the output mode."""
+        if "b" in self._output_mode:
+            # For binary output modes we don't need to specify an encoding, it's all just bytes
+            return None
+
+        # For all other output modes we assume default encoding of utf-8
+        return "utf-8"
+
     def open(self):
         # type: () -> None
         """Create and open the output stream."""
@@ -102,11 +112,12 @@ class MetadataWriter(object):
             if self.output_file == "-":
                 self._output_stream = sys.stdout
             else:
+                encoding = self.get_encoding()
                 # mypy insists that by this point that output_file can be None
                 # That potentiality is addressed by the initial constructor logic,
                 # but I can't figure out how to tell mypy that.
                 # pylint: disable=consider-using-with
-                self._output_stream = open(self.output_file, self._output_mode)  # type: ignore
+                self._output_stream = open(self.output_file, self._output_mode, encoding=encoding)  # type: ignore
 
     def __enter__(self):
         # type: () -> MetadataWriter
