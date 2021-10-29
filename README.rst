@@ -74,7 +74,7 @@ Installation
       $ cd my_project
       $ python3 -m venv env
       $ source env/bin/activate
-      $ pip install aws-encryption-sdk-cli
+      $ python -m pip install aws-encryption-sdk-cli
 
    Windows (PowerShell):
 
