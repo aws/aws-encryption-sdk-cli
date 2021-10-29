@@ -55,9 +55,37 @@ Installation
    If you have not already installed `cryptography`_, you might need to install additional prerequisites as
    detailed in the `cryptography installation guide`_ for your operating system.
 
+   As a system package:
+
    .. code::
 
        $ pip install aws-encryption-sdk-cli
+
+   Using a virtual environment:
+
+   Installation using a python virtual environment is recommended to avoid conflicts between system packages and user installed packages. 
+
+   For the latest information on Python virtual environments, refer to the `Python.org Virtual Environment Documentation`_
+
+   
+   MacOS/Unix:
+
+   .. code-block:: sh
+
+      $ cd my_project
+      $ python3 -m venv env
+      $ source env/bin/activate
+      $ pip install aws-encryption-sdk-cli 
+
+   Windows (PowerShell):
+   
+   .. code-block:: sh
+
+      > cd my_project
+      > python3 -m venv env
+      > .\env\Scripts\Activate.ps1
+      (env) > pip install aws-encryption-sdk-cli
+
 
 *****
 Usage
@@ -515,3 +543,4 @@ targetting a directory, the requested decoding/encoding will be applied to all f
 .. _Support Policy: ./SUPPORT_POLICY.rst
 .. _key commitment: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/concepts.html#key-commitment
 .. _Commitment Policy: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/migrate-commitment-policy.html
+.. _Python.org Virtual Environment Documentation: https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/
