@@ -42,14 +42,14 @@ jobs:
           python -m pip install --upgrade pip    
           python -m venv env
           source env/bin/activate
-          pip install --upgrade -r ci-requirements.txt
+          python -m pip install aws-encryption-sdk-cli
         if: matrix.platform.os != 'windows-latest'
       - name: Windows setup venv and package
         run: |
           python -m pip install --upgrade pip    
           python -m venv env
           .\env\Scripts\activate
-          pip install --upgrade -r ci-requirements.txt
+          python -m pip install aws-encryption-sdk-cli
         if: matrix.platform.os == 'windows-latest'
       - name: Windows run test
         env:
