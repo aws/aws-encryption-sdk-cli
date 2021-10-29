@@ -42,17 +42,31 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           architecture: ${{ matrix.platform.architecture }}
-      - run: |
+      - name: MacOS and Linux setup venv and package
+        run: |
           python -m pip install --upgrade pip    
           python -m venv env
-          
-          if ["$RUNNER_OS"=="Windows"]; then
-              .\env\Scripts\Activate.ps1
-          else
-              source env/bin/activate
-          fi
+          source env/bin/activate
           pip install --upgrade -r ci-requirements.txt
-      - name: run test
+        if: matrix.platform.os != 'windows-latest'
+      - name: Windows setup venv and package
+        run: |
+          python -m pip install --upgrade pip    
+          python -m venv env
+          .\env\Scripts\activate
+          pip install --upgrade -r ci-requirements.txt
+        if: matrix.platform.os == 'windows-latest'
+      - name: Windows run test
         env:
           TOXENV: ${{ matrix.category }}
-        run: tox -- -vv
+        run: |
+          .\env\Scripts\activate
+          tox -- -vv
+        if: matrix.platform.os == 'windows-latest'
+      - name: MacOS Linux run test
+        env:
+          TOXENV: ${{ matrix.category }}
+        run: |
+          source env/bin/activate
+          tox -- -vv
+        if: matrix.platform.os != 'windows-latest'
