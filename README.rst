@@ -63,11 +63,10 @@ Installation
 
    Using a virtual environment:
 
-   Installation using a python virtual environment is recommended to avoid conflicts between system packages and user installed packages. 
+   Installation using a python virtual environment is recommended to avoid conflicts between system packages and user installed packages.
 
    For the latest information on Python virtual environments, refer to the `Python.org Virtual Environment Documentation`_
 
-   
    MacOS/Unix:
 
    .. code-block:: sh
@@ -75,10 +74,10 @@ Installation
       $ cd my_project
       $ python3 -m venv env
       $ source env/bin/activate
-      $ pip install aws-encryption-sdk-cli 
+      $ pip install aws-encryption-sdk-cli
 
    Windows (PowerShell):
-   
+
    .. code-block:: sh
 
       > cd my_project
