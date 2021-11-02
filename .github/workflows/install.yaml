@@ -52,16 +52,12 @@ jobs:
           python -m pip install aws-encryption-sdk-cli
         if: matrix.platform.os == 'windows-latest'
       - name: Windows run test
-        env:
-          TOXENV: ${{ matrix.category }}
         run: |
           .\env\Scripts\activate
           (Get-Command python).Path
-    aws-encryption-cli --version
+          aws-encryption-cli --version
         if: matrix.platform.os == 'windows-latest'
       - name: MacOS Linux run test
-        env:
-          TOXENV: ${{ matrix.category }}
         run: |
           source env/bin/activate
           aws-encryption-cli --version
