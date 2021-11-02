@@ -67,9 +67,5 @@ jobs:
           TOXENV: ${{ matrix.category }}
         run: |
           source env/bin/activate
-          which python
-          INPUT_TEXT="hello world"
-          CIPHERTEXT=$(./examples/bin/encrypt_command_line.sh $INPUT_TEXT $AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID)
-          PLAINTEXT=$(./examples/bin/decrypt_command_line.sh "$CIPHERTEXT" $AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID)
-          python3 -c "assert '$PLAINTEXT' == '$INPUT_TEXT'"
+          aws-encryption-cli --version
         if: matrix.platform.os != 'windows-latest'
