@@ -28,5 +28,10 @@ batch:
     - identifier: py39_examples
       buildspec: codebuild/py39/examples.yml
 
+    - identifier: py310_integ
+      buildspec: codebuild/py310/integ.yml
+    - identifier: py310_examples
+      buildspec: codebuild/py310/examples.yml
+
     - identifier: code_coverage
       buildspec: codebuild/coverage.yml
