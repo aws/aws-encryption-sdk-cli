@@ -34,6 +34,6 @@ def _warn_deprecated_python():
             "starting {}. To continue receiving service updates, "
             "bug fixes, and security updates please upgrade to Python {}.{} or "
             "later. For more information, see SUPPORT_POLICY.rst: "
-            "https://github.com/aws/aws-encryption-sdk-python/blob/master/SUPPORT_POLICY.rst"
+            "https://github.com/aws/aws-encryption-sdk-cli/blob/master/SUPPORT_POLICY.rst"
         ).format(py_version[0], py_version[1], minimum_version[0], minimum_version[1], params["date"])
         warnings.warn(warning, DeprecationWarning)
