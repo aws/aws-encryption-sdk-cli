@@ -10,7 +10,7 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Unit test suite for aws_encryption_sdk.compatability"""
+"""Unit test suite for aws_encryption_sdk.compatability."""
 import sys
 
 import mock
@@ -22,7 +22,10 @@ pytestmark = [pytest.mark.unit, pytest.mark.local]
 
 
 class TestWarnDeprecatedPython:
+    """Tests the _warn_deprecated_python."""
+
     def test_happy_version(self):
+        """Asserts no warning for safe Python version."""
         with mock.patch.object(sys, "version_info") as v_info:
             v_info.major = 3
             v_info.minor = 6
@@ -31,6 +34,7 @@ class TestWarnDeprecatedPython:
             assert len(record) == 0
 
     def test_below_warn(self):
+        """Asserts Deprecation Warning for unsafe Python version."""
         with mock.patch.object(sys, "version_info") as v_info:
             v_info.major = 2
             v_info.minor = 7
