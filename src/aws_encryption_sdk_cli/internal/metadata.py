@@ -106,7 +106,7 @@ class MetadataWriter(object):
                 # That potentiality is addressed by the initial constructor logic,
                 # but I can't figure out how to tell mypy that.
                 # pylint: disable=consider-using-with
-                self._output_stream = open(self.output_file, self._output_mode, encoding="utf-8")  # type: ignore
+                self._output_stream = open(self.output_file, self._output_mode)  # type: ignore pylint: disable=unspecified-encoding
 
     def __enter__(self):
         # type: () -> MetadataWriter
