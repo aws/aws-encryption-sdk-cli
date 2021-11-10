@@ -12,6 +12,7 @@ disable =
     redundant-u-string-prefix, # This major version must support py2
     consider-using-f-string, # This major version must support py2
     no-member,  # breaks with attrs
+    unspecified-encoding, # our open() calls use binary, which does not support encoding
 
 [BASIC]
 # Allow function names up to 50 characters
