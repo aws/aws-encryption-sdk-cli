@@ -31,7 +31,7 @@ GOOD_INIT_KWARGS = dict(suppress_output=False)
 @pytest.mark.parametrize(
     "init_kwargs, call_kwargs",
     (
-        (dict(suppress_output=True), dict()),
+        (dict(suppress_output=True), {}),
         (dict(suppress_output=False), dict(output_file="-")),
         (dict(suppress_output=False), dict(output_file="asdf")),
     ),
@@ -52,7 +52,7 @@ def test_attrs_fail(init_kwargs_patch, error_type):
 
 @pytest.mark.parametrize(
     "init_kwargs, call_kwargs, error_type, error_message",
-    ((dict(suppress_output=False), dict(), TypeError, r"output_file cannot be None when suppress_output is False"),),
+    ((dict(suppress_output=False), {}, TypeError, r"output_file cannot be None when suppress_output is False"),),
 )
 def test_custom_fail(init_kwargs, call_kwargs, error_type, error_message):
     with pytest.raises(error_type) as excinfo:
