@@ -12,4 +12,4 @@ echo "$1" | aws-encryption-cli --decrypt \
                                --output - \
                                --decode \
                                --buffer \
-                               --wrapping-keys discovery=true # region=us-west-2 # key=$2
+                               --wrapping-keys discovery=true
