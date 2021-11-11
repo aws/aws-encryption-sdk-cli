@@ -23,7 +23,7 @@ phases:
       - |
         while [ $NUM_RETRIES -gt 0 ]
         do
-          tox -e py38-examples
+          tox -e py3-examples
           if [ $? -eq 0 ]; then
             break
           fi
