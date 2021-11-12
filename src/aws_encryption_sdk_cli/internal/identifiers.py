@@ -31,10 +31,14 @@ __all__ = (
     "DEFAULT_MASTER_KEY_PROVIDER",
     "OperationResult",
 )
-__version__ = "2.1.0"  # type: str
+__version__ = "4.1.0"  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.
-OUTPUT_SUFFIX = {"encrypt": ".encrypted", "decrypt": ".decrypted"}  # type: Dict[str, str]
+OUTPUT_SUFFIX = {
+    "encrypt": ".encrypted",
+    "decrypt": ".decrypted",
+    "decrypt-unsigned": ".decrypted",
+}  # type: Dict[str, str]
 
 ALGORITHM_NAMES = {
     alg for alg in dir(aws_encryption_sdk.Algorithm) if not alg.startswith("_")

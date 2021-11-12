@@ -192,6 +192,14 @@ def _build_parser():
         "-d", "--decrypt", dest="action", action="store_const", const="decrypt", help="Decrypt data"
     )
     parser.add_dummy_redirect_argument("--decrypt")
+    operating_action.add_argument(
+        "--decrypt-unsigned",
+        dest="action",
+        action="store_const",
+        const="decrypt-unsigned",
+        help="Decrypt data and enforce messages are unsigned during decryption.",
+    )
+    parser.add_dummy_redirect_argument("--decrypt-unsigned")
 
     # For each argument added to this group, a dummy redirect argument must
     # be added to the parent parser for each long form option string.
@@ -237,7 +245,7 @@ def _build_parser():
         "--commitment-policy",
         type=CommitmentPolicyArgs,
         choices=list(CommitmentPolicyArgs),
-        default=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+        default=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
         help=(
             "Specifies the commitment policy for key commitment. "
             "ex: "
@@ -256,6 +264,10 @@ def _build_parser():
             "ex: "
             "--caching capacity=10 max_age=100.0"
         ),
+    )
+
+    parser.add_argument(
+        "-b", "--buffer", action="store_true", help="Buffer result in memory before releasing to output"
     )
 
     parser.add_argument(
@@ -313,6 +325,13 @@ def _build_parser():
             "Maximum frame length (for framed messages) or content length (for "
             "non-framed messages) (decryption only)"
         ),
+    )
+
+    parser.add_argument(
+        "--max-encrypted-data-keys",
+        type=int,
+        action=UniqueStoreAction,
+        help="Maximum number of encrypted data keys to wrap (during encryption) or to unwrap (during decryption)",
     )
 
     parser.add_argument(
@@ -597,11 +616,11 @@ def discovery_pseudobool(value):
 class CommitmentPolicyArgs(Enum):
     """Defines the possible values for a commitment policy"""
 
-    forbid_encrypt_allow_decrypt = "forbid-encrypt-allow-decrypt"
-    require_encrypt_allow_decrypt = "require-encrypt-allow-decrypt"
-    require_encrypt_require_decrypt = "require-encrypt-require-decrypt"
+    FORBID_ENCRYPT_ALLOW_DECRYPT = "forbid-encrypt-allow-decrypt"
+    REQUIRE_ENCRYPT_ALLOW_DECRYPT = "require-encrypt-allow-decrypt"
+    REQUIRE_ENCRYPT_REQUIRE_DECRYPT = "require-encrypt-require-decrypt"
 
-    def str(self):
+    def __str__(self):
         """Returns the string value for the commitment policy"""
         return self.value
 

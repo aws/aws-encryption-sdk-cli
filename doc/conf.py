@@ -11,7 +11,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 def read(*args):
     """Reads complete file contents."""
-    return io.open(os.path.join(HERE, *args), encoding="utf-8").read()
+    return io.open(os.path.join(HERE, *args), encoding="utf-8").read()  # pylint: disable=consider-using-with
 
 
 def get_release():
@@ -29,7 +29,7 @@ def get_version():
     return _release
 
 
-project = u"aws-encryption-sdk-python-cli"
+project = "aws-encryption-sdk-python-cli"
 version = get_version()
 release = get_release()
 
@@ -52,7 +52,7 @@ templates_path = ["_templates"]
 source_suffix = ".rst"  # The suffix of source filenames.
 master_doc = "index"  # The master toctree document.
 
-copyright = u"%s, Amazon" % datetime.now().year  # pylint: disable=redefined-builtin
+copyright = "%s, Amazon" % datetime.now().year  # pylint: disable=redefined-builtin
 
 # List of directories, relative to source directory, that shouldn't be searched
 # for source files.
@@ -61,7 +61,7 @@ exclude_trees = ["_build"]
 pygments_style = "sphinx"
 
 autoclass_content = "both"
-autodoc_default_flags = ["show-inheritance", "members"]
+autodoc_default_options = {"show-inheritance": True, "members": True}
 autodoc_member_order = "bysource"
 
 html_theme = "sphinx_rtd_theme"

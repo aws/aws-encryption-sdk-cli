@@ -26,10 +26,6 @@ aws-encryption-sdk-cli
    :target: https://github.com/aws/aws-encryption-sdk-cli/actions?query=workflow%3A%22static+analysis%22
    :alt: static analysis
 
-.. image:: https://travis-ci.org/aws/aws-encryption-sdk-cli.svg?branch=master
-   :target: https://travis-ci.org/aws/aws-encryption-sdk-cli
-   :alt: integration tests
-
 
 This command line tool can be used to encrypt and decrypt files and directories using the `AWS Encryption SDK`_.
 
@@ -39,6 +35,8 @@ Find us on `GitHub`_.
 
 `Security issue notifications`_
 
+See `Support Policy`_ for details on the current support status of all major versions of this library.
+
 ***************
 Getting Started
 ***************
@@ -46,8 +44,8 @@ Getting Started
 Required Prerequisites
 ======================
 
-* Python 2.7+ or 3.4+
-* aws-encryption-sdk >= 2.0.0
+* Python 3.6+
+* aws-encryption-sdk >= 3.1.0
 
 Installation
 ============
@@ -57,9 +55,36 @@ Installation
    If you have not already installed `cryptography`_, you might need to install additional prerequisites as
    detailed in the `cryptography installation guide`_ for your operating system.
 
+   As a system package:
+
    .. code::
 
        $ pip install aws-encryption-sdk-cli
+
+   Using a virtual environment:
+
+   Installation using a python virtual environment is recommended to avoid conflicts between system packages and user installed packages.
+
+   For the latest information on Python virtual environments, refer to the `Python.org Virtual Environment Documentation`_
+
+   MacOS/Unix:
+
+   .. code-block:: sh
+
+      $ cd my_project
+      $ python3 -m venv env
+      $ source env/bin/activate
+      $ python -m pip install aws-encryption-sdk-cli
+
+   Windows (PowerShell):
+
+   .. code-block:: sh
+
+      > cd my_project
+      > python3 -m venv env
+      > .\env\Scripts\Activate.ps1
+      (env) > pip install aws-encryption-sdk-cli
+
 
 *****
 Usage
@@ -172,7 +197,7 @@ Metadata Contents
 `````````````````
 The metadata JSON contains the following fields:
 
-* ``"mode"`` : ``"encrypt"``/``"decrypt"``
+* ``"mode"`` : ``"encrypt"``/``"decrypt"``/``"decrypt-unsigned"``
 * ``"input"`` : Full path to input file (or ``"<stdin>"`` if stdin)
 * ``"output"`` : Full path to output file (or ``"<stdout>"`` if stdout)
 * ``"header"`` : JSON representation of `message header data`_
@@ -209,6 +234,8 @@ These parameters are common to all master key providers:
   key provider. ``The discovery`` attribute is only available if you are using an ``aws-kms`` provider.
 
     * If using ``aws-kms`` to decrypt, `you must specify either a key or discovery with a value of true`_.
+    * If using ``aws-kms`` to decrypt and specifying a key, you must use a key ARN; key ids, alias names, and alias
+      ARNs are not supported.
 
 Any additional parameters supplied are collected into lists by parameter name and
 passed to the master key provider class when it is instantiated. Custom master key providers
@@ -261,7 +288,9 @@ There are some configuration options which are unique to the ``aws-kms`` master 
 * **discovery** *(default: false; one of key or discovery with a value of true is required)* :
   Indicates whether this provider should be in "discovery" mode. If true (enabled), the AWS Encryption CLI will attempt
   to decrypt ciphertexts encrypted with any AWS KMS CMK. If false (disabled), the AWS Encryption CLI will only attempt
-  to decrypt ciphertexts encrypted with the keys specified in the **key** attribute.
+  to decrypt ciphertexts encrypted with the key ARNs specified in the **key** attribute.
+  Any key specified in the **key** attribute that is a KMS CMK Identier other than a key ARN will not
+  be used for decryption.
 * **discovery-account** *(optional; available only when discovery=true and discovery-partition is also provided)* :
   If discovery is enabled, limits decryption to AWS KMS CMKs in the specified accounts.
 * **discovery-partition** *(optional; available only when discovery=true and discovery-account is also provided)* :
@@ -327,6 +356,22 @@ group.
 If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``, the
 CLI will present the raised error message to the user to indicate bad user input.
 
+Commitment Policy
+-----------------
+The commitment policy controls which algorithms can be used in encryption and decryption.
+Versions 2.0.x and later of the AWS Encryption CLI use a default commitment policy of
+``require-encrypt-require-decrypt``, which ensures that only algorithms which provide `key commitment`_ can be used
+on both encryption and decryption. If you want to use a different commitment policy, you can do so
+with the ``--commitment-policy`` parameter.
+
+For more details, see the `Commitment Policy`_ documentation.
+
+.. code-block:: sh
+
+   # Use a commitment policy that requires an algorithm which provides key commitment
+   # on both encryption and decryption
+   --commitment-policy require-encrypt-require-decrypt
+
 Data Key Caching
 ----------------
 Data key caching is optional, but if used then the parameters noted as required must
@@ -341,7 +386,6 @@ Allowed parameters:
 * **max_age** *(required)* :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_messages_encrypted** :  Determines how long each entry can remain in the cache, beginning when it was added.
 * **max_bytes_encrypted** : Specifies the maximum number of bytes that a cached data key can encrypt.
-
 
 Logging and Verbosity
 ---------------------
@@ -495,3 +539,7 @@ targeting a directory, the requested decoding/encoding will be applied to all fi
 .. _setuptools entry point: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
 .. _you must specify either a key or discovery with a value of true: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-how-to.html#crypto-cli-master-key
 .. _Security issue notifications: https://github.com/aws/aws-encryption-sdk-cli/tree/master/CONTRIBUTING.md#security-issue-notifications
+.. _Support Policy: ./SUPPORT_POLICY.rst
+.. _key commitment: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/concepts.html#key-commitment
+.. _Commitment Policy: https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/migrate-commitment-policy.html
+.. _Python.org Virtual Environment Documentation: https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/

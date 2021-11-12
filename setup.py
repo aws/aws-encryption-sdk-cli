@@ -11,7 +11,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 def read(*args):
     """Reads complete file contents."""
-    return io.open(os.path.join(HERE, *args), encoding="utf-8").read()
+    return io.open(os.path.join(HERE, *args), encoding="utf-8").read()  # pylint: disable=consider-using-with
 
 
 def get_version():
@@ -48,13 +48,12 @@ setup(
         "Natural Language :: English",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Security",
         "Topic :: Security :: Cryptography",

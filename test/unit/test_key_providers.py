@@ -23,29 +23,29 @@ from aws_encryption_sdk_cli.internal.identifiers import USER_AGENT_SUFFIX
 pytestmark = [pytest.mark.unit, pytest.mark.local]
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_deepcopy(mocker):
     mocker.patch.object(key_providers.copy, "deepcopy")
     yield key_providers.copy.deepcopy
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_botocore_session(mocker):
     mocker.patch.object(key_providers.botocore.session, "Session")
     key_providers.botocore.session.Session.return_value = sentinel.botocore_session
     yield key_providers.botocore.session.Session
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_discovery_master_key_provider(mocker):
-    mocker.patch.object(key_providers, "DiscoveryAwsKmsMasterKeyProvider")
-    yield key_providers.DiscoveryAwsKmsMasterKeyProvider
+    mocker.patch.object(key_providers, "MRKAwareDiscoveryAwsKmsMasterKeyProvider")
+    yield key_providers.MRKAwareDiscoveryAwsKmsMasterKeyProvider
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def patch_strict_master_key_provider(mocker):
-    mocker.patch.object(key_providers, "StrictAwsKmsMasterKeyProvider")
-    yield key_providers.StrictAwsKmsMasterKeyProvider
+    mocker.patch.object(key_providers, "MRKAwareStrictAwsKmsMasterKeyProvider")
+    yield key_providers.MRKAwareStrictAwsKmsMasterKeyProvider
 
 
 @pytest.mark.parametrize(

@@ -2,6 +2,77 @@
 Changelog
 *********
 
+4.1.0 -- 2021-10-11
+===================
+
+Deprecation
+-----------
+The AWS Encryption SDK CLI no longer supports Python 3.5
+as of major version 4.1.x; only Python 3.6+ is supported. Customers using
+Python 3.5 can still use the 3.x line of the AWS Encryption SDK CLI,
+which will continue to receive security updates until 2022-07-13, in accordance
+with our `Support Policy <https://github.com/aws/aws-encryption-sdk-cli/blob/master/SUPPORT_POLICY.rst>`__.
+
+Maintenance
+-----------
+* Python 3.10 testing and support
+
+
+4.0.0 -- 2021-07-13
+===================
+
+Deprecation
+-----------
+The AWS Encryption SDK CLI no longer supports Python 2 or Python 3.4
+as of major version 4.x; only Python 3.5+ is supported. Customers using Python 2
+or Python 3.4 can still use the 3.x line of the AWS Encryption SDK CLI,
+which will continue to receive security updates for the next 12 months, in accordance
+with our `Support Policy <https://github.com/aws/aws-encryption-sdk-cli/blob/master/SUPPORT_POLICY.rst>`__.
+
+
+3.1.0 -- 2021-07-13
+===================
+
+Deprecation Announcement
+------------------------
+The AWS Encryption SDK CLI is discontinuing support for Python 2. Future major versions
+of this library will drop support for Python 2 and begin to adopt changes that are known
+to break Python 2.
+
+Support for Python 3.4 will be removed at the same time. Moving forward, we will support
+Python 3.5+.
+
+Security updates will still be available for the AWS Encryption SDK CLI 3.x line for
+the next 12 months, in accordance with our `Support Policy <https://github.com/aws/aws-encryption-sdk-cli/blob/master/SUPPORT_POLICY.rst>`__.
+
+
+3.0.0 -- 2021-06-16
+===================
+
+Features
+--------
+* AWS KMS multi-Region Key support
+
+  CLI now supports Multi-Region Keys (MRKs).
+  Usage of MRKs is identical to the usage of non-MRK KMS Keys.
+  Though a KMS Key does not have to be a MRK key for it to be used.
+
+  See https://docs.aws.amazon.com/kms/latest/developerguide/multi-region-keys-overview.html
+  for more details about AWS KMS multi-Region Keys.
+
+  See https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/configure.html#config-mrks
+  for more details about how the AWS Encryption SDK interoperates
+  with AWS KMS multi-Region keys.
+
+2.2.0 -- 2021-05-27
+===================
+
+Features
+--------
+* Improvements to the message decryption process
+
+  See https://github.com/aws/aws-encryption-sdk-cli/security/advisories/GHSA-89v2-g37m-g3ff.
+
 2.1.0 -- 2020-10-27
 ===================
 

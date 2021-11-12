@@ -3,13 +3,30 @@ version: 0.2
 batch:
   fast-fail: false
   build-list:
-    - identifier: python_27
-      buildspec: codebuild/python_27.yml
-    - identifier: python_35
-      buildspec: codebuild/python_35.yml
-    - identifier: python_36
-      buildspec: codebuild/python_36.yml
-    - identifier: python_37
-      buildspec: codebuild/python_37.yml
-    - identifier: python_38
-      buildspec: codebuild/python_38.yml
+    - identifier: py36_integ
+      buildspec: codebuild/py36/integ.yml
+    - identifier: py36_examples
+      buildspec: codebuild/py36/examples.yml
+
+    - identifier: py37_integ
+      buildspec: codebuild/py37/integ.yml
+    - identifier: py37_examples
+      buildspec: codebuild/py37/examples.yml
+
+    - identifier: py38_integ 
+      buildspec: codebuild/py38/integ.yml
+    - identifier: py38_examples
+      buildspec: codebuild/py38/examples.yml
+
+    - identifier: py39_integ
+      buildspec: codebuild/py39/integ.yml
+    - identifier: py39_examples
+      buildspec: codebuild/py39/examples.yml
+
+    - identifier: py310_integ
+      buildspec: codebuild/py310/integ.yml
+    - identifier: py310_examples
+      buildspec: codebuild/py310/examples.yml
+
+    - identifier: code_coverage
+      buildspec: codebuild/coverage.yml

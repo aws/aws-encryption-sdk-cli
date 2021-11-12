@@ -263,7 +263,9 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
             encode=sentinel.encode_output,
             encryption_context=sentinel.encryption_context,
             required_encryption_context_keys=sentinel.required_keys,
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+            buffer=sentinel.buffer_output,
+            max_encrypted_data_keys=None,
         ),
     )
 
@@ -276,6 +278,8 @@ def test_process_cli_request_source_dir_nonrecursive(tmpdir, patch_iohandler):
         required_encryption_context=sentinel.encryption_context,
         required_encryption_context_keys=sentinel.required_keys,
         commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+        buffer_output=sentinel.buffer_output,
+        max_encrypted_data_keys=None,
     )
     assert not patch_iohandler.return_value.process_single_operation.called
     assert not patch_iohandler.return_value.process_dir.called
@@ -300,6 +304,8 @@ def test_process_cli_request_no_commitment_policy(tmpdir, patch_iohandler):
             encryption_context=sentinel.encryption_context,
             required_encryption_context_keys=sentinel.required_keys,
             commitment_policy=None,
+            buffer=sentinel.buffer_output,
+            max_encrypted_data_keys=None,
         ),
     )
 
@@ -312,6 +318,8 @@ def test_process_cli_request_no_commitment_policy(tmpdir, patch_iohandler):
         required_encryption_context=sentinel.encryption_context,
         required_encryption_context_keys=sentinel.required_keys,
         commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+        buffer_output=sentinel.buffer_output,
+        max_encrypted_data_keys=None,
     )
     assert not patch_iohandler.return_value.process_single_operation.called
     assert not patch_iohandler.return_value.process_dir.called
@@ -334,7 +342,9 @@ def test_process_cli_request_source_dir_destination_nondir(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+                buffer=False,
+                max_encrypted_data_keys=None,
             ),
         )
     excinfo.match(r"If operating on a source directory, destination must be an existing directory")
@@ -355,7 +365,8 @@ def test_process_cli_request_source_dir_destination_dir(tmpdir, patch_iohandler)
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+            buffer=sentinel.buffer_output,
         ),
     )
 
@@ -388,7 +399,8 @@ def test_process_cli_request_source_stdin(tmpdir, patch_iohandler):
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
         metadata_output=MetadataWriter(True)(),
-        commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+        commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+        buffer=sentinel.buffer_output,
     )
     aws_encryption_sdk_cli.process_cli_request(stream_args=sentinel.stream_args, parsed_args=mock_parsed_args)
     assert not patch_iohandler.return_value.process_dir.called
@@ -414,7 +426,8 @@ def test_process_cli_request_source_file_destination_dir(tmpdir, patch_iohandler
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+            buffer=sentinel.buffer_output,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -442,7 +455,8 @@ def test_process_cli_request_source_file_destination_file(tmpdir, patch_iohandle
             decode=sentinel.decode_input,
             encode=sentinel.encode_output,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+            buffer=sentinel.buffer_output,
         ),
     )
     assert not patch_iohandler.return_value.process_dir.called
@@ -468,7 +482,9 @@ def test_process_cli_request_invalid_source(tmpdir):
                 metadata_output=MetadataWriter(True)(),
                 encryption_context={},
                 required_encryption_context_keys=[],
-                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+                buffer=False,
+                max_encrypted_data_keys=None,
             ),
         )
     excinfo.match(r"Invalid source.  Must be a valid pathname pattern or stdin \(-\)")
@@ -488,7 +504,7 @@ def test_process_cli_request_globbed_source_non_directory_target(tmpdir, patch_i
         aws_encryption_sdk_cli.process_cli_request(
             stream_args={"mode": "encrypt"},
             parsed_args=MagicMock(
-                commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+                commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
                 input=source,
                 output=str(target_file),
                 recursive=False,
@@ -523,7 +539,8 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
             encode=False,
             decode=False,
             metadata_output=MetadataWriter(True)(),
-            commitment_policy=CommitmentPolicyArgs.require_encrypt_require_decrypt,
+            commitment_policy=CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+            buffer=False,
         ),
     )
 
@@ -542,7 +559,12 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
     (
         (
             MagicMock(
-                action=sentinel.mode, encryption_context=None, algorithm=None, frame_length=None, max_length=None
+                action=sentinel.mode,
+                encryption_context=None,
+                algorithm=None,
+                frame_length=None,
+                max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {"materials_manager": sentinel.materials_manager, "mode": sentinel.mode},
         ),
@@ -553,6 +575,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
                 algorithm=None,
                 frame_length=None,
                 max_length=sentinel.max_length,
+                max_encrypted_data_keys=None,
             ),
             {
                 "materials_manager": sentinel.materials_manager,
@@ -562,7 +585,26 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
         ),
         (
             MagicMock(
-                action=sentinel.mode, encryption_context=None, algorithm=None, frame_length=None, max_length=None
+                action=sentinel.mode,
+                encryption_context=None,
+                algorithm=None,
+                frame_length=None,
+                max_length=None,
+                max_encrypted_data_keys=sentinel.max_encrypted_data_keys,
+            ),
+            {
+                "materials_manager": sentinel.materials_manager,
+                "mode": sentinel.mode,
+            },
+        ),
+        (
+            MagicMock(
+                action=sentinel.mode,
+                encryption_context=None,
+                algorithm=None,
+                frame_length=None,
+                max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {"materials_manager": sentinel.materials_manager, "mode": sentinel.mode},
         ),
@@ -573,6 +615,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
                 algorithm="AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384",
                 frame_length=sentinel.frame_length,
                 max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {"materials_manager": sentinel.materials_manager, "mode": sentinel.mode},
         ),
@@ -583,6 +626,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
                 algorithm="AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384",
                 frame_length=sentinel.frame_length,
                 max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {
                 "materials_manager": sentinel.materials_manager,
@@ -599,6 +643,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
                 algorithm="AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384",
                 frame_length=sentinel.frame_length,
                 max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {
                 "materials_manager": sentinel.materials_manager,
@@ -615,6 +660,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
                 algorithm=None,
                 frame_length=sentinel.frame_length,
                 max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {
                 "materials_manager": sentinel.materials_manager,
@@ -630,6 +676,7 @@ def test_process_cli_request_source_contains_directory_nonrecursive(tmpdir, patc
                 algorithm="AES_256_GCM_IV12_TAG16_HKDF_SHA384_ECDSA_P384",
                 frame_length=None,
                 max_length=None,
+                max_encrypted_data_keys=None,
             ),
             {
                 "materials_manager": sentinel.materials_manager,
@@ -664,6 +711,7 @@ def patch_for_cli(mocker):
         discovery_partition=sentinel.discovery_partition,
         decode=sentinel.decode_input,
         encode=sentinel.encode_output,
+        buffer=sentinel.buffer_output,
     )
     mocker.patch.object(aws_encryption_sdk_cli, "setup_logger")
     mocker.patch.object(aws_encryption_sdk_cli, "build_crypto_materials_manager_from_args")
@@ -733,7 +781,7 @@ def test_cli_unknown_error_capture_stacktrace(patch_process_cli_request, tmpdir,
             + str(tmpdir.join("ciphertext"))
             + " "
             + requested_log_level
-            + " -w discovery=true"
+            + " -w discovery=true region=us-west-2"
         )
     )
 

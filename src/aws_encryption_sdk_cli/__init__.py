@@ -22,6 +22,7 @@ import aws_encryption_sdk
 from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
 
+from aws_encryption_sdk_cli.compatability import _warn_deprecated_python
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import CommitmentPolicyArgs, parse_args
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
@@ -167,11 +168,11 @@ def process_cli_request(stream_args, parsed_args):  # noqa: C901
 
     if not parsed_args.commitment_policy:
         commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.forbid_encrypt_allow_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.FORBID_ENCRYPT_ALLOW_DECRYPT:
         commitment_policy = CommitmentPolicy.FORBID_ENCRYPT_ALLOW_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.require_encrypt_allow_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.REQUIRE_ENCRYPT_ALLOW_DECRYPT:
         commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_ALLOW_DECRYPT
-    elif parsed_args.commitment_policy == CommitmentPolicyArgs.require_encrypt_require_decrypt:
+    elif parsed_args.commitment_policy == CommitmentPolicyArgs.REQUIRE_ENCRYPT_REQUIRE_DECRYPT:
         commitment_policy = CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT
     else:
         raise BadUserArgumentError("Invalid commitment policy.")
@@ -185,6 +186,8 @@ def process_cli_request(stream_args, parsed_args):  # noqa: C901
         required_encryption_context=parsed_args.encryption_context,
         required_encryption_context_keys=parsed_args.required_encryption_context_keys,
         commitment_policy=commitment_policy,
+        buffer_output=parsed_args.buffer,
+        max_encrypted_data_keys=parsed_args.max_encrypted_data_keys,
     )
 
     if parsed_args.input == "-":
@@ -266,13 +269,15 @@ def cli(raw_args=None):
     try:
         args = parse_args(raw_args)
 
-        setup_logger(args.verbosity, args.quiet)
+        setup_logger(args.verbosity, args.quiet)  # pylint: disable=no-member
 
-        _LOGGER.debug("Encryption mode: %s", args.action)
-        _LOGGER.debug("Encryption source: %s", args.input)
-        _LOGGER.debug("Encryption destination: %s", args.output)
-        _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)
-        _LOGGER.debug("Suffix requested: %s", args.suffix)
+        _LOGGER.debug("Encryption mode: %s", args.action)  # pylint: disable=no-member
+        _LOGGER.debug("Encryption source: %s", args.input)  # pylint: disable=no-member
+        _LOGGER.debug("Encryption destination: %s", args.output)  # pylint: disable=no-member
+        _LOGGER.debug("Wrapping key provider configuration: %s", args.wrapping_keys)  # pylint: disable=no-member
+        _LOGGER.debug("Suffix requested: %s", args.suffix)  # pylint: disable=no-member
+
+        _warn_deprecated_python()
 
         crypto_materials_manager = build_crypto_materials_manager_from_args(
             key_providers_config=args.wrapping_keys, caching_config=args.caching
