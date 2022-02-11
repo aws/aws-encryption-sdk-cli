@@ -10,15 +10,19 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Example showing basic usage of the AWS Encryption CLI to encrypt
-input from stdin and output it to stdout."""
+"""Example showing basic usage of the AWS Encryption CLI.
+
+Encrypt input from stdin and output it to stdout.
+"""
 
 import shlex
 from subprocess import PIPE, Popen
 
-from aws_encryption_sdk_cli_examples.example_test_utils import cmk_arn, is_windows, setup_file
+from aws_encryption_sdk_cli_examples.example_test_utils import cmk_arn, is_windows
+
 
 def run():
+    """Runner function for stdin and stdout encrypt example."""
     expected_plaintext = "Hello World"
     cmk = cmk_arn()
 

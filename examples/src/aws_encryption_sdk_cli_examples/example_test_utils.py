@@ -9,12 +9,12 @@ AWS_KMS_KEY_ID_2 = "AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID_2"
 
 
 def cmk_arn_value(variable_name):
-    """Retrieves the target CMK ARN from environment variable."""
+    """Retrieve target CMK ARN from environment variable."""
     arn = os.environ.get(variable_name, None)
     if arn is None:
         raise ValueError(
             'Environment variable "{}" must be set to a valid KMS CMK ARN for examples to run'.format(
-               variable_name 
+                variable_name
             )
         )
     if arn.startswith("arn:") and ":alias/" not in arn:
@@ -22,20 +22,20 @@ def cmk_arn_value(variable_name):
     raise ValueError("KMS CMK ARN provided for examples must be a key not an alias")
 
 
-def cmk_arn():
+def cmk_arn():  # noqa: D103
     return cmk_arn_value(AWS_KMS_KEY_ID_1)
 
 
-def second_cmk_arn():
+def second_cmk_arn():  # noqa: D103
     return cmk_arn_value(AWS_KMS_KEY_ID_2)
 
 
-def is_windows():
+def is_windows():  # noqa: D103
     return any(platform.win32_ver())
 
 
 def setup_file(tmpdir, plaintext):
-    """Creates a file in the given tmpdir containing the provided plaintext."""
+    """Create a file in the given tmpdir containing the provided plaintext."""
     filename = ''.join(random.choice(string.ascii_lowercase) for i in range(10))
 
     full_path = os.path.join(str(tmpdir), filename)
@@ -45,7 +45,7 @@ def setup_file(tmpdir, plaintext):
 
 
 def setup_files(tmpdir, num_files):
-    """Creates num_files files in the given tmpdir containing random plaintext."""
+    """Create num_files files in the given tmpdir containing random plaintext."""
     files = []
     for i in range(num_files):
         plaintext = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
