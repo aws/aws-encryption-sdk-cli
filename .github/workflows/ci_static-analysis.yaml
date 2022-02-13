@@ -23,6 +23,7 @@ jobs:
           - flake8
           - pylint
           - flake8-tests
+          - flake8-examples
           - pylint-tests
           - black-check
           - isort-check
