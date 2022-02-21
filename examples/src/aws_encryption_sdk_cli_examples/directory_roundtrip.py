@@ -10,9 +10,12 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Example showing basic usage of the AWS Encryption CLI to encrypt
-and decrypt all files in a directory."""
 
+"""Example showing basic usage of the AWS Encryption CLI.
+
+Encrypt and decrypt all files in a directory.
+
+"""
 import os
 import shlex
 from subprocess import PIPE, Popen
@@ -21,6 +24,7 @@ from aws_encryption_sdk_cli_examples.example_test_utils import cmk_arn, is_windo
 
 
 def run(tmpdir):
+    """Runner function for encrypt and decrypt directory example."""
     cmk = cmk_arn()
 
     # Create directories that will store plaintext, ciphertexts,
@@ -52,6 +56,6 @@ def run(tmpdir):
         with open(original_file, "r") as f1:
             original_plaintext = f1.read()
             decrypted_file = os.path.join(decrypt_directory, os.path.basename(original_file) + ".encrypted.decrypted")
-            with open (decrypted_file) as f2:
+            with open(decrypted_file) as f2:
                 decrypted_plaintext = f2.read()
                 assert decrypted_plaintext == original_plaintext
