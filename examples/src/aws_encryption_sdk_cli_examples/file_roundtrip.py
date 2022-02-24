@@ -10,8 +10,10 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-"""Example showing basic usage of the AWS Encryption CLI to encrypt
-and decrypt a file."""
+"""Example showing basic usage of the AWS Encryption CLI.
+
+Encrypt and decrypt a file.
+"""
 
 import shlex
 from subprocess import PIPE, Popen
@@ -20,6 +22,7 @@ from aws_encryption_sdk_cli_examples.example_test_utils import cmk_arn, is_windo
 
 
 def run(tmpdir):
+    """Runner function for encrypt and decrypt file example."""
     expected_plaintext = "Hello World"
     filename = setup_file(tmpdir, expected_plaintext)
     cmk = cmk_arn()
