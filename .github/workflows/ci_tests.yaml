@@ -36,7 +36,7 @@ jobs:
 # Enable them once we sort how to provide them.
 #          - integ
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
