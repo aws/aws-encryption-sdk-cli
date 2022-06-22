@@ -443,8 +443,8 @@ def test_cycle_decrypt_unsigned_fails_on_signed_message(tmpdir):
     (
         (1, True),
         (10, True),
-        (2 ** 16 - 1, True),
-        (2 ** 16, True),
+        (2**16 - 1, True),
+        (2**16, True),
         (0, False),
         (-1, False),
     ),

@@ -1,5 +1,5 @@
 bandit==1.7.2
-black==22.1.0
+black==22.3.0
 doc8==0.10.1
 flake8==4.0.1
 flake8-docstrings==1.6.0
@@ -12,7 +12,7 @@ pylint==2.12.2
 pytest==7.0.0
 pytest-cov==3.0.0
 pytest-mock==3.6.1
-readme_renderer==32.0
+readme_renderer==34.0
 seed-isort-config==2.2.0
 sphinx==4.2.0
 vulture==2.3
