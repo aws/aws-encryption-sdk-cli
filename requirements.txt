@@ -1,4 +1,4 @@
 base64io>=1.0.1
-aws-encryption-sdk~=2.3
+aws-encryption-sdk~=2.5
 setuptools
 attrs>=17.1.0
