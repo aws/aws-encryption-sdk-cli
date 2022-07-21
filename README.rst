@@ -50,7 +50,7 @@ Required Prerequisites
   support Python 2. Future major versions will begin to adopt changes
   known to break Python 2. Python 3.4 support will also be removed
   in future major versions; Python 3.5+ will be required.**
-* aws-encryption-sdk >= 2.3.0
+* aws-encryption-sdk >= 2.5.0
 
 Installation
 ============
