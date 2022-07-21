@@ -43,7 +43,7 @@ Required Prerequisites
 ======================
 
 * Python 2.7+ or 3.4+
-* aws-encryption-sdk >= 1.9.0
+* aws-encryption-sdk >= 1.10.0
 
 Installation
 ============

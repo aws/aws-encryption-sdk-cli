@@ -2,6 +2,13 @@
 Changelog
 *********
 
+1.9.1 -- 2022-07-21
+===================
+
+Operational
+-----------
+* Pin AWS Encryption SDK for Python dependency to at least 1.10.0
+
 1.9.0 -- 2021-05-27
 ===================
 
