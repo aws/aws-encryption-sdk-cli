@@ -32,10 +32,10 @@ This table describes the current support status of each major version of the AWS
     * - 3.x
       - Maintenance
       - End of Support
-      - 2022-02-02
+      - 2023-02-02
     * - 4.x
+      - General Availability
+      -  
       - 
-      - General Availability 
-      - 2021-07-13
 
 .. _AWS SDKs and Tools Maintenance Policy: https://docs.aws.amazon.com/sdkref/latest/guide/maint-policy.html#version-life-cycle
