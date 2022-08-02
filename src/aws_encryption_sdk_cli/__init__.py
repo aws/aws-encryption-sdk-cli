@@ -280,7 +280,7 @@ def cli(raw_args=None):
 
     :returns: Execution return value intended for ``sys.exit()``
     """
-     _warn_end_of_support_cli()
+    _warn_end_of_support_cli()
     try:
         args = parse_args(raw_args)
 
