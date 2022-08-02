@@ -22,6 +22,8 @@ import aws_encryption_sdk
 from aws_encryption_sdk.materials_managers import CommitmentPolicy
 from aws_encryption_sdk.materials_managers.base import CryptoMaterialsManager  # noqa pylint: disable=unused-import
 
+
+from aws_encryption_sdk_cli.compatability import _warn_deprecated_python, _warn_end_of_support_cli
 from aws_encryption_sdk_cli.exceptions import AWSEncryptionSDKCLIError, BadUserArgumentError
 from aws_encryption_sdk_cli.internal.arg_parsing import CommitmentPolicyArgs, parse_args
 from aws_encryption_sdk_cli.internal.identifiers import __version__  # noqa
@@ -267,11 +269,15 @@ def cli(raw_args=None):
 
         setup_logger(args.verbosity, args.quiet)
 
+
         _LOGGER.debug("Encryption mode: %s", args.action)
         _LOGGER.debug("Encryption source: %s", args.input)
         _LOGGER.debug("Encryption destination: %s", args.output)
         _LOGGER.debug("Master key provider configuration: %s", args.master_keys)
         _LOGGER.debug("Suffix requested: %s", args.suffix)
+
+        _warn_deprecated_python()
+        _warn_end_of_support_cli()
 
         if args.wrapping_keys is not None:
             crypto_materials_manager = build_crypto_materials_manager_from_args(
