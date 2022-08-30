@@ -31,7 +31,7 @@ __all__ = (
     "DEFAULT_MASTER_KEY_PROVIDER",
     "OperationResult",
 )
-__version__ = "1.9.1"  # type: str
+__version__ = "1.9.2"  # type: str
 
 #: Suffix added to output files if specific output filename is not specified.
 OUTPUT_SUFFIX = {

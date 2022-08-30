@@ -2,6 +2,19 @@
 Changelog
 *********
 
+1.9.2 -- 2022-08-30
+===================
+
+Deprecation Announcement
+------------------------
+The AWS Encryption SDK CLI Major Version 1 is End of Support.
+It will no longer receive security updates or bug fixes.
+Consider updating to the latest version of the AWS Encryption SDK CLI.
+
+Operational
+-----------
+* Pin AWS Encryption SDK for Python dependency to at least 1.10.1
+
 1.9.1 -- 2022-07-21
 ===================
 
