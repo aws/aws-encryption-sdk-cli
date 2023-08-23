@@ -13,5 +13,5 @@ pytest-cov==4.1.0
 pytest-mock==3.6.1
 readme_renderer==34.0
 seed-isort-config==2.2.0
-sphinx==5.1.1
+sphinx==7.2.2
 vulture==2.3
