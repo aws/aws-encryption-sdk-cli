@@ -20,13 +20,21 @@ batch:
 
     - identifier: py311_integ
       buildspec: codebuild/py311/integ.yml
+      env:
+        image: aws/codebuild/standard:7.0
     - identifier: py311_examples
       buildspec: codebuild/py311/examples.yml
+      env:
+        image: aws/codebuild/standard:7.0
 
     - identifier: py312_integ
       buildspec: codebuild/py312/integ.yml
+      env:
+        image: aws/codebuild/standard:7.0
     - identifier: py312_examples
       buildspec: codebuild/py312/examples.yml
+      env:
+        image: aws/codebuild/standard:7.0
 
     - identifier: code_coverage
       buildspec: codebuild/coverage.yml
