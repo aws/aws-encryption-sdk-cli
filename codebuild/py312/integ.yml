@@ -14,5 +14,5 @@ phases:
       python: 3.12
   build:
     commands:
-      - pip install dev_requirements/ci-requirements.txt
+      - pip install -r dev_requirements/ci-requirements.txt
       - tox
