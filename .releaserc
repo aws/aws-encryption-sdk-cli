@@ -1,0 +1,55 @@
+## Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+## SPDX-License-Identifier: Apache-2.0
+{
+    "branches": ["master"],
+    "plugins": [
+          ["@semantic-release/commit-analyzer", {
+            "preset": "conventionalcommits",
+            "parserOpts": {
+                "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES"]
+            },
+            "presetConfig": {
+                "types": [
+                    {"type": "feat", "section": "Features"},
+                    {"type": "fix", "section": "Fixes"},
+                    {"type": "chore", "section": "Maintenance"},
+                    {"type": "docs", "section": "Maintenance"},
+                    {"type": "revert", "section": "Fixes"},
+                    {"type": "style", "hidden": true},
+                    {"type": "refactor", "hidden": true},
+                    {"type": "perf", "hidden": true},
+                    {"type": "test", "hidden": true}
+                ]
+            },
+            "releaseRules": [
+                {"type": "docs", "release": "patch"},
+                {"type": "revert", "release": "patch"},
+                {"type": "chore", "release": "patch"}
+            ]
+          }],
+          ["@semantic-release/release-notes-generator", {
+            "preset": "conventionalcommits",
+            "parserOpts": {
+                "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES"]
+            },
+            "presetConfig": {
+                "types": [
+                    {"type": "feat", "section": "Features"},
+                    {"type": "fix", "section": "Fixes"},
+                    {"type": "chore", "section": "Maintenance"},
+                    {"type": "docs", "section": "Maintenance"},
+                    {"type": "revert", "section": "Fixes"},
+                    {"type": "style", "hidden": true},
+                    {"type": "refactor", "hidden": true},
+                    {"type": "perf", "hidden": true},
+                    {"type": "test", "hidden": true}
+                ]
+            }
+          }],
+          ["@semantic-release/changelog", {
+            "changelogFile": "./CHANGELOG.md",
+            "changelogTitle": "# Changelog"
+          }]
+    ],
+    "repositoryUrl": "https://github.com/josecorella/aws-encryption-sdk-cli",
+}
