@@ -25,14 +25,14 @@ jobs:
           - os: macos-latest
             architecture: x64
         python:
-          - 3.x
+          - "3.12"
         category:
           - local
 # These require credentials.
 # Enable them once we sort how to provide them.
 #          - integ
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
