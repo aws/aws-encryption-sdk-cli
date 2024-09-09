@@ -2,18 +2,36 @@
 Changelog
 *********
 
-4.2.0 -- 2023-01-19
+4.1.1 -- 2024-03-18
 ===================
 
-Deprecation
------------
-The AWS Encryption SDK CLI no longer supports Python 3.6
-as of major version 4.2.x; only Python 3.7+ is supported.
+Fixes
+-------
+* Update README.rst to specify Python support (#411 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/411)) (ec29211 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/ec29211e2d61b6b5a46bc0f7bb0362dfda36c70d))
+* Upgrade redme_renderer to 34.0 (#274 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/274)) (69ff8e6 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/69ff8e675f332cb8b6c4c2657e80b6438156a97e))
 
 Maintenance
 -----------
-* Warn on Deprecated Python 3.6 usage
-
+* bump deps (#415 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/415)) (95008aa (https://github.com/josecorella/aws-encryption-sdk-cli/commit/95008aa845c70b8459ece6ed772b45049703ef3d))
+* ci: pins deps and enables dependabot (#253 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/253)) (b32b4b2 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/b32b4b25429d891ea148be6f1d99e10961f055a2))
+* deps: bump actions/checkout from 2 to 3 (#264 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/264)) (f2efac5 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/f2efac56336b42a4f4bf72ecee9c79cf341d18f5))
+* deps: bump actions/setup-python from 2 to 4 (#285 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/285)) (f2f2e19 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/f2f2e198c34202ba903f67604337267986c5b265))
+* deps: bump bandit from 1.7.2 to 1.7.4 in /dev_requirements (#314 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/314)) (7bd51b0 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/7bd51b0dd81a22dbff0be5951ab532635de07cec))
+* deps: bump bandit from 1.7.4 to 1.7.5 in /dev_requirements (7c199ec (https://github.com/josecorella/aws-encryption-sdk-cli/commit/7c199ecb78442981c68608bc8c1638759b8f5c53))
+* deps: bump black from 22.1.0 to 22.3.0 (#271 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/271)) (0c6fbbc (https://github.com/josecorella/aws-encryption-sdk-cli/commit/0c6fbbc304ad095b15963662bd5bb3516b67b073))
+* deps: bump black from 22.3.0 to 22.8.0 in /dev_requirements (#330 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/330)) (081600a (https://github.com/josecorella/aws-encryption-sdk-cli/commit/081600a41b3758e4af5984e5679374f77b1de84a))
+* deps: bump doc8 from 0.10.1 to 1.0.0 in /dev_requirements (#334 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/334)) (d4a35e1 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/d4a35e15c0b5ff9ecb93fb95e4dd65c70f373ce2))
+* deps: bump mypy-extensions in /dev_requirements (#393 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/393)) (d154a28 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/d154a285a198a7a7f48cce57e5335cbe82e6ff99))
+* deps: bump pytest-cov from 3.0.0 to 4.1.0 in /dev_requirements (5c91209 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/5c91209b7eba327a395f97be05ccddb43098ca23))
+* deps: bump sphinx from 4.2.0 to 5.1.1 in /dev_requirements (#303 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/303)) (786809c (https://github.com/josecorella/aws-encryption-sdk-cli/commit/786809c12c3ddbef37a884cf0171848f42b45d17))
+* deps: bump tox from 3.24.5 to 3.26.0 in /dev_requirements (#336 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/336)) (13d084b (https://github.com/josecorella/aws-encryption-sdk-cli/commit/13d084b9d36726fc008c29472a641c1cb4293a9a))
+* deps: bump types-six from 1.16.18 to 1.16.21 in /dev_requirements (#338 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/338)) (e557ade (https://github.com/josecorella/aws-encryption-sdk-cli/commit/e557ade53a422a1f11a4f63ba1f35fc9cb5b796e))
+* Drop py36 from changelog (#356 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/356)) (7ed9eb5 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/7ed9eb5318dd42efd7d3ae527b3d0b401b8d2aaf))
+* drop py36 support (#344 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/344)) (5fc460e (https://github.com/josecorella/aws-encryption-sdk-cli/commit/5fc460ec800e7f712e9574be672ef04bdafcc307))
+* fix generated docs (#252 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/252)) (8d0823b (https://github.com/josecorella/aws-encryption-sdk-cli/commit/8d0823b588f551c98caf463f0d7c0e286f55ca99))
+* fix spelling (#194 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/194)) (f879856 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/f879856766d1ece3cf6ab5a3bc0f9cbae2660a0a))
+* release: add api token to staging and prod release process (#321 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/321)) (de61407 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/de614071e1cf41aa739997a5f7fa15dc7d881b8a))
+* SupportPolicy: Mark 1.x, 2.x, & 3.x End-of-Support (#317 (https://github.com/josecorella/aws-encryption-sdk-cli/issues/317)) (25cd1e6 (https://github.com/josecorella/aws-encryption-sdk-cli/commit/25cd1e62d5e7a79047922e4b0ca2360fcb4c7c23))
 
 4.1.0 -- 2021-10-11
 ===================
