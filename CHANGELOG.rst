@@ -2,17 +2,13 @@
 Changelog
 *********
 
-4.2.0 -- 2023-01-19
+4.2.0 -- 2024-09-09
 ===================
 
 Deprecation
 -----------
-The AWS Encryption SDK CLI no longer supports Python 3.6
-as of major version 4.2.x; only Python 3.7+ is supported.
-
-Maintenance
------------
-* Warn on Deprecated Python 3.6 usage
+The AWS Encryption SDK CLI no longer supports Python 3.7
+as of major version 4.2.x; only Python 3.8+ is supported.
 
 
 4.1.0 -- 2021-10-11
