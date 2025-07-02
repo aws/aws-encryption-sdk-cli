@@ -12,17 +12,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8.12', '3.9', '3.10', '3.11.0', '3.12.0']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         include:
-          - python-version: '3.8.12'
+          - python-version: '3.8'
             tox-env: 'py38-examples'
           - python-version: '3.9'
             tox-env: 'py39-examples'
           - python-version: '3.10'
             tox-env: 'py310-examples'
-          - python-version: '3.11.0'
+          - python-version: '3.11'
             tox-env: 'py311-examples'
-          - python-version: '3.12.0'
+          - python-version: '3.12'
             tox-env: 'py312-examples'
     permissions:
       id-token: write
