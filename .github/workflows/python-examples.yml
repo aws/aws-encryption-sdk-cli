@@ -24,7 +24,9 @@ jobs:
             tox-env: 'py311-examples'
           - python-version: '3.12.0'
             tox-env: 'py312-examples'
-    
+    permissions:
+      id-token: write
+      contents: read
     env:
       TOXENV: ${{ matrix.tox-env }}
       AWS_ENCRYPTION_SDK_PYTHON_INTEGRATION_TEST_AWS_KMS_KEY_ID: >-
