@@ -57,7 +57,7 @@ jobs:
           pip install "tox < 4.0"
       
       - name: Install python version specific dependencies
-        if: matrix.python-version == '3.12.0'
+        if: matrix.python-version == '3.12'
         run: |
           pip install -r dev_requirements/ci-requirements.txt
           
