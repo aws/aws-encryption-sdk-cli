@@ -54,6 +54,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install "tox < 4.0"
       
+      # Python no longer bundles setuptools starting in 3.12
       - name: Install python version specific dependencies
         if: matrix.python-version == '3.12'
         run: |
