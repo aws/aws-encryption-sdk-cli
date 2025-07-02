@@ -3,6 +3,7 @@ name: static analysis
 
 on:
   pull_request:
+    branches: [ master ]
   push:
   # Run once a day
   schedule:
