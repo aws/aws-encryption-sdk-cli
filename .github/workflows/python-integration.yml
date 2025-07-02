@@ -53,6 +53,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install "tox < 4.0"
+      
+      - name: Install python version specific dependencies
+        if: matrix.python-version == '3.12.0'
+        run: |
+          pip install -r dev_requirements/ci-requirements.txt
           
       - name: Run integration tests with tox
         run: tox
