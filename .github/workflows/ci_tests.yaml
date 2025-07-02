@@ -22,12 +22,17 @@ jobs:
           # x86 builds are only meaningful for Windows
           - os: windows-latest
             architecture: x86
+          - os: macos-13
+            architecture: x64
           - os: macos-latest
             architecture: x64
         python:
           - 3.8
           - 3.9
           - "3.10"
+          - "3.11"
+          - "3.12"
+        python-macos-latest:
           - "3.11"
           - "3.12"
         category:
@@ -38,8 +43,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
+        if: matrix.platform.os != 'macos-latest'
         with:
           python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.platform.architecture }}
+      
+      - uses: actions/setup-python@v4
+        if: matrix.platform.os == 'macos-latest'
+        with:
+          python-version: ${{ matrix.python-macos-latest }}
           architecture: ${{ matrix.platform.architecture }}
       - run: |
           python -m pip install --upgrade pip
