@@ -13,6 +13,12 @@ jobs:
   install-tests:
     name: Installation Tests
     uses: ./.github/workflows/install.yaml
+  integration-tests:
+    name: Integ Tests
+    uses: ./.github/workflows/python-integration.yml
+  examples:
+    name: Example Tests
+    uses: ./.github/workflows/python-examples.yml
   pr-ci-all-required:
     if: always()
     needs:

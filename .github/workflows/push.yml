@@ -14,3 +14,9 @@ jobs:
   install-tests:
     name: Installation Tests
     uses: ./.github/workflows/install.yaml
+  integ-tests:
+    name: Integ Tests
+    uses: ./.github/workflows/python-integration.yml
+  examples:
+    name: Example Tests
+    uses: ./.github/workflows/python-examples.yml
