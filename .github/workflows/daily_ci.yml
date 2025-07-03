@@ -1,0 +1,33 @@
+# This workflow runs every weekday at 15:00 UTC (8AM PDT)
+name: Daily CI
+
+on:
+  schedule:
+    - cron: "00 15 * * 1-5"
+
+jobs:
+  static-analysis:
+    # Don't run the cron builds on forks
+    if: github.event_name != 'schedule' || github.repository_owner == 'aws'
+    name: Static Analysis
+    uses: ./.github/workflows/ci_static-analysis.yaml
+  tests:
+    # Don't run the cron builds on forks
+    if: github.event_name != 'schedule' || github.repository_owner == 'aws'
+    name: Run Tests
+    uses: ./.github/workflows/ci_tests.yaml
+  install-tests:
+    # Don't run the cron builds on forks
+    if: github.event_name != 'schedule' || github.repository_owner == 'aws'
+    name: Installation Tests
+    uses: ./.github/workflows/install.yaml
+  integ-tests:
+    # Don't run the cron builds on forks
+    if: github.event_name != 'schedule' || github.repository_owner == 'aws'
+    name: Integ Tests
+    uses: ./.github/workflows/python-integration.yml
+  examples:
+    # Don't run the cron builds on forks
+    if: github.event_name != 'schedule' || github.repository_owner == 'aws'
+    name: Example Tests
+    uses: ./.github/workflows/python-examples.yml

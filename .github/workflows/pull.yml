@@ -1,0 +1,33 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+
+jobs:
+  static-analysis:
+    name: Static Analysis
+    uses: ./.github/workflows/ci_static-analysis.yaml
+  tests:
+    name: Run Tests
+    uses: ./.github/workflows/ci_tests.yaml
+  install-tests:
+    name: Installation Tests
+    uses: ./.github/workflows/install.yaml
+  integration-tests:
+    name: Integ Tests
+    uses: ./.github/workflows/python-integration.yml
+  examples:
+    name: Example Tests
+    uses: ./.github/workflows/python-examples.yml
+  pr-ci-all-required:
+    if: always()
+    needs:
+      - tests
+      - static-analysis
+      - install-tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Verify all required jobs passed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

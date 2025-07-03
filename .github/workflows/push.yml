@@ -1,0 +1,22 @@
+name: Pull Request Checks
+
+on:
+  push:
+    branches: master
+
+jobs:
+  static-analysis:
+    name: Static Analysis
+    uses: ./.github/workflows/ci_static-analysis.yaml
+  tests:
+    name: Run Tests
+    uses: ./.github/workflows/ci_tests.yaml
+  install-tests:
+    name: Installation Tests
+    uses: ./.github/workflows/install.yaml
+  integ-tests:
+    name: Integ Tests
+    uses: ./.github/workflows/python-integration.yml
+  examples:
+    name: Example Tests
+    uses: ./.github/workflows/python-examples.yml

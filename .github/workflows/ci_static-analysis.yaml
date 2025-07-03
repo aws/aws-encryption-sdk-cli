@@ -1,13 +1,8 @@
-# This workflow runs static analysis checks on pull requests.
+# This workflow runs static analysis checks.
 name: static analysis
 
 on:
-  pull_request:
-    branches: [ master ]
-  push:
-  # Run once a day
-  schedule:
-    - cron: '0 0 * * *'
+  workflow_call:
 
 jobs:
   analysis:
