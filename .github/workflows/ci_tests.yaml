@@ -1,12 +1,8 @@
-# This workflow runs tests on pull requests.
+# This workflow runs tests.
 name: tests
 
 on:
-  pull_request:
-  push:
-  # Run once a day
-  schedule:
-    - cron: '0 0 * * *'
+  workflow_call:
 
 jobs:
   tests:
