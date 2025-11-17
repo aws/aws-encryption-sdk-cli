@@ -122,7 +122,7 @@ def _load_master_key_provider(name):
 
         raise BadUserArgumentError(
             "Multiple entry points discovered and no package specified. Packages discovered registered by: ({})".format(
-                ", ".join([str(entry.dist) for entry in entry_points.values()])
+                ", ".join(entry_points.keys())
             )
         )
 
@@ -136,7 +136,7 @@ def _load_master_key_provider(name):
             ).format(
                 requested=name,
                 entry_point=entry_point_name,
-                discovered=", ".join([str(entry.dist) for entry in entry_points.values()]),
+                discovered=", ".join(entry_points.keys()),
             )
         )
 
