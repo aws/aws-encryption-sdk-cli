@@ -38,7 +38,7 @@ except ImportError:  # pragma: no cover
 
 __all__ = ("build_crypto_materials_manager_from_args",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
-_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, Dict[str, EntryPoint]]]
+_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, EntryPoint]]
 
 
 def _discover_entry_points():
