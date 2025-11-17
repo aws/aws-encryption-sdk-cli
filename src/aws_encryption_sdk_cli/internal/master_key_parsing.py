@@ -16,7 +16,7 @@ import logging
 from collections import defaultdict
 
 import aws_encryption_sdk
-import pkg_resources
+from importlib.metadata import entry_points, EntryPoint
 from aws_encryption_sdk import CachingCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk import DefaultCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
@@ -38,7 +38,7 @@ except ImportError:  # pragma: no cover
 
 __all__ = ("build_crypto_materials_manager_from_args",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
-_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
+_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, Dict[str, EntryPoint]]]
 
 
 def _discover_entry_points():
@@ -46,7 +46,7 @@ def _discover_entry_points():
     """Discover all registered entry points."""
     _LOGGER.debug("Discovering master key provider plugins")
 
-    for entry_point in pkg_resources.iter_entry_points(MASTER_KEY_PROVIDERS_ENTRY_POINT):
+    for entry_point in entry_points(group=MASTER_KEY_PROVIDERS_ENTRY_POINT):
         _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
         _LOGGER.debug(
             "Plugin details: %s",
@@ -67,12 +67,11 @@ def _discover_entry_points():
             )
             continue
 
-        # mypy has trouble with pkgs_resources.iter_entry_points members
-        _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point  # type: ignore
+        _ENTRY_POINTS[entry_point.name][entry_point.dist.name] = entry_point  # type: ignore
 
 
 def _entry_points():
-    # type: () -> DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
+    # type: () -> DefaultDict[str, Dict[str, EntryPoint]]
     """Discover all entry points for required groups if they have not already been found.
 
     :returns: Mapping of group to name to entry points
