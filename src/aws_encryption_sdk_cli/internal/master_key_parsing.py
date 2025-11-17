@@ -57,9 +57,9 @@ def _discover_entry_points():
             "Plugin details: %s",
             dict(
                 name=entry_point.name,
-                module_name=entry_point.module_name,
-                attrs=entry_point.attrs,
-                extras=entry_point.extras,
+                module_name=getattr(entry_point, 'module_name', getattr(entry_point, 'module', None)),
+                attrs=getattr(entry_point, 'attrs', getattr(entry_point, 'attr', None)),
+                extras=getattr(entry_point, 'extras', None),
                 dist=entry_point.dist,
             ),
         )
