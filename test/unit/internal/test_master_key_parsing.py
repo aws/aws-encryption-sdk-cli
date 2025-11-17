@@ -60,8 +60,8 @@ def patch_aws_encryption_sdk(mocker):
 
 @pytest.fixture
 def patch_iter_entry_points(mocker):
-    mocker.patch.object(master_key_parsing.pkg_resources, "iter_entry_points")
-    yield master_key_parsing.pkg_resources.iter_entry_points
+    mocker.patch("aws_encryption_sdk_cli.internal.master_key_parsing.entry_points")
+    yield master_key_parsing.entry_points
 
 
 @pytest.fixture
