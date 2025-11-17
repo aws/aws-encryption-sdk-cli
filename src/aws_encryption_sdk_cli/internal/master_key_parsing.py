@@ -46,9 +46,6 @@ def _discover_entry_points():
     """Discover all registered entry points."""
     _LOGGER.debug("Discovering master key provider plugins")
 
-    # Scan installed distributions and their entry points so we can
-    # associate each entry point with its distribution name, similar
-    # to pkg_resources.EntryPoint.dist.project_name.
     for dist in distributions():
         dist_name = dist.metadata.get("Name") or dist.metadata.get("name") or "unknown"
 
@@ -79,8 +76,6 @@ def _discover_entry_points():
                 )
                 continue
 
-            # Maintain the same shape as the old pkg_resources mapping:
-            # _ENTRY_POINTS[entry_point.name][dist.project_name] = entry_point
             _ENTRY_POINTS[entry_point.name][dist_name] = entry_point
 
 
