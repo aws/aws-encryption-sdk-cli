@@ -47,9 +47,9 @@ def _discover_entry_points():
     _LOGGER.debug("Discovering master key provider plugins")
 
     try:
-        eps = entry_points().select(group = MASTER_KEY_PROVIDERS_ENTRY_POINT)        
-    except TypeError:
-        eps = entry_points(group = MASTER_KEY_PROVIDERS_ENTRY_POINT)
+        eps = entry_points().select(group=MASTER_KEY_PROVIDERS_ENTRY_POINT)        
+    except (TypeError, AttributeError):
+        eps = entry_points().get(MASTER_KEY_PROVIDERS_ENTRY_POINT, [])
 
     for entry_point in eps:
         _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
