@@ -14,9 +14,9 @@
 import copy
 import logging
 from collections import defaultdict
+from importlib.metadata import EntryPoint, distributions
 
 import aws_encryption_sdk
-from importlib.metadata import EntryPoint, distributions
 from aws_encryption_sdk import CachingCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk import DefaultCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
