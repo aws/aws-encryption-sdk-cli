@@ -16,7 +16,7 @@ import logging
 from collections import defaultdict
 
 import aws_encryption_sdk
-from importlib.metadata import entry_points, EntryPoint
+from importlib.metadata import entry_points, EntryPoint, distributions
 from aws_encryption_sdk import CachingCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk import DefaultCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
@@ -46,33 +46,42 @@ def _discover_entry_points():
     """Discover all registered entry points."""
     _LOGGER.debug("Discovering master key provider plugins")
 
-    try:
-        eps = entry_points().select(group=MASTER_KEY_PROVIDERS_ENTRY_POINT)        
-    except (TypeError, AttributeError):
-        eps = entry_points().get(MASTER_KEY_PROVIDERS_ENTRY_POINT, [])
+    # Scan installed distributions and their entry points so we can
+    # associate each entry point with its distribution name, similar
+    # to pkg_resources.EntryPoint.dist.project_name.
+    for dist in distributions():
+        dist_name = dist.metadata.get("Name") or dist.metadata.get("name") or "unknown"
 
-    for entry_point in eps:
-        _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
-        _LOGGER.debug(
-            "Plugin details: %s",
-            dict(
-                name=entry_point.name,
-                module_name=getattr(entry_point, 'module_name', getattr(entry_point, 'module', None)),
-                attrs=getattr(entry_point, 'attrs', getattr(entry_point, 'attr', None)),
-                extras=getattr(entry_point, 'extras', None),
-                dist=entry_point.dist,
-            ),
-        )
+        for entry_point in dist.entry_points:
+            if entry_point.group != MASTER_KEY_PROVIDERS_ENTRY_POINT:
+                continue
 
-        if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
-            _LOGGER.warning(
-                'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
-                PLUGIN_NAMESPACE_DIVIDER,
-                entry_point.name,
+            # entry_point.value looks like "pkg.module:attr"
+            module_name, _, attr = entry_point.value.partition(":")
+
+            _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, dist_name)
+            _LOGGER.debug(
+                "Plugin details: %s",
+                dict(
+                    name=entry_point.name,
+                    module_name=module_name,
+                    attrs=[attr] if attr else [],
+                    extras=getattr(entry_point, "extras", ()),
+                    dist=dist_name,
+                ),
             )
-            continue
 
-        _ENTRY_POINTS[entry_point.name][entry_point.dist.name] = entry_point  # type: ignore
+            if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
+                _LOGGER.warning(
+                    'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
+                    PLUGIN_NAMESPACE_DIVIDER,
+                    entry_point.name,
+                )
+                continue
+
+            # Maintain the same shape as the old pkg_resources mapping:
+            # _ENTRY_POINTS[entry_point.name][dist.project_name] = entry_point
+            _ENTRY_POINTS[entry_point.name][dist_name] = entry_point
 
 
 def _entry_points():
