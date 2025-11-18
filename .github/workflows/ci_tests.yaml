@@ -4,6 +4,9 @@ name: tests
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   tests:
     runs-on: ${{ matrix.platform.os }}
