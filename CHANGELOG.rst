@@ -2,6 +2,14 @@
 Changelog
 *********
 
+4.3.0 -- 2025-11-24
+===================
+
+Deprecation
+-----------
+* Removed ``pkg_resources`` in favor of ``importlib.metadata``
+`#428 <https://github.com/aws/aws-encryption-sdk-cli/pull/428>` __.
+
 4.2.0 -- 2024-09-09
 ===================
 
