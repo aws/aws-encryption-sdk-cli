@@ -8,7 +8,7 @@ Changelog
 Deprecation
 -----------
 * Removed ``pkg_resources`` in favor of ``importlib.metadata``
-`#428 <https://github.com/aws/aws-encryption-sdk-cli/pull/428>` __.
+  `#428 <https://github.com/aws/aws-encryption-sdk-cli/pull/428>` __.
 
 4.2.0 -- 2024-09-09
 ===================
