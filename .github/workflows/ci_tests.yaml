@@ -18,11 +18,8 @@ jobs:
           # x86 builds are only meaningful for Windows
           - os: windows-latest
             architecture: x86
-          - os: macos-13
-            architecture: x64
+          - os: macos-14
         python:
-          - 3.8
-          - 3.9
           - "3.10"
           - "3.11"
           - "3.12"
