@@ -96,18 +96,18 @@ def patch_json_ready_header_auth(mocker):
     return io_handling.json_ready_header_auth
 
 
-GOOD_IOHANDLER_KWARGS = {
-    "metadata_writer": metadata.MetadataWriter(True)(),
-    "interactive": False,
-    "no_overwrite": False,
-    "decode_input": False,
-    "encode_output": False,
-    "required_encryption_context": {},
-    "required_enc_context_keys": [],
-    "commitment_policy": CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
-    "buffer_output": False,
-    "max_encrypted_data_keys": None,
-}
+GOOD_IOHANDLER_KWARGS = dict(
+    metadata_writer=metadata.MetadataWriter(True)(),
+    interactive=False,
+    no_overwrite=False,
+    decode_input=False,
+    encode_output=False,
+    required_encryption_context={},
+    required_encryption_context_keys=[],
+    commitment_policy=CommitmentPolicy.REQUIRE_ENCRYPT_REQUIRE_DECRYPT,
+    buffer_output=False,
+    max_encrypted_data_keys=None,
+)
 
 
 @pytest.fixture
@@ -196,15 +196,15 @@ def test_iohandler_attrs_good():
 @pytest.mark.parametrize(
     "kwargs",
     (
-        {"metadata_writer": "not a MetadataWriter"},
-        {"interactive": "not a bool"},
-        {"no_overwrite": "not a bool"},
-        {"decode_input": "not a bool"},
-        {"encode_output": "not a bool"},
-        {"encryption_context": "not a dict"},
-        {"required_enc_context_keys": "not a list"},
-        {"commitment_policy": "not a CommitmentPolicy"},
-        {"buffer_output": "not a bool"},
+        dict(metadata_writer="not a MetadataWriter"),
+        dict(interactive="not a bool"),
+        dict(no_overwrite="not a bool"),
+        dict(decode_input="not a bool"),
+        dict(encode_output="not a bool"),
+        dict(encryption_context="not a dict"),
+        dict(required_encryption_context_keys="not a list"),
+        dict(commitment_policy="not a CommitmentPolicy"),
+        dict(buffer_output="not a bool"),
     ),
 )
 def test_iohandler_attrs_fail(kwargs):
@@ -412,7 +412,7 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
     assert not os.path.exists(str(target))
     # Should always be true regardless of input if file does not exist
     kwargs = GOOD_IOHANDLER_KWARGS.copy()
-    kwargs.update({"interactive": interactive, "no_overwrite": no_overwrite})
+    kwargs.update(dict(interactive=interactive, no_overwrite=no_overwrite))
     handler = io_handling.IOHandler(**kwargs)
 
     assert handler._should_write_file(str(target))
@@ -430,12 +430,12 @@ def test_f_should_write_file_does_not_exist(tmpdir, interactive, no_overwrite):
         (False, False, None, True),  # interactive is not set, and no_overwrite is not set
     ),
 )
-def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, expected):  # pylint: disable=too-many-positional-arguments
+def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overwrite, user_input, expected):
     target_file = tmpdir.join("target")
     target_file.write(b"")
     patch_input.return_value = user_input
     kwargs = GOOD_IOHANDLER_KWARGS.copy()
-    kwargs.update({"interactive": interactive, "no_overwrite": no_overwrite})
+    kwargs.update(dict(interactive=interactive, no_overwrite=no_overwrite))
     handler = io_handling.IOHandler(**kwargs)
 
     should_write = handler._should_write_file(str(target_file))
@@ -463,19 +463,19 @@ def test_should_write_file_does_exist(tmpdir, patch_input, interactive, no_overw
         ("decrypt-unsigned", True, True, 1.0),
     ),
 )
-def test_process_single_file(  # pylint: disable=too-many-positional-arguments
+def test_process_single_file(
     tmpdir, patch_process_single_operation, mode, decode_input, encode_output, expected_multiplier
 ):
     patch_process_single_operation.return_value = identifiers.OperationResult.SUCCESS
     source = tmpdir.join("source")
     source.write("some data")
     kwargs = GOOD_IOHANDLER_KWARGS.copy()
-    kwargs.update({"decode_input": decode_input, "encode_output": encode_output})
+    kwargs.update(dict(decode_input=decode_input, encode_output=encode_output))
     handler = io_handling.IOHandler(**kwargs)
     destination = tmpdir.join("destination")
-    initial_kwargs = {"mode": mode, "a": sentinel.a, "b": sentinel.b}
+    initial_kwargs = dict(mode=mode, a=sentinel.a, b=sentinel.b)
     expected_length = int(os.path.getsize(str(source)) * expected_multiplier)
-    updated_kwargs = {"mode": mode, "a": sentinel.a, "b": sentinel.b, "source_length": expected_length}
+    updated_kwargs = dict(mode=mode, a=sentinel.a, b=sentinel.b, source_length=expected_length)
     with patch("aws_encryption_sdk_cli.internal.io_handling.open", create=True) as mock_open:
         handler.process_single_file(stream_args=initial_kwargs, source=str(source), destination=str(destination))
     mock_open.assert_called_once_with(str(source), "rb")

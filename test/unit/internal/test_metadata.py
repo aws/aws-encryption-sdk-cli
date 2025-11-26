@@ -25,22 +25,22 @@ from aws_encryption_sdk_cli.exceptions import BadUserArgumentError
 from aws_encryption_sdk_cli.internal import metadata
 
 pytestmark = [pytest.mark.unit, pytest.mark.local]
-GOOD_INIT_KWARGS = {"suppress_output": False}
+GOOD_INIT_KWARGS = dict(suppress_output=False)
 
 
 @pytest.mark.parametrize(
     "init_kwargs, call_kwargs",
     (
-        ({"suppress_output": True}, {}),
-        ({"suppress_output": False}, {"output_file": "-"}),
-        ({"suppress_output": False}, {"output_file": "asdf"}),
+        (dict(suppress_output=True), {}),
+        (dict(suppress_output=False), dict(output_file="-")),
+        (dict(suppress_output=False), dict(output_file="asdf")),
     ),
 )
 def test_attrs_good(init_kwargs, call_kwargs):
     metadata.MetadataWriter(**init_kwargs)(**call_kwargs)
 
 
-@pytest.mark.parametrize("init_kwargs_patch, error_type", (({"suppress_output": None}, TypeError),))
+@pytest.mark.parametrize("init_kwargs_patch, error_type", ((dict(suppress_output=None), TypeError),))
 def test_attrs_fail(init_kwargs_patch, error_type):
     """Verifying that validators are applied because we overwrite attrs init."""
     init_kwargs = GOOD_INIT_KWARGS.copy()
@@ -52,7 +52,7 @@ def test_attrs_fail(init_kwargs_patch, error_type):
 
 @pytest.mark.parametrize(
     "init_kwargs, call_kwargs, error_type, error_message",
-    (({"suppress_output": False}, {}, TypeError, r"output_file cannot be None when suppress_output is False"),),
+    ((dict(suppress_output=False), {}, TypeError, r"output_file cannot be None when suppress_output is False"),),
 )
 def test_custom_fail(init_kwargs, call_kwargs, error_type, error_message):
     with pytest.raises(error_type) as excinfo:

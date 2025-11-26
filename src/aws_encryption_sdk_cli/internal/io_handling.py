@@ -34,8 +34,7 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
 
     from aws_encryption_sdk_cli.internal.mypy_types import SOURCE, STREAM_KWARGS  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
-    def cast(typ, val):  # noqa pylint: disable=invalid-name,missing-function-docstring,unused-argument
-        return val
+    cast = lambda typ, val: val  # noqa pylint: disable=invalid-name
     IO = None  # type: ignore
     # We only actually need the other imports when running the mypy checks
 
@@ -192,10 +191,9 @@ class IOHandler(object):
         interactive,  # type: bool
         no_overwrite,  # type: bool
         decode_input,  # type: bool
-        *,
         encode_output,  # type: bool
         required_encryption_context,  # type: Dict[str, str]
-        required_enc_context_keys,  # type: List[str]
+        required_encryption_context_keys,  # type: List[str]
         commitment_policy,  # type: CommitmentPolicy
         buffer_output,
         max_encrypted_data_keys,  # type: Union[None, int]
@@ -211,7 +209,7 @@ class IOHandler(object):
         self.decode_input = decode_input
         self.encode_output = encode_output
         self.required_encryption_context = required_encryption_context
-        self.required_encryption_context_keys = required_enc_context_keys
+        self.required_encryption_context_keys = required_encryption_context_keys  # pylint: disable=invalid-name
         self.buffer_output = buffer_output
         self.client = aws_encryption_sdk.EncryptionSDKClient(
             commitment_policy=commitment_policy,
@@ -235,12 +233,12 @@ class IOHandler(object):
             destination_writer, self.encode_output
         ) as _destination:  # noqa pylint: disable=line-too-long
             with self.client.stream(source=_source, **stream_args) as handler, self.metadata_writer as metadata:
-                metadata_kwargs = {
-                    "mode": stream_args["mode"],
-                    "input": source.name,
-                    "output": destination_writer.name,
-                    "header": json_ready_header(handler.header),
-                }
+                metadata_kwargs = dict(
+                    mode=stream_args["mode"],
+                    input=source.name,
+                    output=destination_writer.name,
+                    header=json_ready_header(handler.header),
+                )
                 try:
                     header_auth = handler.header_auth
                 except AttributeError:
@@ -258,12 +256,12 @@ class IOHandler(object):
                             "Skipping decrypt because discovered encryption context did not match required elements."
                         )
                         metadata_kwargs.update(
-                            {
-                                "skipped": True,
-                                "reason": "Missing encryption context key or value",
-                                "missing_encryption_context_keys": list(missing_keys),
-                                "missing_encryption_context_pairs": list(missing_pairs),
-                            }
+                            dict(
+                                skipped=True,
+                                reason="Missing encryption context key or value",
+                                missing_encryption_context_keys=list(missing_keys),
+                                missing_encryption_context_pairs=list(missing_pairs),
+                            )
                         )
                         metadata.write_metadata(**metadata_kwargs)
                         return OperationResult.FAILED_VALIDATION

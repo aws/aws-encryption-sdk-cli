@@ -40,8 +40,7 @@ try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
         RAW_CONFIG,
     )
 except ImportError:  # pragma: no cover
-    def cast(typ, val):  # noqa pylint: disable=invalid-name,missing-function-docstring,unused-argument
-        return val
+    cast = lambda typ, val: val  # noqa pylint: disable=invalid-name
     # We only actually need the other imports when running the mypy checks
 
 __all__ = ("parse_args",)
@@ -665,6 +664,6 @@ def parse_args(raw_args=None):
         if parsed_args.caching is not None:
             parsed_args.caching = _process_caching_config(parsed_args.caching)
     except ParameterParseError as error:
-        parser.error(str(error))
+        parser.error(*error.args)
 
     return parsed_args

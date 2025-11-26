@@ -2,6 +2,7 @@
 # Disabling messages that we either don't care about
 # for tests or are necessary to break for tests.
 disable =
+    bad-continuation,  # we let black handle this
     ungrouped-imports,  # we let black handle this
     duplicate-code,  # we have several functions in io_handling with similar profiles
     # All below are disabled because we need to support Python 2

@@ -59,13 +59,13 @@ def _discover_entry_points():
             _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, dist_name)
             _LOGGER.debug(
                 "Plugin details: %s",
-                {
-                    "name": entry_point.name,
-                    "module_name": module_name,
-                    "attrs": [attr] if attr else [],
-                    "extras": getattr(entry_point, "extras", ()),
-                    "dist": dist_name,
-                },
+                dict(
+                    name=entry_point.name,
+                    module_name=module_name,
+                    attrs=[attr] if attr else [],
+                    extras=getattr(entry_point, "extras", ()),
+                    dist=dist_name,
+                ),
             )
 
             if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:

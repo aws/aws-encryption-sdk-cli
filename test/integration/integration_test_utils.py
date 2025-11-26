@@ -14,7 +14,7 @@
 import logging
 import os
 import platform
-import shutil
+from distutils.spawn import find_executable  # distutils confuses pylint: disable=import-error,no-name-in-module
 
 import pytest
 import six
@@ -30,9 +30,10 @@ def is_windows():
 
 
 def aws_encryption_cli_is_findable():
-    path = shutil.which("aws-encryption-cli")
+    path = find_executable("aws-encryption-cli")
     if path is None:
-        raise UserWarning("aws-encryption-cli executable could not be found")
+        UserWarning("aws-encryption-cli executable could not be found")
+        return False
     return True
 
 
