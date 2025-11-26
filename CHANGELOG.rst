@@ -7,9 +7,7 @@ Changelog
 
 Deprecation
 -----------
------------
-* The AWS Encryption SDK CLI no longer supports Python 3.8 and 3.9
-as of major version 4.3.x; only Python 3.10+ is supported.
+* The AWS Encryption SDK CLI no longer supports Python < 3.10 as of major version 4.3.x; only Python 3.10+ is supported.
 * Removed ``pkg_resources`` in favor of ``importlib.metadata``
   `#428 <https://github.com/aws/aws-encryption-sdk-cli/pull/428>`_
 
