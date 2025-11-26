@@ -374,8 +374,7 @@ class IOHandler(object):
             operation_result = OperationResult.FAILED
             raise
         finally:
-            # pylint: disable=no-member, used-before-assignment
-            if operation_result.needs_cleanup and destination != "-":
+            if operation_result.needs_cleanup and destination != "-":  # pylint:disable=no-member,used-before-assignment
                 _LOGGER.warning("Operation failed: deleting output file: %s", destination)
                 try:
                     os.remove(destination)
