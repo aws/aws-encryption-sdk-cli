@@ -47,7 +47,7 @@ def _discover_entry_points():
     _LOGGER.debug("Discovering master key provider plugins")
 
     for dist in distributions():
-        dist_name = dist.metadata.get("Name") or dist.metadata.get("name") or "unknown"
+        dist_name = dist.metadata['Name'] or dist.metadata['name'] or "unknown"
 
         for entry_point in dist.entry_points:
             if entry_point.group != MASTER_KEY_PROVIDERS_ENTRY_POINT:
