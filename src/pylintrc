@@ -1,4 +1,5 @@
 [MESSAGES CONTROL]
+errors-only = yes
 # Disabling messages that we either don't care about
 # for tests or are necessary to break for tests.
 disable =
