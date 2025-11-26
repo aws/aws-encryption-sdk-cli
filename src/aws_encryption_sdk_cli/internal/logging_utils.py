@@ -19,7 +19,8 @@ import logging
 try:  # Python 3.5.0 and 3.5.1 have incompatible typing modules
     from typing import Dict, Sequence, Text, Union, cast  # noqa pylint: disable=unused-import
 except ImportError:  # pragma: no cover
-    cast = lambda typ, val: val  # noqa pylint: disable=invalid-name
+    def cast(typ, val):  # noqa pylint: disable=invalid-name,missing-function-docstring,unused-argument
+        return val
     # We only actually need the other imports when running the mypy checks
 
 __all__ = ("setup_logger", "LOGGER_NAME")
@@ -33,7 +34,7 @@ _REDACTED = "<**-redacted-**>"  # type: str
 class _KMSKeyRedactingFormatter(logging.Formatter):
     """Log formatter that redacts ``Plaintext`` values from KMS request and response bodies."""
 
-    def __to_str(self, value):  # pylint: disable=no-self-use
+    def __to_str(self, value):
         # type: (Union[Text, str, bytes]) -> Text
         """Converts bytes or str to str.
 
@@ -45,7 +46,7 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
             return codecs.decode(value, "utf-8")
         return value
 
-    def __is_kms_encrypt_request(self, record):  # pylint: disable=no-self-use
+    def __is_kms_encrypt_request(self, record):
         # type: (logging.LogRecord) -> bool
         """Determine if a record contains a kms:Encrypt request.
 
@@ -76,9 +77,9 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
             parsed_body["Plaintext"] = _REDACTED
             cast(tuple, record.args)[-1]["body"] = json.dumps(parsed_body, sort_keys=True)
         except Exception:  # pylint: disable=broad-except
-            return
+            pass
 
-    def __is_kms_response_with_plaintext(self, record):  # pylint: disable=no-self-use
+    def __is_kms_response_with_plaintext(self, record):
         # type: (logging.LogRecord) -> bool
         """Determine if a record contains a KMS response with plaintext.
 
@@ -111,7 +112,7 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
             new_args = (json.dumps(parsed_body, sort_keys=True),) + cast(tuple, record.args)[1:]
             record.args = new_args
         except Exception:  # pylint: disable=broad-except
-            return
+            pass
 
     def __redact_record(self, record):
         # type: (logging.LogRecord) -> logging.LogRecord
