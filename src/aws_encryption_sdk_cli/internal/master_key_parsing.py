@@ -14,9 +14,9 @@
 import copy
 import logging
 from collections import defaultdict
+from importlib.metadata import EntryPoint, distributions
 
 import aws_encryption_sdk
-import pkg_resources
 from aws_encryption_sdk import CachingCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk import DefaultCryptoMaterialsManager  # noqa pylint: disable=unused-import
 from aws_encryption_sdk.key_providers.base import MasterKeyProvider  # noqa pylint: disable=unused-import
@@ -38,7 +38,7 @@ except ImportError:  # pragma: no cover
 
 __all__ = ("build_crypto_materials_manager_from_args",)
 _LOGGER = logging.getLogger(LOGGER_NAME)
-_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
+_ENTRY_POINTS = defaultdict(dict)  # type: DefaultDict[str, Dict[str, EntryPoint]]
 
 
 def _discover_entry_points():
@@ -46,33 +46,41 @@ def _discover_entry_points():
     """Discover all registered entry points."""
     _LOGGER.debug("Discovering master key provider plugins")
 
-    for entry_point in pkg_resources.iter_entry_points(MASTER_KEY_PROVIDERS_ENTRY_POINT):
-        _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, entry_point.dist)
-        _LOGGER.debug(
-            "Plugin details: %s",
-            dict(
-                name=entry_point.name,
-                module_name=entry_point.module_name,
-                attrs=entry_point.attrs,
-                extras=entry_point.extras,
-                dist=entry_point.dist,
-            ),
-        )
+    for dist in distributions():
+        dist_name = dist.metadata['Name'] or dist.metadata['name'] or "unknown"
 
-        if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
-            _LOGGER.warning(
-                'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
-                PLUGIN_NAMESPACE_DIVIDER,
-                entry_point.name,
+        for entry_point in dist.entry_points:
+            if entry_point.group != MASTER_KEY_PROVIDERS_ENTRY_POINT:
+                continue
+
+            # entry_point.value looks like "pkg.module:attr"
+            module_name, _, attr = entry_point.value.partition(":")
+
+            _LOGGER.info('Collecting plugin "%s" registered by "%s"', entry_point.name, dist_name)
+            _LOGGER.debug(
+                "Plugin details: %s",
+                dict(
+                    name=entry_point.name,
+                    module_name=module_name,
+                    attrs=[attr] if attr else [],
+                    extras=getattr(entry_point, "extras", ()),
+                    dist=dist_name,
+                ),
             )
-            continue
 
-        # mypy has trouble with pkgs_resources.iter_entry_points members
-        _ENTRY_POINTS[entry_point.name][entry_point.dist.project_name] = entry_point  # type: ignore
+            if PLUGIN_NAMESPACE_DIVIDER in entry_point.name:
+                _LOGGER.warning(
+                    'Invalid substring "%s" in discovered entry point "%s". It will not be usable.',
+                    PLUGIN_NAMESPACE_DIVIDER,
+                    entry_point.name,
+                )
+                continue
+
+            _ENTRY_POINTS[entry_point.name][dist_name] = entry_point
 
 
 def _entry_points():
-    # type: () -> DefaultDict[str, Dict[str, pkg_resources.EntryPoint]]
+    # type: () -> DefaultDict[str, Dict[str, EntryPoint]]
     """Discover all entry points for required groups if they have not already been found.
 
     :returns: Mapping of group to name to entry points
@@ -109,7 +117,7 @@ def _load_master_key_provider(name):
 
         raise BadUserArgumentError(
             "Multiple entry points discovered and no package specified. Packages discovered registered by: ({})".format(
-                ", ".join([str(entry.dist) for entry in entry_points.values()])
+                ", ".join(entry_points.keys())
             )
         )
 
@@ -123,7 +131,7 @@ def _load_master_key_provider(name):
             ).format(
                 requested=name,
                 entry_point=entry_point_name,
-                discovered=", ".join([str(entry.dist) for entry in entry_points.values()]),
+                discovered=", ".join(entry_points.keys()),
             )
         )
 

@@ -59,9 +59,8 @@ def patch_aws_encryption_sdk(mocker):
 
 
 @pytest.fixture
-def patch_iter_entry_points(mocker):
-    mocker.patch.object(master_key_parsing.pkg_resources, "iter_entry_points")
-    yield master_key_parsing.pkg_resources.iter_entry_points
+def patch_distributions(mocker):
+    yield mocker.patch.object(master_key_parsing, "distributions")
 
 
 @pytest.fixture
@@ -84,8 +83,10 @@ def entry_points_cleaner():
 
 
 # "name" is a special, non-overridable attribute on mock objects
-FakeEntryPoint = namedtuple("FakeEntryPoint", ["name", "module_name", "attrs", "extras", "dist"])
-FakeEntryPoint.__new__.__defaults__ = ("MODULE", "ATTRS", "EXTRAS", MagicMock(project_name="PROJECT"))
+FakeEntryPoint = namedtuple("FakeEntryPoint", ["name", "value", "group", "extras"])
+FakeEntryPoint.__new__.__defaults__ = ("MODULE:ATTR", "GROUP", "EXTRAS")
+
+FakeDistribution = namedtuple("FakeDistribution", ["metadata", "entry_points"])
 
 
 def test_entry_points(monkeypatch):
@@ -99,8 +100,15 @@ def test_entry_points_aws_kms():
     assert master_key_parsing._entry_points()["aws-kms"]["aws-encryption-sdk-cli"].load() is aws_kms_master_key_provider
 
 
-def test_entry_points_invalid_substring(logger_stream, patch_iter_entry_points):
-    patch_iter_entry_points.return_value = [FakeEntryPoint("BAD::NAME")]
+def test_entry_points_invalid_substring(logger_stream, patch_distributions):
+    bad_ep = FakeEntryPoint(
+        name="BAD::NAME",
+        value="module:attr",
+        group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
+    )
+    fake_dist = FakeDistribution(metadata={"Name": "fake-dist"}, entry_points=[bad_ep])
+    patch_distributions.return_value = [fake_dist]
+
     master_key_parsing._discover_entry_points()
 
     key = 'Invalid substring "::" in discovered entry point "BAD::NAME". It will not be usable.'
@@ -109,11 +117,28 @@ def test_entry_points_invalid_substring(logger_stream, patch_iter_entry_points):
     assert "BAD::NAME" not in master_key_parsing._ENTRY_POINTS
 
 
-def test_entry_points_multiple_per_name(entry_points_cleaner, patch_iter_entry_points):
-    entry_point_a = FakeEntryPoint(name="aws-kms", dist=MagicMock(project_name="aws-encryption-sdk-cli"))
-    entry_point_b = FakeEntryPoint(name="aws-kms", dist=MagicMock(project_name="some-other-thing"))
-    entry_point_c = FakeEntryPoint(name="zzz", dist=MagicMock(project_name="yet-another-thing"))
-    patch_iter_entry_points.return_value = [entry_point_a, entry_point_b, entry_point_c]
+def test_entry_points_multiple_per_name(entry_points_cleaner, patch_distributions):
+    entry_point_a = FakeEntryPoint(
+        name="aws-kms",
+        value="module_a:attr",
+        group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
+    )
+    entry_point_b = FakeEntryPoint(
+        name="aws-kms",
+        value="module_b:attr",
+        group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
+    )
+    entry_point_c = FakeEntryPoint(
+        name="zzz",
+        value="module_c:attr",
+        group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
+    )
+
+    dist_a = FakeDistribution(metadata={"Name": "aws-encryption-sdk-cli"}, entry_points=[entry_point_a])
+    dist_b = FakeDistribution(metadata={"Name": "some-other-thing"}, entry_points=[entry_point_b])
+    dist_c = FakeDistribution(metadata={"Name": "yet-another-thing"}, entry_points=[entry_point_c])
+
+    patch_distributions.return_value = [dist_a, dist_b, dist_c]
 
     test = master_key_parsing._entry_points()
 
@@ -142,9 +167,15 @@ def test_load_master_key_provider_known_name_only_multiple_entry_points(monkeypa
         "aws-kms",
         {
             "aws-encryption-sdk-cli": FakeEntryPoint(
-                name="aws-kms", dist=MagicMock(project_name="aws-encryption-sdk-cli")
+                name="aws-kms",
+                value="module_a:attr",
+                group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
             ),
-            "my-fake-package": FakeEntryPoint(name="aws-kms", module_name="my-fake-package"),
+            "my-fake-package": FakeEntryPoint(
+                name="aws-kms",
+                value="module_b:attr",
+                group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
+            ),
         },
     )
 
@@ -164,14 +195,21 @@ def test_load_master_key_provider_known_name_unknown_name(monkeypatch):
     monkeypatch.setitem(
         master_key_parsing._ENTRY_POINTS,
         "aws-kms",
-        {"my-fake-package": FakeEntryPoint(name="aws-kms", module_name="my-fake-package")},
+        {
+            "my-fake-package": FakeEntryPoint(
+                name="aws-kms",
+                value="module_b:attr",
+                group=master_key_parsing.MASTER_KEY_PROVIDERS_ENTRY_POINT,
+            )
+        },
     )
 
     with pytest.raises(BadUserArgumentError) as excinfo:
         master_key_parsing._load_master_key_provider("aws-encryption-sdk-cli::aws-kms")
 
     excinfo.match(
-        r'Requested master key provider not found: "aws-encryption-sdk-cli::aws-kms". Packages discovered for *'
+        r'Requested master key provider not found: "aws-encryption-sdk-cli::aws-kms". '
+        r'Packages discovered for "aws-kms" registered by: .*'
     )
 
 

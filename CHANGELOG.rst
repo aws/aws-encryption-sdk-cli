@@ -2,6 +2,20 @@
 Changelog
 *********
 
+4.3.0 -- 2025-11-24
+===================
+
+Deprecation
+-----------
+* The AWS Encryption SDK CLI no longer supports Python < 3.10 as of major version 4.3.x; only Python 3.10+ is supported.
+* Removed ``pkg_resources`` in favor of ``importlib.metadata``
+  `#428 <https://github.com/aws/aws-encryption-sdk-cli/pull/428>`_
+
+Operational
+-----------
+* Drop release dependency on ``pypi-parker``
+
+
 4.2.0 -- 2024-09-09
 ===================
 
