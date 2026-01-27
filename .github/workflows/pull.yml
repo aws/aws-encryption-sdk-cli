@@ -3,6 +3,9 @@ name: Pull Request Checks
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   static-analysis:
     name: Static Analysis
