@@ -34,7 +34,7 @@ This table describes the current support status of each major version of the AWS
       - 
       - 
     * - 4.x
-      - General Availability 
+      - Maintenance
       - 
       -
 
