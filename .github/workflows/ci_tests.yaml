@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   tests:
-    runs-on: ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.os == 'ubuntu-latest' && format('codebuild-CryptoToolsCI-linux-aws-encryption-sdk-cli-{0}-{1}', github.run_id, github.run_attempt) || matrix.platform.os }}
     strategy:
       fail-fast: true
       matrix:
