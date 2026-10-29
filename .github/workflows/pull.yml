@@ -14,9 +14,29 @@ jobs:
   tests:
     name: Run Tests
     uses: ./.github/workflows/ci_tests.yaml
+    with:
+      platforms: >-
+        [{"os": "ubuntu-latest", "architecture": "x64", "runner": "codebuild-CryptoToolsCI-linux-aws-encryption-sdk-cli-${{ github.run_id }}-${{ github.run_attempt }}"}]
+  tests-macos-windows:
+    name: Run Tests (macOS, Windows)
+    uses: ./.github/workflows/ci_tests.yaml
+    with:
+      platforms: >-
+        [{"os": "windows-latest", "architecture": "x64", "runner": "windows-latest"},
+         {"os": "macos-14", "runner": "macos-14"}]
   install-tests:
     name: Installation Tests
     uses: ./.github/workflows/install.yaml
+    with:
+      platforms: >-
+        [{"os": "ubuntu-latest", "architecture": "x64", "runner": "codebuild-CryptoToolsCI-linux-aws-encryption-sdk-cli-${{ github.run_id }}-${{ github.run_attempt }}"}]
+  install-tests-macos-windows:
+    name: Installation Tests (macOS, Windows)
+    uses: ./.github/workflows/install.yaml
+    with:
+      platforms: >-
+        [{"os": "windows-latest", "architecture": "x64", "runner": "windows-latest"},
+         {"os": "macos-latest", "architecture": "x64", "runner": "macos-latest"}]
   integration-tests:
     name: Integ Tests
     uses: ./.github/workflows/python-integration.yml
@@ -29,7 +49,7 @@ jobs:
       - tests
       - static-analysis
       - install-tests
-    runs-on: ubuntu-22.04
+    runs-on: codebuild-CryptoToolsCI-linux-aws-encryption-sdk-cli-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Verify all required jobs passed
         uses: re-actors/alls-green@release/v1
