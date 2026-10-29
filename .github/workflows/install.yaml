@@ -6,14 +6,17 @@ on:
     inputs:
       platforms:
         type: string
-        default: '[{"os": "ubuntu-latest", "architecture": "x64"}, {"os": "windows-latest", "architecture": "x64"}, {"os": "macos-latest", "architecture": "x64"}]'
+        default: >-
+          [{"os": "ubuntu-latest", "architecture": "x64", "runner": "codebuild-CryptoToolsCI-linux-aws-encryption-sdk-cli-${{ github.run_id }}-${{ github.run_attempt }}"},
+           {"os": "windows-latest", "architecture": "x64", "runner": "windows-latest"},
+           {"os": "macos-latest", "architecture": "x64", "runner": "macos-latest"}]
 
 permissions:
   contents: read
 
 jobs:
   tests:
-    runs-on: ${{ matrix.platform.os == 'ubuntu-latest' && format('codebuild-CryptoToolsCI-linux-aws-encryption-sdk-cli-{0}-{1}', github.run_id, github.run_attempt) || matrix.platform.os }}
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: true
       matrix:
