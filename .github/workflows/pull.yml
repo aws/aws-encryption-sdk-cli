@@ -14,9 +14,23 @@ jobs:
   tests:
     name: Run Tests
     uses: ./.github/workflows/ci_tests.yaml
+    with:
+      platforms: '[{"os": "ubuntu-latest", "architecture": "x64"}]'
+  tests-macos-windows:
+    name: Run Tests (macOS, Windows)
+    uses: ./.github/workflows/ci_tests.yaml
+    with:
+      platforms: '[{"os": "windows-latest", "architecture": "x64"}, {"os": "macos-14"}]'
   install-tests:
     name: Installation Tests
     uses: ./.github/workflows/install.yaml
+    with:
+      platforms: '[{"os": "ubuntu-latest", "architecture": "x64"}]'
+  install-tests-macos-windows:
+    name: Installation Tests (macOS, Windows)
+    uses: ./.github/workflows/install.yaml
+    with:
+      platforms: '[{"os": "windows-latest", "architecture": "x64"}, {"os": "macos-latest", "architecture": "x64"}]'
   integration-tests:
     name: Integ Tests
     uses: ./.github/workflows/python-integration.yml

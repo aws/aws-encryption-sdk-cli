@@ -3,6 +3,10 @@ name: venv-tests
 
 on:
   workflow_call:
+    inputs:
+      platforms:
+        type: string
+        default: '[{"os": "ubuntu-latest", "architecture": "x64"}, {"os": "windows-latest", "architecture": "x64"}, {"os": "macos-latest", "architecture": "x64"}]'
 
 permissions:
   contents: read
@@ -13,13 +17,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        platform:
-          - os: ubuntu-latest
-            architecture: x64
-          - os: windows-latest
-            architecture: x64
-          - os: macos-latest
-            architecture: x64
+        platform: ${{ fromJSON(inputs.platforms) }}
         python:
           - "3.12"
         category:
