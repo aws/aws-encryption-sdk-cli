@@ -1,5 +1,5 @@
 coverage==4.5.4
-mypy==0.971
+mypy==1.7.0
 mypy-extensions==1.0.0
 typing==3.7.4.3
 types-setuptools==63.2.2
