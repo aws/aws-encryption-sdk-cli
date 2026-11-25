@@ -158,6 +158,26 @@ def _is_decrypt_mode(mode):
     raise BadUserArgumentError("Mode {mode} has not been implemented".format(mode=mode))
 
 
+# The first two bytes of a message are the version and type: 0x01 0x80 (version 1) or 0x02 0x05 (version 2).
+# Base64-encoding those bytes always starts with "AY" (version 1) or "Ag" (version 2).
+_BASE64_MESSAGE_PREFIXES = (b"AY", b"Ag")
+
+
+def _looks_like_base64_message(source):
+    # type: (IO) -> bool
+    """Checks, without consuming any data, whether the source starts like a base64-encoded message.
+
+    :param source: source to inspect
+    :type source: file-like object
+    :rtype: bool
+    """
+    try:
+        head = source.peek(2)[:2]
+    except (AttributeError, OSError, ValueError):
+        return False
+    return head in _BASE64_MESSAGE_PREFIXES
+
+
 @attr.s(hash=False, init=False)
 class IOHandler(object):
     """Common handler for all IO operations. Holds common configuration values used for all
@@ -229,6 +249,11 @@ class IOHandler(object):
         :returns: OperationResult stating whether the file was written
         :rtype: aws_encryption_sdk_cli.internal.identifiers.OperationResult
         """
+        if _is_decrypt_mode(str(stream_args["mode"])) and not self.decode_input and _looks_like_base64_message(source):
+            raise BadUserArgumentError(
+                "Input looks like a base64-encoded message, not a raw encrypted message. "
+                "Use --decode to base64-decode the input before decrypting."
+            )
         with _encoder(source, self.decode_input) as _source, _encoder(
             destination_writer, self.encode_output
         ) as _destination:  # noqa pylint: disable=line-too-long

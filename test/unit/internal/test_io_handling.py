@@ -269,6 +269,52 @@ def test_single_io_write_stream_decrypt(
     )
 
 
+@pytest.mark.parametrize("prefix", (b"AY", b"Ag"))
+@pytest.mark.parametrize("mode", ("decrypt", "decrypt-unsigned"))
+def test_single_io_write_rejects_base64_input_without_decode(
+    tmpdir, patch_aws_encryption_sdk_stream, standard_handler, mode, prefix
+):
+    target_file = tmpdir.join("target")
+    source = io.BufferedReader(io.BytesIO(prefix + b"AAAAAAAAAAAAAAAA"))
+    with open(str(target_file), "wb") as destination_writer:
+        with pytest.raises(BadUserArgumentError) as excinfo:
+            standard_handler._single_io_write(
+                stream_args={"mode": mode}, source=source, destination_writer=destination_writer
+            )
+    assert "--decode" in excinfo.value.args[0]
+    assert not patch_aws_encryption_sdk_stream.called
+    # The check only peeks: nothing was consumed from the source
+    assert source.read(2) == prefix
+
+
+@pytest.mark.parametrize("head", (b"\x01\x80", b"\x02\x05", b"", b"A"))
+def test_looks_like_base64_message_false_for_other_input(head):
+    assert not io_handling._looks_like_base64_message(io.BufferedReader(io.BytesIO(head + b"rest")))
+
+
+def test_looks_like_base64_message_false_without_peek():
+    assert not io_handling._looks_like_base64_message(io.BytesIO(b"AYAA"))
+
+
+def test_single_io_write_decrypt_base64_input_with_decode_not_rejected(
+    tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, patch_json_ready_header_auth
+):
+    patch_aws_encryption_sdk_stream.return_value = io.BytesIO(DATA)
+    patch_aws_encryption_sdk_stream.return_value.header = MagicMock()
+    patch_aws_encryption_sdk_stream.return_value.header_auth = MagicMock()
+    kwargs = dict(GOOD_IOHANDLER_KWARGS)
+    kwargs["decode_input"] = True
+    handler = io_handling.IOHandler(**kwargs)
+    handler.metadata_writer = MagicMock()
+    source_file = tmpdir.join("source")
+    source_file.write_binary(b"AYAAAAAAAAAAAAAA")
+    with open(str(source_file), "rb") as source, open(str(tmpdir.join("target")), "wb") as destination_writer:
+        handler._single_io_write(
+            stream_args={"mode": "decrypt"}, source=source, destination_writer=destination_writer
+        )
+    assert patch_aws_encryption_sdk_stream.called
+
+
 def test_single_io_write_stream_decrypt_unsigned(
     tmpdir, patch_aws_encryption_sdk_stream, patch_json_ready_header, patch_json_ready_header_auth, standard_handler
 ):
