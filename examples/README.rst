@@ -14,6 +14,7 @@ Use Cases
 * `Encrypt all files in a directory <./bin/encrypt_directory.sh>`_ and `decrypt them <./bin/decrypt_directory.sh>`_.
 * `Encrypt plaintext from stdin <./bin/encrypt_command_line.sh>`_ and `decrypt from stdin <./bin/decrypt_command_line.sh>`_.
 * `Encrypt a file under multiple master keys <./bin/encrypt_file_multiple_keys.sh>`_ and `decrypt it <./bin/decrypt_file_multiple_keys.sh>`__.
+* `Write and register a custom master key provider <./custom_master_key_provider/README.rst>`_ and use it with ``--wrapping-keys``. This example does not require AWS credentials.
 
 See the `Public Documentation <https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/crypto-cli-examples.html>`_ for more details on these examples.
 
