@@ -120,12 +120,17 @@ class _KMSKeyRedactingFormatter(logging.Formatter):
         :param record: Logging record to filter
         :type record: logging.LogRecord
         """
-        _record = copy.deepcopy(record)
-        if self.__is_kms_encrypt_request(_record):
+        if self.__is_kms_encrypt_request(record):
+            _record = copy.deepcopy(record)
             self.__redact_encrypt_request(_record)
-        elif self.__is_kms_response_with_plaintext(_record):
+            return _record
+        if self.__is_kms_response_with_plaintext(record):
+            _record = copy.deepcopy(record)
             self.__redact_key_from_response(_record)
-        return _record
+            return _record
+        # Only copy records that need redaction: arbitrary records may hold
+        # objects that cannot be deep-copied, which would make format() raise.
+        return record
 
     def format(self, record):
         # type: (logging.LogRecord) -> str
