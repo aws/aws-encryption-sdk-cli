@@ -356,6 +356,10 @@ group.
 If the entry point raises a ``aws_encryption_sdk_cli.exceptions.BadUserArgumentError``, the
 CLI will present the raised error message to the user to indicate bad user input.
 
+For a complete, runnable sample (a provider that wraps data keys with a raw AES key read from a file,
+plus the ``setup.py`` that registers it), see
+`examples/custom_master_key_provider <./examples/custom_master_key_provider/README.rst>`_.
+
 Commitment Policy
 -----------------
 The commitment policy controls which algorithms can be used in encryption and decryption.
