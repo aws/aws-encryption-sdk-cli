@@ -99,3 +99,48 @@ def test_blacklist_filter():
     assert test._BlacklistFilter__blacklist == (sentinel.a, sentinel.b)
     assert test.filter(FakeRecord(name=sentinel.c))
     assert not test.filter(FakeRecord(name=sentinel.b))
+
+
+class _NotDeepCopyable(object):
+    """Object that cannot be deep-copied, like some objects found in real log records."""
+
+    def __deepcopy__(self, memo):
+        raise TypeError("cannot deep copy")
+
+    def __str__(self):
+        return "not-copyable"
+
+
+def test_kms_key_redacting_formatter_unrelated_record_not_copied():
+    record = logging.LogRecord(
+        name="urllib3.connectionpool",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="Starting new HTTPS connection (%s): %s",
+        args=(1, _NotDeepCopyable()),
+        exc_info=None,
+    )
+
+    formatted = logging_utils._KMSKeyRedactingFormatter("%(message)s").format(record)
+
+    assert formatted == "Starting new HTTPS connection (1): not-copyable"
+
+
+def test_kms_key_redacting_formatter_still_redacts_response_plaintext():
+    body = b'{"KeyId": "key", "Plaintext": "c2VjcmV0"}'
+    record = logging.LogRecord(
+        name="botocore.parsers",
+        level=logging.DEBUG,
+        pathname=__file__,
+        lineno=1,
+        msg="Response body:\n%s",
+        args=(body,),
+        exc_info=None,
+    )
+
+    formatted = logging_utils._KMSKeyRedactingFormatter("%(message)s").format(record)
+
+    assert "c2VjcmV0" not in formatted
+    assert logging_utils._REDACTED in formatted
+    assert record.args == (body,)
